@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#101b27" />
+    <title>Arre simulator 2.0</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <canvas id="view" aria-label="Campus i 3D. Styr med WASD eller mobilens styrspak."></canvas>
+    <div class="top">
+      <div class="brand glass">
+        <div class="brand-icon">A</div>
+        <div>
+          <div class="eyebrow">Campus Vasa · 2.0</div>
+          <b>Arre simulator</b>
+          <div class="sub" id="place">Ett campus. Ditt liv.</div>
+        </div>
+      </div>
+      <div class="toolbar glass">
+        <span class="pill" id="time">08:00</span><span class="pill" id="money">0 €</span
+        ><button id="fullButton" title="Helskärm">⛶</button
+        ><button id="menuButton" title="Pausa / meny">Meny</button>
+      </div>
+    </div>
+    <div class="left">
+      <div class="objective glass">
+        <div class="eyebrow" id="termLabel">Din nästa historia</div>
+        <h3 id="goalTitle">Välkommen till Vasa</h3>
+        <p id="goalDetail">Plugga, jobba och lär känna folket på campus.</p>
+        <div class="term-line">
+          <span id="courseCount">Välj din karaktär</span><span id="characterName">8 terminer</span>
+        </div>
+        <div class="track"><i id="termProgress" style="width: 0%"></i></div>
+      </div>
+    </div>
+    <div class="stats glass">
+      <div class="stat" style="--color: #ffcb83">
+        <span>🍔</span>
+        <div class="track"><i id="hungerBar"></i></div>
+        <span id="hungerValue">80</span>
+      </div>
+      <div class="stat" style="--color: #9cc7ff">
+        <span>☺</span>
+        <div class="track"><i id="happyBar"></i></div>
+        <span id="happyValue">80</span>
+      </div>
+      <div class="stat" style="--color: #92e2bf">
+        <span>ϟ</span>
+        <div class="track"><i id="energyBar"></i></div>
+        <span id="energyValue">100</span>
+      </div>
+    </div>
+    <div id="mapBox" class="glass">
+      <div id="mapName"><span id="mapTitle">CAMPUS</span><span>Översikt</span></div>
+      <canvas id="minimap" width="148" height="148"></canvas>
+    </div>
+    <div id="cross"></div>
+    <div id="prompt" class="glass"></div>
+    <div id="toast" class="glass" role="status"></div>
+    <div id="saving">Sparat</div>
+    <div id="jobHUD" class="glass"></div>
+    <div id="mobile">
+      <div id="stick"><div id="knob"></div></div>
+      <div id="touchActions">
+        <button id="runBtn">Spring</button><button id="interactBtn">E</button>
+      </div>
+    </div>
+    <div id="start" class="shade">
+      <div class="modal">
+        <div class="row">
+          <span class="eyebrow">Ett fristående campusäventyr</span
+          ><span class="badge">Campus Vasa HD · offline</span>
+        </div>
+        <h1>Arre simulator <span style="color: var(--mint)">2.0</span></h1>
+        <p class="introText">
+          Ditt studentliv börjar hemma. Hitta till W33 och Technobothnia, skaffa vänner, jobba extra
+          och ta dig genom åtta terminer. Alla personporträtt och händelser är fiktiva
+          spelkaraktärer.
+        </p>
+        <div id="characters" class="cards"></div>
+        <div class="info keys">
+          <span id="controlHelp"
+            >WASD / pilar: gå · mus / dra: se dig omkring · E: interagera · Shift: spring · Esc:
+            pausa</span
+          ><br />Sparar automatiskt i den här webbläsaren. Exportera en säkerhetskopia i menyn.
+        </div>
+        <div class="actions">
+          <button class="primary" id="newButton">Starta ett nytt liv →</button
+          ><button id="continueButton" hidden>Fortsätt sparat spel →</button>
+        </div>
+        <div id="bootError"></div>
+      </div>
+    </div>
+    <div id="dialog" class="shade" hidden>
+      <div class="modal">
+        <div class="row">
+          <span class="eyebrow" id="dialogTag">Campusliv</span
+          ><button id="closeButton" aria-label="Stäng">✕</button>
+        </div>
+        <h2 id="dialogTitle"></h2>
+        <div id="dialogBody"></div>
+        <div class="actions" id="dialogActions"></div>
+      </div>
+    </div>
+    <input id="importFile" type="file" accept=".json,application/json" hidden />
+    <script src="js/core.js"></script>
+    <script src="js/data/characters.js"></script>
+    <script src="js/data/curriculum.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/graphics/sprites.js"></script>
+    <script src="js/data/photos.js"></script>
+    <script src="js/graphics/textures.js"></script>
+    <script src="js/ui/info.js"></script>
+    <script src="js/world/build.js"></script>
+    <script src="js/game/start.js"></script>
+    <script src="js/game/hud.js"></script>
+    <script src="js/game/studies.js"></script>
+    <script src="js/game/campus.js"></script>
+    <script src="js/game/social.js"></script>
+    <script src="js/game/jobs.js"></script>
+    <script src="js/ui/menu.js"></script>
+    <script src="js/game/update.js"></script>
+    <script src="js/render/render.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

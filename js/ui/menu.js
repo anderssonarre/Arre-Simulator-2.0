@@ -1,0 +1,151 @@
+// Meny, karta och export/import av sparning
+'use strict';
+function menu() {
+  if (!active) return;
+  paused = true;
+  const p = profile(),
+    out = outfits.find((o) => o.id === state.outfit);
+  const portrait = npcSprite({ ...p, color: out.color || p.color }).toDataURL();
+  dialog(
+    'Ditt campusliv',
+    '<div class="row"><div><strong>' +
+      esc(p.name) +
+      '</strong><p class="sub">' +
+      esc(out.name) +
+      ' · ' +
+      state.runs +
+      ' arbetspass · ' +
+      state.lunches +
+      ' luncher</p></div><img src="' +
+      portrait +
+      '" alt="Din karaktär" style="height:85px"></div><div class="keys">WASD / pilar: gå eller kör · Shift: spring<br>Mus efter klick / dra på skärmen: se dig omkring<br>E: interagera · Esc: meny · På mobil: vänster spak + dra på höger sida<br>Behov och klocka pausas medan menyer är öppna.</div>',
+    [
+      {
+        label: 'Fortsätt spela',
+        primary: true,
+        run: () => {
+          paused = false;
+          if (job?.type === 'challenge') showChallenge();
+          else close();
+        },
+      },
+      { label: 'Studieplan', run: showCourses },
+      { label: 'Campus och vänner', run: showMap },
+      { label: 'Platsbilder och ritningsunderlag', run: showSources },
+      {
+        label: 'Grafik: ' + (highDetail ? 'HD' : 'Mobil') + ' · byt',
+        run: () => {
+          highDetail = !highDetail;
+          resize();
+          menu();
+        },
+      },
+      {
+        label: 'Spara nu',
+        run: () => {
+          toast(save() ? 'Spelet är sparat.' : 'Exportera för att spara en kopia.');
+        },
+      },
+      { label: 'Exportera sparning', run: exportSave },
+      { label: 'Importera sparning', run: () => $('importFile').click() },
+      {
+        label: muted ? 'Slå på ljud' : 'Stäng av ljud',
+        run: () => {
+          muted = !muted;
+          menu();
+        },
+      },
+      ...(job ? [{ label: 'Avbryt extrajobbet', run: confirmAbort }] : []),
+      {
+        label: 'Börja om',
+        run: () =>
+          dialog(
+            'Börja om?',
+            '<p>Exportera din sparning om du vill behålla den. Ett nytt liv startar med din nuvarande karaktär.</p>',
+            [
+              { label: 'Starta nytt liv', run: () => start(fresh(state.character)) },
+              { label: 'Tillbaka till menyn', run: menu },
+            ],
+          ),
+      },
+    ],
+    'Pausad',
+  );
+}
+function showMap() {
+  const people = [...characters, ...extra].filter((p) => p.id !== state.character);
+  dialog(
+    'Hitta på campus',
+    '<div class="info"><strong>Hemmet:</strong> säng, skrivbord och garderob.<br><strong>W33:</strong> programmering, restaurang och Filicia Castle.<br><strong>Technobothnia:</strong> matematik och konstruktion.<br><strong>WSC:</strong> tidigare träningsbana; planritning saknas.<br><strong>Ute:</strong> extrajobb hos Ossi och vägen hem.<br>På kartan: gul punkt = du · mint = aktivitet · blå = person.</div><h3>Campusfolk</h3>' +
+      people
+        .map(
+          (p) =>
+            '<div class="course"><span>' +
+            esc(p.name) +
+            '<br><small style="color:var(--muted)">' +
+            worlds[p.place].name +
+            '</small></span><span class="badge">' +
+            relationName(relation(p)) +
+            '</span></div>',
+        )
+        .join(''),
+    [{ label: 'Tillbaka till menyn', run: menu }],
+    'Campusguide',
+  );
+}
+function downloadState(s) {
+  const blob = new Blob([JSON.stringify(s, null, 2)], { type: 'application/json' }),
+    url = URL.createObjectURL(blob),
+    a = document.createElement('a');
+  a.href = url;
+  a.download = 'Arre_simulator_2_sparning.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('Din sparning har exporterats.');
+}
+function exportSave() {
+  save();
+  downloadState(state);
+}
+function exportSaved() {
+  try {
+    downloadState(validate(JSON.parse(safeStorage())));
+  } catch {
+    toast('Sparningen kunde inte exporteras.');
+  }
+}
+$('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    if (file.size > 200000) throw Error('Sparfilen är för stor.');
+    const imported = validate(JSON.parse(await file.text()));
+    dialog(
+      'Importera ' + characters.find((c) => c.id === imported.character).name + '?',
+      '<p>Termin ' +
+        imported.term +
+        ' · dag ' +
+        imported.day +
+        ' · ' +
+        imported.money +
+        ' €. Nuvarande sparning ersätts.</p>',
+      [
+        { label: 'Importera och fortsätt', primary: true, run: () => start(imported) },
+        { label: 'Avbryt', run: () => (active ? menu() : close()) },
+      ],
+      'Säkerhetskopia',
+    );
+  } catch (err) {
+    toast('Import misslyckades: ' + err.message);
+  }
+});
+$('menuButton').onclick = () => (modal && paused ? close() : menu());
+$('fullButton').onclick = async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  } catch {
+    toast('Helskärm stöds inte i den här webbläsaren.');
+  }
+};
