@@ -24,6 +24,8 @@ const CONDITION_KEYS = [
   'färdighetMinst',
   'snittMinst',
   'tentaRedo',
+  'årstid',
+  'tentavecka',
 ];
 const TAGS = ['vardag', 'chans', 'kris', 'följd', 'social', 'studier'];
 const EVENT_KEYS = [
@@ -89,6 +91,8 @@ function conditionsMet(c = {}) {
   if (c.skuldMinst != null && (state.debt || 0) < c.skuldMinst) return false;
   if (c.snittMinst != null && (!state.transcript?.length || gradeAverage() < c.snittMinst))
     return false;
+  if (c.årstid && seasonName() !== c.årstid) return false;
+  if (c.tentavecka && !isExamWeek()) return false;
   if (c.tentaRedo && !state.courses.some((k) => !k.pass && k.study >= 2 && !k.retake)) return false;
   for (const [k, n] of Object.entries(c.färdighetMinst || {})) if (skillLevel(k) < n) return false;
   for (const [id, n] of Object.entries(c.relationMinst || {}))

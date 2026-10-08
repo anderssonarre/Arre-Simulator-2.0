@@ -65,6 +65,7 @@ function crowdWanted(id) {
   if (!base || h < 7 || h >= 22) return 0;
   const weekend = isWeekend(state.day),
     peak = h >= 9 && h < 16 ? 1 : h >= 7.5 && h < 18 ? 0.6 : 0.25;
+  if (isVappen() && id === 'outdoor' && h >= 11 && h < 21) return base * 2;
   return Math.round(base * peak * (weekend ? (id === 'gym' || id === 'outdoor' ? 0.5 : 0.15) : 1));
 }
 function makeStranger(w) {

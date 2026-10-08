@@ -19,6 +19,27 @@ function objective() {
             lectureNow(k).till +
             ':00. Räknas som ett studiepass.',
         };
+  if (
+    !job &&
+    !state.graduated &&
+    isSitzDay() &&
+    state.hour >= 15 &&
+    state.hour < 22 &&
+    state.sitzDay !== state.day
+  )
+    return {
+      title: 'Sitz ikväll på Filicia Castle',
+      detail: 'W33 · från kl. 18. Biljett 15 €. Kom gärna i overall.',
+    };
+  if (
+    !job &&
+    !state.graduated &&
+    isVappen() &&
+    state.vappenDay !== state.day &&
+    state.hour >= 10 &&
+    state.hour < 22
+  )
+    return { title: 'Glad vappen!', detail: 'Hela campus har picknick ute. Gå ut och fira.' };
   const t = !job && tutorialStep();
   if (t)
     return {
@@ -70,7 +91,7 @@ function updateHUD() {
   $('goalDetail').textContent = o.detail;
   $('termLabel').textContent = state.graduated
     ? 'EXAMEN AVKLARAD'
-    : 'Termin ' + state.term + ' / 8 · dag ' + state.day;
+    : 'Termin ' + state.term + ' / 8 · ' + seasonHud();
   $('courseCount').textContent = state.courses.filter((c) => c.pass).length + ' / 3 kurser klara';
   $('characterName').textContent = profile().name.split(' ')[0];
   $('termProgress').style.width =

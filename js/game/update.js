@@ -47,6 +47,9 @@ function update(dt) {
   }
   updatePointerHint();
   onlineTick(dt);
+  try {
+    ambientTick(dt);
+  } catch {}
   storyTick();
   if (!active || modal || document.hidden) return;
   if (sleeping) {
@@ -95,7 +98,10 @@ function update(dt) {
   }
   state.stats.hunger = Math.max(0, state.stats.hunger - dt * 0.07);
   state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025 * energyDrain());
-  state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018);
+  // Vintermörkret tar på humöret, sommaren ger mer.
+  const season = seasonName(),
+    moodK = season === 'vinter' ? 1.25 : season === 'sommar' ? 0.8 : 1;
+  state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018 * moodK);
   if (state.stats.hunger <= 0) {
     // Utan mat tar både ork och humör slut fortare.
     state.stats.energy = Math.max(0, state.stats.energy - dt * 0.05);
@@ -135,6 +141,7 @@ function update(dt) {
   partyTick(dt);
   peopleTick(dt);
   nightlifeTick(dt);
+  vappenCheck();
   crowdTick(dt);
   saveTimer += dt;
   if (saveTimer > 12) {

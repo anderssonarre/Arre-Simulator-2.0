@@ -22,7 +22,12 @@ function wardrobe() {
     'Garderoben',
     '<p>Din nuvarande outfit: <strong>' +
       esc(outfits.find((o) => o.id === state.outfit).name) +
-      '</strong>.</p><p>Kläderna syns på porträttet i menyn. Välj din campusstil.</p>',
+      '</strong>.</p><p>Kläderna syns på porträttet i menyn. Välj din campusstil.</p>' +
+      (state.marken?.length
+        ? '<div class="info"><strong>Overallmärken:</strong> ' +
+          state.marken.map(esc).join(' · ') +
+          '</div>'
+        : '<p class="sub">Overallmärken får du på sitzar, vappen och andra evenemang.</p>'),
     outfits.map((o) => ({
       label:
         (state.outfit === o.id ? '✓ ' : state.owned.includes(o.id) ? 'Ta på ' : 'Köp ') +
@@ -60,6 +65,7 @@ function partyText() {
 }
 function partyPrompt() {
   if (partyNow()) return fridayParty();
+  if (isSitzDay() && state.hour >= 17 && state.hour < 23) return sitzPrompt();
   dialog(
     'Filicia Castle',
     '<p>Axel och Otto har laddat upp för en campusfest. Musik, färger och ett välbehövligt avbrott från tentorna.</p><p class="sub">Fredagsfest för alla online: ' +

@@ -93,8 +93,8 @@ function buildLightmap(w) {
 // Hur mycket lamporna respektive dagsljuset lyser just nu.
 function lightLevels(w) {
   const h = state?.hour ?? 12,
-    sun =
-      h >= 8 && h <= 17 ? 1 : h >= 6 && h < 8 ? (h - 6) / 2 : h > 17 && h < 20 ? (20 - h) / 3 : 0;
+    // Dagsljuset följer årstiden (js/game/seasons.js).
+    sun = daylight(h);
   return {
     sun,
     lamps: homeParty ? 0.6 : sun > 0.7 ? 0.45 : 1,

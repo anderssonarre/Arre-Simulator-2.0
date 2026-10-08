@@ -40,6 +40,8 @@
 //   snittMinst: 3.5        betygssnittet är minst 3,5
 //   färdighetMinst: { programmering: 3 }
 //   tentaRedo: true        någon tenta är redo att skrivas
+//   årstid: 'vinter'       bara en viss årstid: 'höst', 'vinter', 'vår', 'sommar'
+//   tentavecka: true       bara under tentaveckan
 //
 // Hyra och studiestöd dras automatiskt varje måndag, se js/data/progress.js.
 const EVENT_DATA = [
@@ -518,5 +520,60 @@ const EVENT_DATA = [
       },
       { text: 'Skratta åt honom', effekt: { glädje: 4, relation: { axel: -1 } } },
     ],
+  },
+  // ---- Fas 7: årstiderna ----
+  {
+    id: 'forsta-snon',
+    taggar: ['vardag'],
+    villkor: { årstid: 'vinter' },
+    titel: 'Första snön',
+    text: 'Det har snöat under natten. Campus är vitt och tyst, och någon har redan gjort en snögubbe utanför W33.',
+    val: [
+      { text: 'Gör en snöängel · +10 glädje', effekt: { glädje: 10, tid: 15 } },
+      { text: 'Skynda in i värmen', effekt: { energi: 5 } },
+    ],
+  },
+  {
+    id: 'kaamos',
+    taggar: ['kris'],
+    upprepas: true,
+    villkor: { årstid: 'vinter' },
+    titel: 'Mörkt hela dagen',
+    text: 'Solen orkar knappt över hustaken. Det är svårt att komma igång när det är mörkt både när du går och när du kommer hem.',
+    val: [
+      { text: 'Ljusterapilampa på biblioteket · +8 glädje', effekt: { glädje: 8, tid: 30 } },
+      { text: 'Kör på ändå · −6 glädje', effekt: { glädje: -6 } },
+    ],
+  },
+  {
+    id: 'hostlov',
+    taggar: ['vardag'],
+    villkor: { årstid: 'höst' },
+    titel: 'Höstfärger',
+    text: 'Björkarna längs Wolffskavägen har blivit gula och löven yr över cykelstället.',
+    val: [{ text: 'Ta en promenad · +6 glädje', effekt: { glädje: 6, tid: 20 } }],
+  },
+  {
+    id: 'tentavecka',
+    taggar: ['studier'],
+    upprepas: true,
+    villkor: { tentavecka: true },
+    titel: 'Tentaveckan',
+    text: 'Biblioteket är fullt och kaffemaskinen i W33 går varm. Alla pluggar på kvällarna den här veckan.',
+    val: [
+      {
+        text: 'Sätt dig med en läsgrupp · färdighet +15 XP',
+        effekt: { tid: 60, energi: -8, färdighet: { programmering: 5, matematik: 5, teknik: 5 } },
+      },
+      { text: 'Plugga själv hemma', effekt: { glädje: -2 } },
+    ],
+  },
+  {
+    id: 'sommarkvall',
+    taggar: ['vardag', 'social'],
+    villkor: { årstid: 'sommar' },
+    titel: 'Ljus sommarkväll',
+    text: 'Klockan är tio på kvällen och det är fortfarande ljust. Folk sitter ute vid stranden i Sandviken.',
+    val: [{ text: 'Häng med · +12 glädje', effekt: { glädje: 12, tid: 60, energi: -5 } }],
   },
 ];

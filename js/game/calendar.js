@@ -128,6 +128,7 @@ function showWeek() {
           items.push([l.från, course(i).name + ' · ' + LECTURE_ROOM[i].name, 'Föreläsning']),
         ),
     );
+    if (d === 3 && isSitzDay(day)) items.push([18, 'Sitz på Filicia Castle · 15 €', 'Fest']);
     if (d === 4) items.push([20, 'Fredagsfest för alla online · Filicia Castle', 'Fest']);
     if (d === 5) items.push([20, 'Filicia Castle · W33', 'Fest']);
     items.sort((a, b) => a[0] - b[0]);
@@ -150,6 +151,11 @@ function showWeek() {
       (Math.floor((state.day - 1) / 7) + 1) +
       ', termin ' +
       state.term +
+      ' · ' +
+      dateText() +
+      (isExamWeek() ? ' · <strong>tentavecka</strong>' : '') +
+      ' · väder idag: ' +
+      weatherText() +
       '. Föreläsningar räknas som studiepass och ger alla anteckningar. Kurskamraterna sitter också där.</p>' +
       rows.join(''),
     [{ label: 'Tillbaka', primary: true, run: menu }],

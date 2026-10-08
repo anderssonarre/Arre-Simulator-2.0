@@ -280,8 +280,9 @@ function buildCampus3d(w, g) {
   }
   q.meshes().forEach((m) => g.add(m));
   // Platta tak med takpapp och en låg kant av plåt runt om.
-  const roofMat = std({ color: 0x4d4f52, roughness: 0.95 }),
-    edgeMat = std({ color: 0x6d7174, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }),
+  const roofMat = std({ color: 0x4d4f52, roughness: 0.95 });
+  g.userData.roofMat = roofMat;
+  const edgeMat = std({ color: 0x6d7174, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }),
     edges = quadBuilder();
   for (const h of w.houses || [])
     for (const r of h.rings)
@@ -345,6 +346,7 @@ function litWindows(mat, canvas, h) {
 }
 // Marken på campus: klasskartan (gräs, asfalt, plattor, målning, trottoarkant) styr vilken
 // detaljtextur som visas, så kanterna blir skarpa fast texturerna är högupplösta.
+const snowUniform = { value: 0 };
 function groundMesh(w) {
   const n = w.size * w.groundRes,
     classes = new THREE.DataTexture(w.ground, n, n, THREE.RedFormat, THREE.UnsignedByteType);
@@ -364,6 +366,7 @@ function groundMesh(w) {
       uGrass: { value: d.grass },
       uPaving: { value: d.paving },
       uSize: { value: size },
+      uSnow: snowUniform,
     });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec2 vWorld;')
@@ -374,7 +377,7 @@ function groundMesh(w) {
     sh.fragmentShader = sh.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nvarying vec2 vWorld;\nuniform sampler2D uClass, uAsphalt, uGrass, uPaving;\nuniform float uSize;',
+        '#include <common>\nvarying vec2 vWorld;\nuniform sampler2D uClass, uAsphalt, uGrass, uPaving;\nuniform float uSize, uSnow;',
       )
       .replace(
         '#include <map_fragment>',
@@ -389,6 +392,9 @@ function groundMesh(w) {
         else if (cls < 3.5) col = vec3(0.75, 0.76, 0.71);
         else if (cls < 4.5) col = texture2D(uAsphalt, t).rgb * 1.12;
         else col = vec3(0.41, 0.41, 0.38);
+        // Snö: vitt på gräs och plattor, sörjigt på asfalten.
+        float snowAmt = uSnow * (cls < 1.5 ? 1.0 : cls < 2.5 || cls > 3.5 ? 0.35 : 0.8);
+        col = mix(col, vec3(0.9, 0.92, 0.95), snowAmt);
         diffuseColor.rgb *= col;`,
       );
   };
@@ -545,7 +551,7 @@ function buildStatics(w, g) {
     r = seeded(99);
   if (trees.length) {
     const trunkGeo = new THREE.CylinderGeometry(0.07, 0.11, 1, 7),
-      leafGeo = new THREE.IcosahedronGeometry(1, 3),
+      leafGeo = new THREE.SphereGeometry(1, 18, 12),
       coneGeo = new THREE.ConeGeometry(1, 1, 9),
       bark = std({ color: 0x5a4434 }),
       birchBark = std({ color: 0xe8e4da }),
@@ -575,6 +581,7 @@ function buildStatics(w, g) {
       S = new THREE.Vector3(),
       P = new THREE.Vector3(),
       C = new THREE.Color();
+    const leafInfo = [];
     let nt = 0,
       nb = 0,
       nl = 0,
@@ -614,6 +621,7 @@ function buildStatics(w, g) {
             S.set(s, s * 0.85, s),
           );
           blobs.setMatrixAt(nl, M);
+          leafInfo.push([birch, r()]);
           blobs.setColorAt(nl++, C.setHSL(birch ? 0.24 : 0.27, 0.45, 0.24 + r() * 0.1));
         }
       }
@@ -628,6 +636,7 @@ function buildStatics(w, g) {
       m.castShadow = m.receiveShadow = true;
       g.add(m);
     }
+    g.userData.leaves = { mesh: blobs, info: leafInfo, look: null };
   }
   for (const o of w.objects) {
     if (o.type === 'chimney') {
@@ -693,11 +702,14 @@ function buildStatics(w, g) {
 function lightRig(w) {
   const h = state?.hour ?? 12,
     outdoor = !!w.outdoor,
-    // Solen: upp kl. 7, högst kl. 13, ner kl. 19.
-    sunUp = clamp(Math.sin(((h - 7) / 12) * Math.PI), -0.3, 1),
-    elev = Math.max(-0.2, sunUp) * 0.75,
-    az = ((h - 13) / 12) * Math.PI,
-    day = clamp(sunUp * 1.6, 0, 1),
+    // Solen går upp och ner efter årstiden i Vasa och står lägre på vintern.
+    sunT = sunTimes(),
+    t = (h - sunT.up) / (sunT.down - sunT.up),
+    maxElev = 0.15 + (sunT.down - sunT.up - 5) * 0.045,
+    elev = Math.max(0.03, Math.sin(clamp(t, 0, 1) * Math.PI) * maxElev),
+    az = (t - 0.5) * Math.PI * 1.4,
+    wx = weather(),
+    day = daylight(h),
     dir = new THREE.Vector3(
       Math.sin(az) * Math.cos(elev),
       Math.sin(elev),
@@ -706,6 +718,9 @@ function lightRig(w) {
   const u = R3.sky.material.uniforms;
   u.sunPosition.value.copy(dir);
   R3.sky.visible = outdoor;
+  u.turbidity.value = 3 + wx.clouds * 12;
+  u.rayleigh.value = 2.2 - wx.clouds * 1.4;
+  seasonLook(w, wx);
   R3.renderer.toneMappingExposure = outdoor ? 0.9 - day * 0.4 : 0.95;
   nightUniform.value = clamp(1 - day * 2.5, 0, 1);
   // Solen följer spelaren så att skuggorna alltid är skarpa nära dig.
@@ -728,7 +743,7 @@ function lightRig(w) {
     sun.intensity = outdoor ? 0.35 : 0.1;
     sun.color.setHex(0x9fb4d8);
   } else {
-    sun.intensity = outdoor ? 4.2 * day : 1.1 * day;
+    sun.intensity = (outdoor ? 4.2 * day : 1.1 * day) * (1 - wx.clouds * 0.75);
     sun.color.setHSL(0.09, 0.6 - day * 0.35, 0.75 + day * 0.15);
   }
   sun.castShadow = highDetail && !moon;
@@ -736,10 +751,12 @@ function lightRig(w) {
   R3.hemi.color.setHSL(0.6, 0.45, 0.3 + day * 0.45);
   R3.hemi.groundColor.setHSL(0.08, 0.25, 0.12 + day * 0.15);
   // Dimman mot horisonten har himlens färg.
-  const fog = day > 0.6 ? 0xc5d6d8 : day > 0.15 ? 0xd2a07c : 0x1b2433;
+  const fog =
+    day > 0.6 ? (wx.clouds > 0.5 ? 0xa9b2b6 : 0xc5d6d8) : day > 0.15 ? 0xd2a07c : 0x1b2433;
   if (outdoor) {
     R3.scene.fog ??= new THREE.Fog(fog, 70, 330);
     R3.scene.fog.color.setHex(fog);
+    R3.scene.fog.far = wx.kind === 'regn' || wx.kind === 'snö' ? 160 : 330;
     R3.scene.background = new THREE.Color(fog);
   } else {
     R3.scene.fog = null;
@@ -805,6 +822,77 @@ function lightRig(w) {
     }
   }
   return day;
+}
+
+// ---- Årstiden: snö på marken och taken, höstlöv, kala träd, regn och snöfall ----
+function seasonLook(w, wx) {
+  const g = R3.scenes.get(w);
+  snowUniform.value = w.outdoor ? snowCover() : 0;
+  if (g?.userData.roofMat) g.userData.roofMat.color.setHex(snowCover() > 0.5 ? 0xe4e8ec : 0x4d4f52);
+  const leaves = g?.userData.leaves,
+    look = foliage();
+  if (leaves && leaves.look !== look) {
+    leaves.look = look;
+    leaves.mesh.visible = look !== 'kal';
+    const C = new THREE.Color();
+    leaves.info.forEach(([birch, r], i) => {
+      if (look === 'höst') C.setHSL(birch ? 0.13 : 0.07 + r * 0.06, 0.75, 0.38 + r * 0.1);
+      else C.setHSL(birch ? 0.24 : 0.27, 0.45, 0.24 + r * 0.1);
+      leaves.mesh.setColorAt(i, C);
+    });
+    leaves.mesh.instanceColor.needsUpdate = true;
+  }
+  precipitation(w.outdoor ? wx.kind : null);
+}
+function precipitation(kind) {
+  if (!R3.rain) {
+    const n = 2500,
+      pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 1] = Math.random() * 14;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    R3.rain = new THREE.Points(
+      geo,
+      new THREE.PointsMaterial({
+        color: 0xcfd8e0,
+        size: 0.06,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: false,
+        map: new THREE.CanvasTexture(
+          canvasOf2(32, 32, (g) => {
+            const r = g.createRadialGradient(16, 16, 1, 16, 16, 15);
+            r.addColorStop(0, 'rgba(255,255,255,1)');
+            r.addColorStop(1, 'rgba(255,255,255,0)');
+            g.fillStyle = r;
+            g.fillRect(0, 0, 32, 32);
+          }),
+        ),
+      }),
+    );
+    R3.rain.frustumCulled = false;
+    R3.scene.add(R3.rain);
+  }
+  const p = R3.rain;
+  p.visible = !!(kind === 'regn' || kind === 'snö');
+  if (!p.visible) return;
+  const snow = kind === 'snö',
+    a = p.geometry.attributes.position,
+    fall = snow ? 0.03 : 0.35;
+  p.material.size = snow ? 0.07 : 0.03;
+  p.material.color.setHex(snow ? 0xffffff : 0xaebccb);
+  for (let i = 0; i < a.count; i++) {
+    let y = a.getY(i) - fall;
+    if (y < 0) y += 14;
+    a.setY(i, y);
+    if (snow) a.setX(i, a.getX(i) + Math.sin(frame * 0.02 + i) * 0.01);
+  }
+  a.needsUpdate = true;
+  p.position.set(player.x, 0, player.y);
 }
 
 // ---- Figurer (personer, markörer) som skyltar mot kameran ----

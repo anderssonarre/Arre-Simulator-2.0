@@ -57,6 +57,14 @@ function planFor(id, day, hour) {
   }
   for (const [spec, from, to, where, activity] of S.egna[id] || [])
     if (dayMatches(spec, day) && hour >= from && hour < to) return { where, activity };
+  // Vappen: hela campus har picknick ute på eftermiddagen.
+  if (isVappen(day) && hour >= 12 && hour < 20) return { where: 'outdoor', activity: 'fest' };
+  // Tentaveckan: kurskamraterna pluggar på kvällarna.
+  if (isExamWeek(day) && hour >= 17 && hour < 20 && S.kurs.some((k) => k.includes(id)))
+    return { where: S.kurs[0].includes(id) ? 'w33' : 'tech', activity: 'pluggar' };
+  // Sitz: festfolket sitter på Filicia på torsdagskvällen.
+  if (isSitzDay(day) && hour >= 18 && hour < 23 && S.festfolk.includes(id))
+    return { where: 'w33', activity: 'fest' };
   // Bästa vänner umgås ibland på kvällen i W33.
   if (state?.society && hour >= 17 && hour < 21) {
     const best = allIds().find((o) => o !== state.character && npcRel(id, o) >= 70);

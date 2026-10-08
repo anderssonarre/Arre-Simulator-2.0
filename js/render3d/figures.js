@@ -106,7 +106,8 @@ function poseFigure(fig, x, y, opts) {
   let want = u.heading;
   if (moving && speed > 0.001) want = Math.atan2(dx, dy);
   else if (opts.faceTo) want = Math.atan2(opts.faceTo[0] - x, opts.faceTo[1] - y);
-  const diff = ((((want - u.heading + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+  const diff =
+    ((((want - u.heading + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
   // Första gången står figuren direkt rätt, sedan vrider den sig mjukt.
   u.heading = u.posed ? u.heading + diff * 0.2 : want;
   u.posed = true;

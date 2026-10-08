@@ -33,8 +33,7 @@ function render() {
     cam = { focal, horizon, eye, dirX, dirY, planeX, planeY, plane },
     lit = !!w.lightmap,
     mirrorPlane = w.mirror ? w.mirror.plane : null;
-  const light =
-    day >= 7 && day <= 18 ? 1 : day >= 6 && day < 7 ? 0.6 : day > 18 && day < 21 ? 0.7 : 0.32;
+  const light = 0.32 + 0.68 * daylight(day);
   // Färgen på diset långt bort, samma som himlen vid horisonten.
   const fogRGB = light > 0.8 ? [199, 220, 218] : light > 0.4 ? [212, 167, 130] : [54, 70, 88],
     fogCss = 'rgba(' + fogRGB.join(',') + ',';
@@ -78,7 +77,8 @@ function render() {
       groundMap = w.ground || null,
       gRes = w.groundRes || 1,
       gN = (w.size || 1) * gRes,
-      dayK = w.outdoor ? light : Math.max(light, 0.74);
+      dayK = w.outdoor ? light : Math.max(light, 0.74),
+      snowNow = w.outdoor ? snowCover() : 0;
     for (let sy = startY; sy < H; sy += 2) {
       const below = sy >= floorTop;
       const dist = below
@@ -116,8 +116,17 @@ function render() {
           const gx = Math.floor(wx * gRes),
             gy = Math.floor(wy * gRes),
             v = gx >= 0 && gy >= 0 && gx < gN && gy < gN ? groundMap[gy * gN + gx] : 1;
-          if (v === 1) ground = 'grass';
-          else if (v === 2 || v === 4) ground = 'asphalt';
+          if (v === 1) {
+            ground = 'grass';
+            // Snö på gräsmattorna på vintern.
+            if (snowNow > 0.5) {
+              const n = ((Math.floor(wx * 9) * 7 + Math.floor(wy * 9) * 13) % 7) * 2;
+              r = 232 + n;
+              g = 236 + n;
+              b = 240 + n;
+              painted = true;
+            }
+          } else if (v === 2 || v === 4) ground = 'asphalt';
           else if (v === 3) {
             r = 226;
             g = 227;
