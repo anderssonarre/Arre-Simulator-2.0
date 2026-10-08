@@ -13,6 +13,11 @@ const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.resolve(__dirname, '..');
 const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 40;
 const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
+// Gemensam spelklocka: en sekund i verkligheten är en spelminut, precis som i spelet.
+// Räknas från en fast tidpunkt, så alla får samma tid och den överlever omstarter.
+// Minut 0 är måndag kl. 08:00 på dag 1.
+const CLOCK_EPOCH = Date.UTC(2026, 0, 1);
+const clockMinutes = () => (Date.now() - CLOCK_EPOCH) / 1000 + 8 * 60;
 
 // ---- Statiska filer ----
 const TYPES = {
@@ -273,6 +278,7 @@ wss.on('connection', (ws) => {
       send(ws, {
         t: 'welcome',
         id: me.id,
+        clock: clockMinutes(),
         players: [...players.values()].filter((p) => p !== me).map(publicInfo),
       });
       broadcast({ t: 'join', p: publicInfo(me) }, me);
@@ -283,8 +289,8 @@ wss.on('connection', (ws) => {
       // Världsnamn är korta ord, t.ex. outdoor, w33, home:3. Koordinater hålls inom kartan.
       const world = clean(m.world, 24);
       if (/^[a-z0-9:]{1,24}$/.test(world)) me.world = world;
-      me.x = num(m.x, 0, 128) ?? me.x;
-      me.y = num(m.y, 0, 128) ?? me.y;
+      me.x = num(m.x, 0, 512) ?? me.x;
+      me.y = num(m.y, 0, 512) ?? me.y;
       me.a = num(m.a, -1e6, 1e6) ?? me.a;
       me.moving = !!m.moving;
       if (/^#[0-9a-f]{6}$/i.test(m.color)) me.color = m.color;
@@ -324,6 +330,11 @@ setInterval(() => {
     ]),
   });
 }, TICK_MS);
+
+// Klockan skickas ut varje halvminut så att ingen hinner glida isär.
+setInterval(() => {
+  if (players.size) broadcast({ t: 'clock', minutes: clockMinutes() });
+}, 30000);
 
 // Släng anslutningar som slutat svara.
 setInterval(() => {

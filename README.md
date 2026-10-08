@@ -26,7 +26,12 @@ och tryck Deploy. Adressen du får (t.ex. `https://arre-simulator.onrender.com`)
 alla spelar på. Gratisnivån somnar efter en kvart utan spelare och tar ungefär en minut
 att vakna när någon öppnar sidan igen.
 
-Hem och extrajobb är privata.
+Hem och extrajobb är privata. Online följer alla serverns klocka (en sekund är en
+spelminut), så veckodag och tid är samma för alla. Sömn ger energi men spolar inte fram
+tiden när man är online.
+
+Render bygger inte om av sig självt när repot ägs av någon annan. Efter en push:
+Manual Deploy → Deploy latest commit.
 
 ### Konton och sparning på servern
 
@@ -48,6 +53,18 @@ Tre filer är rena innehållsfiler som vem som helst kan redigera:
 
 Instruktionerna står överst i varje fil. Skriver man fel visar webbläsarens konsol en varning.
 
+## Utomhuskartan
+
+Campus utomhus (W33, Technobothnia, Fabriikki, Myndigheten, WSC och gatorna runt) är
+byggd i verklig skala från OpenStreetMap. Kartdata © OpenStreetMaps bidragsgivare,
+licens ODbL (https://www.openstreetmap.org/copyright).
+
+- `tools/campus/osm-utdrag.json` är utdraget, vridet så att Wolffskavägen går nord–syd.
+- `tools/campus/bygg_karta.py` gör om det till `js/data/campus.js` (kör `python3 tools/campus/bygg_karta.py`).
+  Där bestäms också vilka hus som får vilken fasad och höjd.
+- `js/world/campus.js` bygger världen av datan: dörrar, skyltar, lampor och träd.
+- `js/render/segments.js` ritar väggar i valfri vinkel och fasaderna.
+
 ## Struktur
 
 ```
@@ -60,11 +77,13 @@ js/
   data/               Karaktärer, kläder, kursfrågor, bildlista
   graphics/           Figurer, föremål, träd och texturer
   world/build.js      Bygger campus, W33, Technobothnia och gym, dörrar och träd
+  world/campus.js     Utomhuskartan från OpenStreetMap
   world/home.js       Hemmet: möbler, ljus, fönster, spegel och vad man kan göra där
   game/               Spellogik: kalender, personernas scheman (people.js), rörelse,
                       studier, samtal, jobb, händelser m.m.
   ui/                 Meny, karta, bildvisare
   render/geometry.js  3D-möbler, ljuskarta, dörrar och spegel
+  render/segments.js  Sneda väggar och fasader utomhus
   render/render.js    Ritar 3D-vyn och minikartan
   input.js            Tangentbord, mus och touch
   net/online.js       Anslutning till servern, andra spelare och chatt

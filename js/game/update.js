@@ -70,9 +70,12 @@ function update(dt) {
     walk(dt, f, r, keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.run);
     $('jobHUD').style.display = 'none';
   }
-  const hours = state.hour + dt / 60;
-  state.day += Math.floor(hours / 24);
-  state.hour = hours % 24;
+  if (!sharedClock()) {
+    // Online går klockan efter servern (se online.js).
+    const hours = state.hour + dt / 60;
+    state.day += Math.floor(hours / 24);
+    state.hour = hours % 24;
+  }
   state.stats.hunger = Math.max(0, state.stats.hunger - dt * 0.07);
   state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025);
   state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018);

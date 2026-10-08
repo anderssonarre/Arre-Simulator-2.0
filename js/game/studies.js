@@ -215,13 +215,18 @@ function sleep() {
         },
       },
       {
-        label: 'Sov till morgonen · +75 energi',
+        label: sharedClock() ? 'Sov ordentligt · +75 energi' : 'Sov till morgonen · +75 energi',
         run: () => {
-          state.day++;
-          state.hour = 8;
           gain('energy', 75);
           gain('hunger', -20);
           close();
+          if (sharedClock()) {
+            save();
+            toast('Du sov gott. Online är klockan gemensam, så tiden spolas inte fram.');
+            return;
+          }
+          state.day++;
+          state.hour = 8;
           save();
           toast('Ny dag. Klockan är 08:00.');
           morningEvent();
@@ -234,8 +239,10 @@ function sleep() {
               primary: true,
               run: () => {
                 state.term++;
-                state.day++;
-                state.hour = 8;
+                if (!sharedClock()) {
+                  state.day++;
+                  state.hour = 8;
+                }
                 state.courses = [
                   { study: 0, pass: false },
                   { study: 0, pass: false },
@@ -260,15 +267,19 @@ function sleep() {
 function passOut() {
   if (job) return;
   changeWorld('home');
-  if (state.hour >= 8) state.day++;
-  state.hour = 8;
+  if (!sharedClock()) {
+    if (state.hour >= 8) state.day++;
+    state.hour = 8;
+  }
   state.stats.energy = 45;
   gain('happy', -10);
   gain('hunger', -15);
   save();
   dialog(
     'Du somnade',
-    '<p>Energin tog slut och du somnade där du stod. Någon hjälpte dig hem.</p><div class="info">Du vaknar hemma klockan 08:00 · −10 glädje · −15 mättnad</div><p>Vila i tid nästa gång, sängen hemma ger mest energi.</p>',
+    '<p>Energin tog slut och du somnade där du stod. Någon hjälpte dig hem.</p><div class="info">' +
+      (sharedClock() ? 'Du vaknar hemma' : 'Du vaknar hemma klockan 08:00') +
+      ' · −10 glädje · −15 mättnad</div><p>Vila i tid nästa gång, sängen hemma ger mest energi.</p>',
     [{ label: 'Upp och hoppa', primary: true, run: close }],
     'Utmattad',
   );

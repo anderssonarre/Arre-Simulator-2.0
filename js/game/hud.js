@@ -83,9 +83,12 @@ function updateHUD() {
   }
 }
 function advance(minutes) {
-  const h = state.hour + minutes / 60;
-  state.day += Math.floor(h / 24);
-  state.hour = h % 24;
+  if (!sharedClock()) {
+    // Online kan ingen spola fram tiden, den är gemensam för alla.
+    const h = state.hour + minutes / 60;
+    state.day += Math.floor(h / 24);
+    state.hour = h % 24;
+  }
   state.stats.hunger = clamp(state.stats.hunger - minutes * 0.05, 0, 100);
   state.stats.energy = clamp(state.stats.energy - minutes * 0.025, 0, 100);
   updateHUD();

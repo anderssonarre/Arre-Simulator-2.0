@@ -124,6 +124,7 @@ function onlineMessage(m) {
     net.status = 'online';
     net.retry = 0;
     net.last = '';
+    setServerClock(m.clock, true);
     remotes.clear();
     for (const p of m.players) addRemote(p);
     updateOnlineBadge();
@@ -167,10 +168,36 @@ function onlineMessage(m) {
       r.chatUntil = performance.now() + 7000;
     }
     addChatLine(m.name, m.text, m.id === net.id);
+  } else if (m.t === 'clock') {
+    setServerClock(m.minutes, false);
   } else if (m.t === 'full') {
     toast('Servern är full just nu. Du spelar ensam så länge.');
     net.manualClose = true;
   }
+}
+// ---- Gemensam klocka ----
+// Online följer alla serverns klocka, så veckodag och tid är samma för alla.
+// Ditt eget dagnummer (dag 1, dag 2 ...) behålls: vid anslutning hoppar det fram
+// till närmaste dag med serverns veckodag, och följer sedan servern.
+function setServerClock(minutes, fresh) {
+  if (!Number.isFinite(minutes)) return;
+  const serverDay = Math.floor(minutes / 1440) + 1;
+  if (fresh || net.clock?.offset === undefined) {
+    let day = state ? state.day : 1;
+    while (weekdayIndex(day) !== weekdayIndex(serverDay)) day++;
+    net.clock = { minutes, at: performance.now(), offset: day - serverDay };
+  } else net.clock = { ...net.clock, minutes, at: performance.now() };
+  syncClock();
+}
+function sharedClock() {
+  return net.status === 'online' && net.clock;
+}
+function syncClock() {
+  if (!sharedClock() || !state) return;
+  const minutes = net.clock.minutes + (performance.now() - net.clock.at) / 1000,
+    serverDay = Math.floor(minutes / 1440) + 1;
+  state.day = serverDay + net.clock.offset;
+  state.hour = (minutes % 1440) / 60;
 }
 function addRemote(p) {
   remotes.set(p.id, { ...p, tx: p.x, ty: p.y, moving: false, chat: '', chatUntil: 0 });
@@ -186,6 +213,7 @@ function remoteProfile(r) {
 }
 // Körs varje bildruta: skickar egen position och låter andra glida mjukt mot sin senaste position.
 function onlineTick(dt) {
+  syncClock();
   for (const r of remotes.values()) {
     const k = 1 - Math.exp(-dt * 12);
     r.x += (r.tx - r.x) * k;
