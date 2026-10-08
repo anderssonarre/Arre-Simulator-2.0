@@ -51,11 +51,23 @@ function menu() {
         : []),
       ...(serverInfo ? [{ label: 'Tyck till om spelet', run: feedbackDialog }] : []),
       { label: 'Platsbilder och ritningsunderlag', run: showSources },
+      ...(R3.ok || typeof THREE !== 'undefined'
+        ? [
+            {
+              label: 'Grafik: ' + (use3d() ? 'realistisk 3D' : 'klassisk') + ' · byt',
+              run: () => {
+                setGfx3d(!use3d());
+                menu();
+              },
+            },
+          ]
+        : []),
       {
-        label: 'Grafik: ' + (highDetail ? 'HD' : 'Mobil') + ' · byt',
+        label: 'Kvalitet: ' + (highDetail ? 'hög' : 'mobil') + ' · byt',
         run: () => {
           highDetail = !highDetail;
           resize();
+          resize3d();
           menu();
         },
       },

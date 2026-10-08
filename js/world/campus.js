@@ -222,16 +222,23 @@ function buildCampus() {
   for (const [x, y] of C.trees) {
     if (maskAt(w, x, y)) continue;
     const pick = r();
-    if (pick < 0.5) deco(w, x, y, 'tree', 6 + r() * 1.6);
+    if (pick < 0.5)
+      obj(w, x, y, 'tree', '', null, {
+        height: 6 + r() * 1.6,
+        sprite: propSprite('tree'),
+        kind: 'leafy',
+      });
     else if (pick < 0.8)
       obj(w, x, y, 'tree', '', null, {
         height: 7 + r() * 2,
         sprite: birchSprite(Math.floor(r() * 3)),
+        kind: 'birch',
       });
     else
       obj(w, x, y, 'tree', '', null, {
         height: 7 + r() * 2.5,
         sprite: spruceSprite(Math.floor(r() * 3)),
+        kind: 'spruce',
       });
   }
   // Gatlampor i vajer.

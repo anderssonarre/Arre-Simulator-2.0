@@ -601,6 +601,7 @@ function loop(time) {
   last = time;
   frame++;
   update(dt);
-  render();
+  if (use3d()) render3d();
+  else render();
   requestAnimationFrame(loop);
 }

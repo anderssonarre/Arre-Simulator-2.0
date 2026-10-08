@@ -76,6 +76,14 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 
 Instruktionerna står överst i varje fil. Skriver man fel visar webbläsarens konsol en varning.
 
+## Grafik
+
+Spelet ritas i riktig 3D med three.js (`js/render3d/render3d.js`, biblioteket ligger i
+`js/vendor/`): solen ger skuggor efter tid på dygnet, himlen och dimman ändrar färg, gatlampor och
+fönster lyser på kvällen och spegeln hemma speglar på riktigt. Datorer utan grafikkort, och den som
+väljer det i menyn, får den klassiska motorn (`js/render/render.js`). `?gfx=3d` eller `?gfx=classic`
+i adressen tvingar fram den ena eller den andra.
+
 ## Utomhuskartan
 
 Campus utomhus (W33, Technobothnia, Fabriikki, Myndigheten, WSC och gatorna runt) är

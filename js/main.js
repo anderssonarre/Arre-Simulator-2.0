@@ -1,6 +1,9 @@
 // Bygger världarna och startar spelloopen. Laddas sist, när alla funktioner finns.
 'use strict';
 build();
+// Realistisk 3D om datorn klarar det, annars den klassiska motorn.
+initR3();
+document.body.classList.toggle('gfx3d', use3d());
 window.addEventListener('error', (e) => {
   console.error(e.error);
   $('bootError').style.display = 'block';

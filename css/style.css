@@ -886,3 +886,18 @@ body.touch .toolbar #fullButton {
     max-width: 88%;
   }
 }
+/* Realistisk 3D: WebGL-bilden och en genomskinlig yta för namn och bubblor ligger över
+   den klassiska bilden, som fortfarande tar emot mus och touch. */
+#view3d,
+#overlay3d {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+}
+body.gfx3d #view3d,
+body.gfx3d #overlay3d {
+  display: block;
+}
