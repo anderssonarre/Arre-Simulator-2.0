@@ -677,6 +677,7 @@ function buildHome() {
   spot(4.5, 1.25, 'Spegeln', mirrorLook);
   spot(7.05, 6.55, 'Kylskåpet · laga mat', cookAtHome);
   spot(2.75, 5.5, 'Soffan · titta på TV', watchTv);
+  spot(3.9, 6.55, 'Hallen · inred hemmet och boende', homeShop);
   spot(6.3, 4.95, 'Köksbordet · hemmafest', () => (homeParty ? endHomeParty() : partyInvite()));
   const exit = spot(5.5, 6.55, 'Gå ut till campus', () =>
     changeWorld('outdoor', { x: 48.5, y: 57.0, a: -Math.PI / 2 }),
@@ -738,16 +739,18 @@ function mirrorLook() {
   );
 }
 function cookAtHome() {
-  if (state.money < 3)
-    return toast('Kylskåpet är tomt. Det kostar 3 € att handla till en enkel middag.');
-  state.money -= 3;
+  // I studentkorridoren delar man kök och handlar billigare tillsammans.
+  const price = state.home?.typ === 'korridor' ? 2 : 3;
+  if (state.money < price)
+    return toast('Kylskåpet är tomt. Det kostar ' + price + ' € att handla till en enkel middag.');
+  state.money -= price;
   tutorialDone('lunch');
   gain('hunger', 35);
   gain('happy', 2);
   advance(25);
   save();
   sound('win');
-  toast('Du lagade pasta hemma för 3 €. +35 mättnad.');
+  toast('Du lagade pasta hemma för ' + price + ' €. +35 mättnad.');
 }
 function watchTv() {
   gain('happy', 6);

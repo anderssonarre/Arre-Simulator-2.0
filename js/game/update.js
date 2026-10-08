@@ -100,7 +100,10 @@ function update(dt) {
   state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025 * energyDrain());
   // Vintermörkret tar på humöret, sommaren ger mer.
   const season = seasonName(),
-    moodK = season === 'vinter' ? 1.25 : season === 'sommar' ? 0.8 : 1;
+    moodK =
+      (season === 'vinter' ? 1.25 : season === 'sommar' ? 0.8 : 1) *
+      // Ett mysigt hem gör att humöret håller längre när man är hemma.
+      (world.id === 'home' && net.visiting == null ? Math.max(0.5, 1 - coziness() * 0.04) : 1);
   state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018 * moodK);
   if (state.stats.hunger <= 0) {
     // Utan mat tar både ork och humör slut fortare.

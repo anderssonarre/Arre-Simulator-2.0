@@ -418,7 +418,19 @@ wss.on('connection', (ws) => {
       me.lastInvite = now;
       const kind = m.kind === 'home' ? 'home' : null;
       if (!kind) return;
-      send(to.ws, { t: m.t, from: me.id, name: me.name, kind, accept: !!m.accept });
+      // Inbjudan hem tar med värdens möbler (id och plats) så att gästen ser samma hem.
+      let home;
+      if (m.t === 'invite' && m.home && typeof m.home === 'object') {
+        const ok = (s) => typeof s === 'string' && /^[a-zåäö]{2,16}$/.test(s);
+        home = {
+          typ: ok(m.home.typ) ? m.home.typ : 'etta',
+          items: (Array.isArray(m.home.items) ? m.home.items : [])
+            .slice(0, 8)
+            .filter((it) => it && ok(it.id) && ok(it.slot))
+            .map((it) => ({ id: it.id, slot: it.slot })),
+        };
+      }
+      send(to.ws, { t: m.t, from: me.id, name: me.name, kind, accept: !!m.accept, home });
     } else if (m.t === 'note') {
       // Lappar till ett spelarnamn. Finns mottagaren online levereras lappen direkt, annars när hen loggar in.
       const text = clean(m.text, 200),

@@ -264,9 +264,9 @@ function sleep() {
         run: () => {
           close();
           tutorialDone('sov');
-          if (online) return startSleep(35, 15, 0, 'Tupplur');
+          if (online) return startSleep(Math.round(35 * restBonus()), 15, 0, 'Tupplur');
           advance(60);
-          gain('energy', 35);
+          gain('energy', Math.round(35 * restBonus()));
           save();
           toast('Lite vila gjorde gott.');
         },
@@ -279,7 +279,7 @@ function sleep() {
           close();
           tutorialDone('sov');
           if (online) return startSleep(Math.max(40, 100 - state.stats.energy), 30, 15, 'Sömn');
-          gain('energy', 75);
+          gain('energy', Math.round(75 * restBonus()));
           gain('hunger', -20);
           state.day++;
           state.hour = 8;
@@ -318,6 +318,10 @@ function sleep() {
       { label: 'Tillbaka', run: close },
     ],
   );
+}
+// Trivseln hemma (möbler och lägenhet) gör att man vilar bättre.
+function restBonus() {
+  return clamp(1 + coziness() * 0.03, 0.9, 1.4);
 }
 // Sömnläge (online): energin fylls på i verklig tid tills tiden är ute eller du vaknar.
 function startSleep(energy, seconds, hunger, title) {

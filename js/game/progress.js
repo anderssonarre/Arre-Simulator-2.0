@@ -18,6 +18,7 @@ function ensureProgress() {
   s.lastPassDay = Number.isFinite(s.lastPassDay) ? s.lastPassDay : 0;
   for (const c of s.courses) c.lectures ??= 0;
   ensureSociety();
+  ensureHome();
   // Svar från AI som aldrig hann komma innan spelet stängdes.
   for (const id of Object.keys(s.histories || {}))
     s.histories[id] = s.histories[id].filter((h) => !h.pending);
@@ -36,6 +37,9 @@ function skillLevel(k) {
 }
 function addXp(k, n) {
   if (!SKILLS[k] || !n) return;
+  // Bokhyllan hemma: lite mer erfarenhet i studierna.
+  if (['programmering', 'matematik', 'teknik'].includes(k) && hasItem('bokhylla'))
+    n = Math.round(n * 1.1);
   const before = skillLevel(k);
   state.skills[k] = (state.skills[k] || 0) + n;
   const after = skillLevel(k);
@@ -124,11 +128,12 @@ function weeklyEconomy() {
     ledger('FPA pausade stödet: ingen godkänd kurs på länge', 0);
     notes.push('inget studiestöd (för få studiepoäng)');
   }
-  const rent = Math.min(state.money, ECONOMY.hyra),
-    missing = ECONOMY.hyra - rent;
-  state.money -= rent;
-  ledger('Hyra', -ECONOMY.hyra);
-  notes.push('hyra −' + ECONOMY.hyra + ' €');
+  const due = rent(),
+    paid = Math.min(state.money, due),
+    missing = due - paid;
+  state.money -= paid;
+  ledger('Hyra', -due);
+  notes.push('hyra −' + due + ' €');
   if (missing > 0) {
     state.debt += missing;
     ledger('Hyran räckte inte, skuld', missing);
@@ -319,7 +324,7 @@ function showProgress() {
       daysToMonday +
       (daysToMonday === 1 ? ' dag' : ' dagar') +
       ': hyra −' +
-      ECONOMY.hyra +
+      rent() +
       ' €, ' +
       (eligible
         ? 'studiestöd +' + ECONOMY.studiestöd + ' €'

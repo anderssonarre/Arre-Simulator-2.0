@@ -5,6 +5,7 @@ function start(s) {
   if (nick) s.nickname = nick;
   state = s;
   ensureProgress();
+  applyHome(state.home);
   active = true;
   job = null;
   party = false;

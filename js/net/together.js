@@ -59,7 +59,7 @@ function sendInvite(r) {
   if (Date.now() - inviteSent < 3000) return toast('Vänta lite innan du bjuder in igen.');
   inviteSent = Date.now();
   try {
-    net.ws.send(JSON.stringify({ t: 'invite', to: r.id, kind: 'home' }));
+    net.ws.send(JSON.stringify({ t: 'invite', to: r.id, kind: 'home', home: state.home }));
   } catch {}
   close();
   toast('Inbjudan skickad till ' + r.name.split(' ')[0] + '.');
@@ -76,7 +76,7 @@ function receivedInvite(m) {
           primary: true,
           run: () => {
             answer(m, true);
-            visitHome(m.from, m.name);
+            visitHome(m.from, m.name, m.home);
           },
         },
         {
@@ -98,8 +98,10 @@ function answer(m, accept) {
     net.ws.send(JSON.stringify({ t: 'answer', to: m.from, kind: 'home', accept }));
   } catch {}
 }
-function visitHome(id, name) {
+function visitHome(id, name, home) {
   changeWorld('home');
+  // Värdens möbler och lägenhet, så att du ser hur hen har det.
+  if (home) applyHome(home);
   net.visiting = id;
   net.visitingName = name;
   updateHUD();
@@ -110,6 +112,7 @@ function leftWorld(id) {
   if (id !== 'home' && net.visiting != null) {
     net.visiting = null;
     net.visitingName = null;
+    applyHome(state.home);
   }
 }
 

@@ -530,9 +530,12 @@ function boxMesh(b) {
     side = b.tex ? std({ map: tex(b.tex) }) : std({ color: col(b.color) }),
     top = std({ color: col(b.top) }),
     front = b.frontTex ? std({ map: tex(b.frontTex) }) : side;
+  // Lysande saker (lampor, skärmar, akvarium) lyser i sin egen färg.
   if (b.glow)
-    for (const m of [side, top, front])
-      ((m.emissive = new THREE.Color(0xffe4b8)), (m.emissiveIntensity = 0.6));
+    for (const m of [side, top, front]) {
+      m.emissive = col(b.color);
+      m.emissiveIntensity = 0.7;
+    }
   // BoxGeometry: +x, -x, +y (topp), -y, +z, -z. Spelets +y är 3D:s +z.
   const faces = { '+x': 0, '-x': 1, '+y': 4, '-y': 5 },
     list = [side, side, top, side, side, side];
