@@ -416,7 +416,7 @@ wss.on('connection', (ws) => {
         now = Date.now();
       if (!to || to === me || now - (me.lastInvite || 0) < (m.t === 'invite' ? 3000 : 300)) return;
       me.lastInvite = now;
-      const kind = m.kind === 'home' ? 'home' : null;
+      const kind = ['home', 'job'].includes(m.kind) ? m.kind : null;
       if (!kind) return;
       // Inbjudan hem tar med värdens möbler (id och plats) så att gästen ser samma hem.
       let home;

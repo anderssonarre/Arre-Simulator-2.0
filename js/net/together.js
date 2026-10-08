@@ -47,6 +47,7 @@ function playerActions(r) {
         disabled: !home,
         run: () => sendInvite(r),
       },
+      { label: 'Jobba ihop (lagbonus på extrajobbet)', run: () => sendJobInvite(r) },
       { label: 'Lämna en lapp', run: () => noteDialog(r.name) },
       { label: 'Tillbaka', run: showPlayers },
     ],
@@ -65,6 +66,7 @@ function sendInvite(r) {
   toast('Inbjudan skickad till ' + r.name.split(' ')[0] + '.');
 }
 function receivedInvite(m) {
+  if (m.kind === 'job') return receivedJobInvite(m);
   const show = () => {
     if (modal || job || sleeping) return setTimeout(show, 1500);
     dialog(
@@ -95,7 +97,7 @@ function receivedInvite(m) {
 }
 function answer(m, accept) {
   try {
-    net.ws.send(JSON.stringify({ t: 'answer', to: m.from, kind: 'home', accept }));
+    net.ws.send(JSON.stringify({ t: 'answer', to: m.from, kind: m.kind || 'home', accept }));
   } catch {}
 }
 function visitHome(id, name, home) {
@@ -114,6 +116,54 @@ function leftWorld(id) {
     net.visitingName = null;
     applyHome(state.home);
   }
+}
+
+// ---- Jobba ihop ----
+// Två spelare som har extrajobb samtidigt får 30 % lagbonus. Laget gäller en kvart.
+function sendJobInvite(r) {
+  if (Date.now() - inviteSent < 3000) return toast('Vänta lite innan du frågar igen.');
+  inviteSent = Date.now();
+  try {
+    net.ws.send(JSON.stringify({ t: 'invite', to: r.id, kind: 'job' }));
+  } catch {}
+  close();
+  toast('Du frågade ' + r.name.split(' ')[0] + ' om att jobba ihop.');
+}
+function receivedJobInvite(m) {
+  const show = () => {
+    if (modal || sleeping) return setTimeout(show, 1500);
+    dialog(
+      m.name + ' vill jobba ihop',
+      '<p>Har ni extrajobb samtidigt de närmaste femton minuterna får ni båda 30 % lagbonus på lönen.</p>',
+      [
+        {
+          label: 'Kör!',
+          primary: true,
+          run: () => {
+            answer({ ...m, kind: 'job' }, true);
+            startTeam(m.from, m.name);
+            close();
+          },
+        },
+        { label: 'Inte nu', run: () => (answer({ ...m, kind: 'job' }, false), close()) },
+      ],
+      'Lagjobb',
+    );
+    sound('win');
+  };
+  show();
+}
+function startTeam(id, name) {
+  net.team = { id, name, until: Date.now() + 15 * 60000 };
+  toast('Ni jobbar ihop! Starta era extrajobb, så får ni lagbonus.');
+  updateHUD();
+}
+// Lagbonus om kompisen också är på sitt extrajobb just nu.
+function teamBonus() {
+  const t = net.team;
+  if (!t || Date.now() > t.until) return null;
+  const r = remotes.get(t.id);
+  return r && r.world.startsWith('work') ? t.name.split(' ')[0] : null;
 }
 
 // ---- Lappar ----
@@ -183,7 +233,10 @@ function receivedNotes(list) {
 }
 function togetherMessage(m) {
   if (m.t === 'invite') receivedInvite(m);
-  else if (m.t === 'answer')
+  else if (m.t === 'answer' && m.kind === 'job') {
+    if (m.accept) startTeam(m.from, m.name);
+    else toast(m.name.split(' ')[0] + ' kan inte jobba just nu.');
+  } else if (m.t === 'answer')
     toast(m.name.split(' ')[0] + (m.accept ? ' är på väg hem till dig!' : ' kan inte just nu.'));
   else if (m.t === 'notes') receivedNotes(m.list);
   else if (m.t === 'noteSent') toast('Lappen till ' + m.to + ' är lämnad.');

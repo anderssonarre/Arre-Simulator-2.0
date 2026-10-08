@@ -101,9 +101,11 @@ function finishJob() {
   if (!job) return;
   const p = characters.find((c) => c.id === job.key);
   job = null;
-  const happyBonus = state.stats.happy >= 70,
+  let happyBonus = state.stats.happy >= 70,
     double = state.doubleJobDay === state.day,
     pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1) * payBoost());
+  const mate = teamBonus();
+  if (mate) pay = Math.round(pay * 1.3);
   addXp('arbetsvana', XP.jobbpass);
   tutorialDone('jobb');
   state.weekJobs = (state.weekJobs || 0) + 1;
@@ -123,11 +125,12 @@ function finishJob() {
       ' är avslutat. Du får <strong style="color:var(--mint)">' +
       pay +
       ' €</strong>.</p>' +
-      (happyBonus || double || skillLevel('arbetsvana')
+      (happyBonus || double || mate || skillLevel('arbetsvana')
         ? '<p>' +
           [
             double ? 'Dubbel lön från Ossi idag.' : '',
             happyBonus ? 'Ditt goda humör gav 25 % bonus.' : '',
+            mate ? 'Lagbonus +30 % med ' + mate + '.' : '',
             skillLevel('arbetsvana')
               ? 'Arbetsvana nivå ' +
                 skillLevel('arbetsvana') +
