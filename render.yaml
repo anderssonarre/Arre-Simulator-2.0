@@ -1,0 +1,9 @@
+# Render Blueprint: kör spelet och multiplayerservern som en gratis webbtjänst.
+services:
+  - type: web
+    name: arre-simulator
+    runtime: node
+    plan: free
+    buildCommand: cd server && npm install --omit=dev
+    startCommand: node server/server.js
+    healthCheckPath: /health

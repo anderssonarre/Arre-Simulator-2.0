@@ -17,23 +17,44 @@ const onlineChars = new Set();
 const chatLog = [];
 
 // Servern ligger på samma adress som sidan. ?server=wss://… går också att ange för test.
-function serverUrl() {
-  let custom = null;
+// Sidan frågar /health först, så att spelet inte försöker ansluta där ingen server finns.
+let serverFound = null; // null = inte kollat än, true/false = svar
+function customServer() {
   try {
-    custom =
-      new URLSearchParams(location.search).get('server') || localStorage.getItem('arre_server');
-  } catch {}
+    return (
+      new URLSearchParams(location.search).get('server') || localStorage.getItem('arre_server')
+    );
+  } catch {
+    return null;
+  }
+}
+function serverUrl() {
+  const custom = customServer();
   if (custom) return custom;
-  if (location.protocol === 'http:' || location.protocol === 'https:')
+  if (serverFound && (location.protocol === 'http:' || location.protocol === 'https:'))
     return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
   return null;
+}
+async function findServer() {
+  if (serverFound !== null || customServer()) return;
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') {
+    serverFound = false;
+    return;
+  }
+  try {
+    const r = await fetch('/health', { cache: 'no-store' });
+    serverFound = r.ok && (await r.json()).ok === true;
+  } catch {
+    serverFound = false;
+  }
 }
 // Hem och extrajobb är privata, så de får ett eget namn per spelare.
 function worldKey() {
   if (!world) return 'outdoor';
   return world.id === 'home' || world.id === 'work' ? world.id + ':' + (net.id ?? 0) : world.id;
 }
-function onlineConnect() {
+async function onlineConnect() {
+  await findServer();
   const url = serverUrl();
   if (!url || !state) return;
   if (net.ws) {
@@ -163,6 +184,14 @@ function onlineTick(dt) {
     r.y += (r.ty - r.y) * k;
   }
   if (net.status !== 'online' || !net.ws || !state) return;
+  // Ett litet livstecken varje halvminut, så att servern vet att du är kvar även när du står still.
+  net.beat = (net.beat || 0) - dt;
+  if (net.beat <= 0) {
+    net.beat = 30;
+    try {
+      net.ws.send('{"t":"ping"}');
+    } catch {}
+  }
   net.sendTimer -= dt;
   if (net.sendTimer > 0) return;
   net.sendTimer = 0.1;

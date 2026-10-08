@@ -19,6 +19,13 @@ chatta (Enter eller T). Porten ändras med miljövariabeln `PORT`.
 
 Med Docker: `docker build -t arre-simulator .` och `docker run -p 8080:8080 arre-simulator`.
 
+### Lägga ut servern på Render (gratis)
+
+Repot har en `render.yaml`. På render.com: New → Blueprint, välj repot och branchen,
+och tryck Deploy. Adressen du får (t.ex. `https://arre-simulator.onrender.com`) är den
+alla spelar på. Gratisnivån somnar efter en kvart utan spelare och tar ungefär en minut
+att vakna när någon öppnar sidan igen.
+
 Hem och extrajobb är privata. Sparningen ligger kvar i varje spelares egen webbläsare.
 
 ## Struktur
