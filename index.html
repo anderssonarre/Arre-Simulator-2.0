@@ -19,7 +19,9 @@
         </div>
       </div>
       <div class="toolbar glass">
-        <span class="pill" id="time">08:00</span><span class="pill" id="money">0 €</span
+        <span class="pill online off" id="onlineBadge" hidden>○ offline</span
+        ><button id="chatBtn" title="Chatta (Enter)" hidden>Chatt</button
+        ><span class="pill" id="time">08:00</span><span class="pill" id="money">0 €</span
         ><button id="fullButton" title="Helskärm">⛶</button
         ><button id="menuButton" title="Pausa / meny">Meny</button>
       </div>
@@ -58,6 +60,18 @@
     </div>
     <div id="cross"></div>
     <div id="prompt" class="glass"></div>
+    <div id="chatLog" class="glass" aria-live="polite"></div>
+    <form id="chatForm" class="glass" hidden>
+      <input
+        id="chatInput2"
+        type="text"
+        maxlength="140"
+        autocomplete="off"
+        placeholder="Skriv till alla i närheten …"
+        aria-label="Chattmeddelande"
+      />
+      <button type="submit" class="primary">Skicka</button>
+    </form>
     <div id="lockHint" class="glass">Klicka i bilden för att styra med musen</div>
     <div id="toast" class="glass" role="status"></div>
     <div id="saving">Sparat</div>
@@ -130,6 +144,7 @@
     <script src="js/game/movement.js"></script>
     <script src="js/game/update.js"></script>
     <script src="js/render/render.js"></script>
+    <script src="js/net/online.js"></script>
     <script src="js/input.js"></script>
     <script src="js/main.js"></script>
   </body>

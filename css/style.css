@@ -233,6 +233,64 @@ canvas#view {
   text-align: center;
   pointer-events: none;
 }
+.pill.online {
+  font-size: 12px;
+}
+.pill.online.online {
+  color: var(--mint);
+}
+.pill.online.off,
+.pill.online.connecting {
+  color: var(--muted);
+}
+#chatLog {
+  position: fixed;
+  left: 20px;
+  bottom: 200px;
+  width: min(340px, 60vw);
+  padding: 10px 12px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 4;
+}
+#chatLog.show {
+  display: flex;
+}
+.chatLine {
+  overflow-wrap: anywhere;
+}
+.chatLine b {
+  color: var(--amber);
+}
+.chatLine.mine b {
+  color: var(--mint);
+}
+#chatForm {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 32px));
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  z-index: 7;
+}
+#chatForm[hidden] {
+  display: none;
+}
+#chatForm input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #0c1520;
+  color: var(--ink);
+}
 #lockHint {
   position: fixed;
   top: 50%;

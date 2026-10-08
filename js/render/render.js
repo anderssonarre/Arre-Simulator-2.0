@@ -275,6 +275,7 @@ function render() {
     if (depth > 0.1) items.push({ kind: 's', o, depth, lateral: -dx * dirY + dy * dirX });
   };
   for (const o of w.objects) {
+    if (o.profile && !o.guest && onlineChars.has(o.profile.id)) continue;
     if (o.profile?.id === state?.character || o.hidden) {
       if (o.hidden && o.label) pushSprite(o);
       continue;
@@ -308,6 +309,20 @@ function render() {
           moving ? Math.floor(frame / 9) % 4 : 0,
         ),
       });
+  }
+  // Andra spelare online i samma värld.
+  for (const r of remotesHere()) {
+    pushSprite({
+      x: r.x,
+      y: r.y,
+      height: 1.08,
+      profile: remoteProfile(r),
+      remote: r,
+      label: r.name,
+      phase: r.id,
+      targetX: r.moving ? r.x + 1 : r.x,
+      targetY: r.y,
+    });
   }
   for (const b of w.boxes || []) items.push({ kind: 'b', b, depth: boxDepth(b, cam) });
   for (const b of w.mirrorBoxes || []) items.push({ kind: 'b', b, depth: boxDepth(b, cam) });
@@ -345,7 +360,7 @@ function render() {
         if (
           o.label &&
           !o.virtual &&
-          it.depth < 5.5 &&
+          it.depth < (o.remote ? 16 : 5.5) &&
           Math.abs(it.lateral) < it.depth * 0.75 &&
           lineOfSight(o)
         )
@@ -372,14 +387,20 @@ function render() {
     if (
       o.label &&
       !o.virtual &&
-      it.depth < 5.5 &&
+      it.depth < (o.remote ? 16 : 5.5) &&
       Math.abs(it.lateral) < it.depth * 0.75 &&
       lineOfSight(o)
     )
       nearLabels.push({ o, x: W / 2 + it.lateral * scale, py });
   }
   // Etiketter sist så att möbler inte täcker dem.
+  const nowMs = performance.now();
   for (const { o, x, py } of nearLabels) {
+    if (o.remote) {
+      drawTag(o.remote.name, x, py, '#ffcb83');
+      if (o.remote.chatUntil > nowMs) drawBubble(o.remote.chat, x, py - 26);
+      continue;
+    }
     const label =
       near && o.x === near.x && o.y === near.y
         ? o.label
@@ -456,6 +477,54 @@ function render() {
   ctx.fillRect(0, 0, W, H);
   drawMap(w);
 }
+// Namnskylt ovanför en figur.
+function drawTag(text, x, py, color) {
+  ctx.font = '600 ' + clamp(W / 65, 9, 13) + 'px system-ui';
+  const tw = ctx.measureText(text).width;
+  ctx.fillStyle = '#102635dd';
+  ctx.beginPath();
+  ctx.roundRect(x - tw / 2 - 6, py - 22, tw + 12, 18, 5);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(text, x, py - 9);
+}
+// Pratbubbla från chatten, radbruten till högst tre rader.
+function drawBubble(text, x, bottom) {
+  const size = clamp(W / 70, 9, 13);
+  ctx.font = '500 ' + size + 'px system-ui';
+  const maxW = clamp(W * 0.28, 120, 260),
+    lines = [];
+  let line = '';
+  for (const wd of text.split(/\s+/)) {
+    const t = line ? line + ' ' + wd : wd;
+    if (ctx.measureText(t).width > maxW && line) {
+      lines.push(line);
+      line = wd;
+    } else line = t;
+  }
+  if (line) lines.push(line);
+  if (lines.length > 3) {
+    lines.length = 3;
+    lines[2] += ' …';
+  }
+  const lh = size + 4,
+    bw = Math.min(maxW + 16, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 16),
+    bh = lines.length * lh + 10,
+    top = bottom - bh;
+  ctx.fillStyle = '#f4f1e8';
+  ctx.beginPath();
+  ctx.roundRect(x - bw / 2, top, bw, bh, 8);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x - 5, bottom);
+  ctx.lineTo(x, bottom + 6);
+  ctx.lineTo(x + 5, bottom);
+  ctx.fill();
+  ctx.fillStyle = '#1b2a33';
+  ctx.textAlign = 'center';
+  lines.forEach((l, i) => ctx.fillText(l, x, top + 5 + lh * (i + 0.8)));
+}
 function drawMap(w) {
   const c = mapCtx,
     sz = 148,
@@ -494,6 +563,13 @@ function drawMap(w) {
     c.fillStyle = o.profile ? '#82b5d9' : '#92e2bf';
     c.beginPath();
     c.arc(o.x * scale, o.y * scale, w.size > 30 ? 1.8 : 2.3, 0, 7);
+    c.fill();
+  }
+  // Andra spelare som orange prickar.
+  c.fillStyle = '#ffcb83';
+  for (const r of remotesHere()) {
+    c.beginPath();
+    c.arc(r.x * scale, r.y * scale, 2.8, 0, 7);
     c.fill();
   }
   c.save();

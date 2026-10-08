@@ -1,7 +1,11 @@
 // Interaktion, rörelse och uppdatering varje bildruta
 'use strict';
 function visibleObjects() {
-  return world.objects.filter((o) => o.profile?.id !== state?.character);
+  return world.objects.filter(
+    (o) =>
+      o.profile?.id !== state?.character &&
+      !(o.profile && !o.guest && onlineChars.has(o.profile.id)),
+  );
 }
 function lineOfSight(o) {
   const d = Math.hypot(o.x - player.x, o.y - player.y);
@@ -42,6 +46,7 @@ function update(dt) {
       $('timingCursor').style.left = clamp(((Math.sin(job.phase) + 1) / 2) * 100, 0, 99) + '%';
   }
   updatePointerHint();
+  onlineTick(dt);
   if (!active || modal || document.hidden) return;
   const f =
       (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -

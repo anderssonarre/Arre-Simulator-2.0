@@ -23,6 +23,11 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (!active) return;
+  if ((e.code === 'Enter' || e.code === 'KeyT') && !e.repeat && net.status === 'online') {
+    e.preventDefault();
+    openChat();
+    return;
+  }
   if (
     [
       'KeyW',

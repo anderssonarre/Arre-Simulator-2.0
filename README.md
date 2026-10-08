@@ -4,7 +4,22 @@ Ett campusäventyr i 3D som utspelar sig på campus i Vasa.
 
 ## Starta spelet
 
-Öppna `index.html` i webbläsaren. Ingen installation eller server behövs.
+Ensam: öppna `index.html` i webbläsaren. Ingen installation behövs.
+
+Online med andra (multiplayer): starta servern, som också serverar själva spelet.
+
+```
+cd server
+npm install
+npm start
+```
+
+Öppna sedan http://localhost:8080. Alla som öppnar samma adress ser varandra och kan
+chatta (Enter eller T). Porten ändras med miljövariabeln `PORT`.
+
+Med Docker: `docker build -t arre-simulator .` och `docker run -p 8080:8080 arre-simulator`.
+
+Hem och extrajobb är privata. Sparningen ligger kvar i varje spelares egen webbläsare.
 
 ## Struktur
 
@@ -24,7 +39,9 @@ js/
   render/geometry.js  3D-möbler, ljuskarta, dörrar och spegel
   render/render.js    Ritar 3D-vyn och minikartan
   input.js            Tangentbord, mus och touch
+  net/online.js       Anslutning till servern, andra spelare och chatt
   main.js             Bygger världarna och startar spelet (laddas sist)
+server/server.js      Multiplayerservern (Node + WebSocket)
 ```
 
 Skripten är vanliga skript som delar samma globala namn. De laddas i ordningen

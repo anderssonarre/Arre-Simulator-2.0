@@ -20,6 +20,7 @@ function start(s) {
   updateHUD();
   save();
   toast('Välkommen, ' + profile().name.split(' ')[0] + '. Ditt liv på campus börjar nu.');
+  onlineConnect();
 }
 function choose(id) {
   selected = id;
