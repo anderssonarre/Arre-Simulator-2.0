@@ -26,7 +26,27 @@ och tryck Deploy. Adressen du får (t.ex. `https://arre-simulator.onrender.com`)
 alla spelar på. Gratisnivån somnar efter en kvart utan spelare och tar ungefär en minut
 att vakna när någon öppnar sidan igen.
 
-Hem och extrajobb är privata. Sparningen ligger kvar i varje spelares egen webbläsare.
+Hem och extrajobb är privata.
+
+### Konton och sparning på servern
+
+När spelet körs från servern kan man logga in på startskärmen. Då sparas spelet även på
+servern och kan fortsättas från andra datorer. Utan inloggning sparas allt i webbläsaren.
+
+- Lokalt och med Docker sparas konton i en fil (`DATA_DIR`, standard `server/data`).
+- På Render försvinner filer vid omstart. Sätt därför miljövariabeln `DATABASE_URL` till en
+  Postgres-databas, så skapar servern tabellerna själv.
+
+## Skriva innehåll utan kod
+
+Tre filer är rena innehållsfiler som vem som helst kan redigera:
+
+- `js/data/events.js`: händelser som dyker upp på morgonen, med val och effekter.
+- `js/data/dialogue.js`: allt personerna säger.
+- `js/data/schedules.js`: vem som går på vilka föreläsningar och vad alla gör på dagarna.
+- `js/data/curriculum.js`: kurser och tentafrågor.
+
+Instruktionerna står överst i varje fil. Skriver man fel visar webbläsarens konsol en varning.
 
 ## Struktur
 
@@ -41,14 +61,17 @@ js/
   graphics/           Figurer, föremål, träd och texturer
   world/build.js      Bygger campus, W33, Technobothnia och gym, dörrar och träd
   world/home.js       Hemmet: möbler, ljus, fönster, spegel och vad man kan göra där
-  game/               Spellogik: rörelse och kamera, studier, samtal, jobb, händelser m.m.
+  game/               Spellogik: kalender, personernas scheman (people.js), rörelse,
+                      studier, samtal, jobb, händelser m.m.
   ui/                 Meny, karta, bildvisare
   render/geometry.js  3D-möbler, ljuskarta, dörrar och spegel
   render/render.js    Ritar 3D-vyn och minikartan
   input.js            Tangentbord, mus och touch
   net/online.js       Anslutning till servern, andra spelare och chatt
+  net/account.js      Spelarnamn, inloggning och sparning på servern
   main.js             Bygger världarna och startar spelet (laddas sist)
-server/server.js      Multiplayerservern (Node + WebSocket)
+server/server.js      Multiplayerservern (Node + WebSocket) och konton
+server/store.js       Lagring av konton och sparningar (fil eller Postgres)
 ```
 
 Skripten är vanliga skript som delar samma globala namn. De laddas i ordningen

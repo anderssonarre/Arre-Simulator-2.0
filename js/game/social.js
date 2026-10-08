@@ -1,5 +1,14 @@
 // Relationer och samtal
 'use strict';
+// Väljer en slumpad rad ur en lista i DIALOGUE och fyller i {namn}, {jag}, {ämne} m.fl.
+function say(lines, p, extraFill = {}) {
+  const line = Array.isArray(lines) ? rand(lines) : lines;
+  return String(line)
+    .replace(/\{namn\}/g, p ? p.name.split(' ')[0] : '')
+    .replace(/\{jag\}/g, playerName().split(' ')[0])
+    .replace(/\{ämne\}/g, p?.topic || '')
+    .replace(/\{(\w+)\}/g, (m, k) => extraFill[k] ?? m);
+}
 function relation(p) {
   return state.relations[p.id] || 0;
 }
@@ -41,17 +50,23 @@ function remember(p, who, text) {
 function chat(p) {
   const r = relation(p),
     hist = state.histories[p.id] || [];
-  const greet =
+  const greet = say(
     r >= 40
-      ? 'Hej igen! Kul att du är här.'
+      ? DIALOGUE.hälsning.vän
       : r < 0
-        ? 'Jaha, du igen.'
-        : p.personality === 'shy'
-          ? 'Hej … hur går det?'
-          : p.personality === 'cold'
-            ? 'Hej. Vad funderar du på?'
-            : 'Hej! Vad händer idag?';
+        ? DIALOGUE.hälsning.ovän
+        : DIALOGUE.hälsning[p.personality] || DIALOGUE.hälsning.vanlig,
+    p,
+  );
   if (!hist.length) remember(p, 'npc', greet);
+  // Säger vad hen håller på med, en gång per aktivitet och dag.
+  const me = people.get(p.id)?.obj,
+    act = me?.activity,
+    actKey = state.day + ':' + act;
+  if (act && DIALOGUE.aktivitet[act] && me.saidActivity !== actKey) {
+    me.saidActivity = actKey;
+    remember(p, 'npc', say(DIALOGUE.aktivitet[act], p));
+  }
   const history = (state.histories[p.id] || [])
     .slice(-6)
     .map(
@@ -79,6 +94,7 @@ function chat(p) {
         label: r >= 15 ? 'Ska vi ta en kaffe?' : 'Vill du hitta på något?',
         run: () => reply(p, r >= 15 ? 'Ska vi ta en kaffe?' : 'Vill du hitta på något?', 'invite'),
       },
+      { label: 'Vet du var någon är?', run: () => askWhere(p) },
       ...(buddyCourse(p) >= 0
         ? [
             {
@@ -129,47 +145,22 @@ function reply(p, text, type) {
   if (homeParty?.guests.includes(p.id) && delta > 0) delta *= 2;
   state.relations[p.id] = clamp(r + delta, -100, 100);
   state.socialDay[p.id] = state.day;
-  const lines = {
-    teknik: 'Ett litet steg i taget. Testa det du bygger innan du gör det större.',
-    system: 'Jag försöker få delarna att fungera tillsammans. Det är nästan som ett strategispel.',
-    konstruktion: 'Precision först. En bra ritning sparar mycket problem senare.',
-    campus: 'Det känns som att alla har något på gång. Har du hunnit äta lunch?',
-    fester: 'Filicia Castle behöver bara lite musik och rätt folk!',
-    träning: 'Jag kör hellre ett bra pass än ett långt pass. Vill du ses på gymmet?',
-    matematik: 'Bryt ner problemet. Panik har aldrig gjort en integral lättare.',
-    planering: 'Om vi delar upp jobbet blir det klart. Jag kan hålla koll på planen.',
-    jobb: 'Det finns ett pass vid den gröna jobbmarkeringen ute. Du får lön när hela jobbet är klart.',
-    budget: 'Små utgifter blir stora tillsammans. Låt inte alla pengar gå till nya outfits.',
-  };
+  const keyword = DIALOGUE.nyckelord.find((k) => k.ord.some((o) => lower.includes(o)));
   let response = bad
-    ? 'Det där var onödigt. Vi kan prata när du har en bättre ton.'
+    ? say(DIALOGUE.oförskämt, p)
     : type === 'invite'
       ? r >= 15
-        ? 'Gärna! Vi tar en kaffe efter nästa föreläsning.'
-        : 'Kanske senare. Vi får lära känna varandra lite först.'
+        ? say(DIALOGUE.kaffe, p)
+        : say(DIALOGUE.inbjudanFörTidigt, p)
       : type === 'topic' || lower.includes(p.topic)
-        ? lines[p.topic]
-        : lower.includes('tack')
-          ? 'Varsågod. Kul att kunna hjälpa.'
-          : lower.includes('jobb')
-            ? 'Kolla jobbmarkeringen ute på campus. Ett pass kan rädda lunchbudgeten.'
-            : lower.includes('tenta') || lower.includes('stud')
-              ? 'Två studiepass först, sedan tentan. Ta en kurs i taget.'
-              : lower.includes('fest')
-                ? 'Hör med Axel i Filicia Castle. Det brukar finnas planer där.'
-                : r >= 40
-                  ? rand([
-                      'Skönt att prata med någon som känner mig. Hur har din dag varit?',
-                      'Jag minns vårt senaste snack. Ska vi fortsätta på det?',
-                      'Kul att se dig igen. Det blev en bättre dag nu.',
-                    ])
-                  : slow
-                    ? 'Jo, det går framåt. Jag håller på med ' + p.topic + '.'
-                    : rand([
-                        'Ganska bra faktiskt. Har du hittat runt på campus?',
-                        'Lite mycket idag, men en lunch och lite sällskap hjälper.',
-                        'Vi försöker få ihop dagen. Hur går det för dig?',
-                      ]);
+        ? say(DIALOGUE.ämne[p.topic] || DIALOGUE.vanligasvar, p)
+        : type === 'free' && keyword
+          ? say(keyword.svar, p)
+          : r >= 40
+            ? say(DIALOGUE.vänsvar, p)
+            : slow
+              ? say(DIALOGUE.blygsvar, p)
+              : say(DIALOGUE.vanligasvar, p);
   // En kaffe med en bekant ger glädje och närmare relation, en gång per dag och person.
   state.hangout ??= {};
   if (type === 'invite' && r >= 15 && !bad) {
@@ -178,13 +169,9 @@ function reply(p, text, type) {
       bump(p.id, 4);
       gain('happy', 8);
       advance(30);
-      response = rand([
-        'Gärna! Vi tar en kaffe i entrén.',
-        'Ja, det behövs. Kaffe på mig den här gången.',
-        'Perfekt timing, jag behövde en paus.',
-      ]);
+      response = say(DIALOGUE.kaffe, p);
       toast('Kaffe med ' + p.name.split(' ')[0] + ' · +8 glädje · 30 minuter');
-    } else response = 'Vi tog ju redan en kaffe idag. Imorgon igen?';
+    } else response = say(DIALOGUE.kaffeIgen, p);
   }
   if (relation(p) >= 40 && r < 40)
     toast(

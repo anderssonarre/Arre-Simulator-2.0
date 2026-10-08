@@ -94,7 +94,7 @@ function update(dt) {
     noticeTimer = 40;
   }
   for (const o of world.objects) {
-    if (!o.profile || o.profile.id === state.character) continue;
+    if (!o.guest) continue;
     o.roam -= dt;
     if (o.roam <= 0) {
       o.targetX = o.anchorX + (Math.random() - 0.5) * 2.8;
@@ -112,6 +112,7 @@ function update(dt) {
     }
   }
   partyTick(dt);
+  peopleTick(dt);
   saveTimer += dt;
   if (saveTimer > 12) {
     saveTimer = 0;

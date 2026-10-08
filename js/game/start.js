@@ -1,6 +1,8 @@
 // Starta spel och välja karaktär
 'use strict';
 function start(s) {
+  const nick = cleanNick($('nickInput').value);
+  if (nick) s.nickname = nick;
   state = s;
   active = true;
   job = null;
@@ -20,6 +22,7 @@ function start(s) {
   updateHUD();
   save();
   toast('Välkommen, ' + profile().name.split(' ')[0] + '. Ditt liv på campus börjar nu.');
+  setupPeople();
   onlineConnect();
 }
 function choose(id) {

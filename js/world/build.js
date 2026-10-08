@@ -42,6 +42,7 @@ function station(w, x, y, type, label, action) {
 // En portal är en dörr: själva dörren ritas i väggen (doorAt), markören är osynlig och visar bara etiketten.
 function portal(w, x, y, label, target, spawn) {
   const o = station(w, x, y, 'portal', label, () => changeWorld(target, spawn));
+  o.target = target;
   o.hidden = true;
   o.height = 1.3;
   return o;
@@ -118,8 +119,9 @@ function build() {
   rect(w, 31, 25, 2, 5, 1);
   rect(w, 39, 25, 4, 1, 1);
   w.grid[25][41] = 0;
-  station(w, 14.5, 26.5, 'study', 'Studera programmering', () => study(0));
-  station(w, 23.5, 26.5, 'exam', 'Programmeringstenta', () => exam(0));
+  station(w, 14.5, 26.5, 'study', '', () => study(0)).courseIndex = 0;
+  lectureSpot(w, 0, ...freeSpotNear(w, 14.5, 26.5));
+  station(w, 23.5, 26.5, 'exam', '', () => exam(0)).courseIndex = 0;
   station(w, 23.5, 21.5, 'food', 'Lunch · 8 €', lunch);
   station(w, 35.5, 12.5, 'party', 'Filicia Castle · fest', partyPrompt);
   doorAt(w, 37, 30);
@@ -183,10 +185,12 @@ function build() {
   for (const x of [9, 17, 24, 37, 42, 49]) {
     rect(w, x, 38, 1, 4, 1);
   }
-  station(w, 45.5, 27, 'study', 'Studera matematik', () => study(1));
-  station(w, 49.5, 27, 'exam', 'Matematiktenta', () => exam(1));
-  station(w, 24.5, 32.5, 'study', 'Studera konstruktion', () => study(2));
-  station(w, 26.5, 35.5, 'exam', 'Konstruktionstenta', () => exam(2));
+  station(w, 45.5, 27, 'study', '', () => study(1)).courseIndex = 1;
+  lectureSpot(w, 1, ...freeSpotNear(w, 45.5, 27));
+  station(w, 49.5, 27, 'exam', '', () => exam(1)).courseIndex = 1;
+  station(w, 24.5, 32.5, 'study', '', () => study(2)).courseIndex = 2;
+  lectureSpot(w, 2, ...freeSpotNear(w, 24.5, 32.5));
+  station(w, 26.5, 35.5, 'exam', '', () => exam(2)).courseIndex = 2;
   doorAt(w, 32, 42);
   portal(w, 32.5, 41.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 40.15, a: Math.PI / 2 });
   sign(w, 32.5, 38.5, 'TECHNOBOTHNIA');
@@ -235,48 +239,7 @@ function build() {
   });
   doorAt(w, 8, 17);
   portal(w, 8.5, 16.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41.85, a: -Math.PI / 2 });
-  const spots = {
-    w33: [
-      [17.5, 27.5],
-      [27.5, 27.5],
-      [36.5, 11.5],
-      [35.5, 14.5],
-      [28.5, 18.5],
-      [36.5, 15.5],
-      [29.5, 22.5],
-      [21.5, 21.5],
-    ],
-    tech: [
-      [42.5, 27.5],
-      [27.5, 31.5],
-      [50.5, 27.5],
-      [22.5, 35.5],
-      [35.5, 34.5],
-    ],
-    outdoor: [
-      [35.5, 44.5],
-      [20.5, 17.5],
-      [44.5, 24.5],
-      [45.5, 26.5],
-      [34.5, 20.5],
-      [33.5, 25.5],
-    ],
-  };
-  const used = {};
-  for (const p of [...characters, ...extra]) {
-    let n = used[p.place] || 0;
-    const [x, y] = spots[p.place][n];
-    used[p.place] = n + 1;
-    obj(worlds[p.place], x, y, 'npc', p.name, () => chat(p), {
-      profile: p,
-      sprite: npcSprite(p),
-      height: 1.08,
-      anchorX: x,
-      anchorY: y,
-      phase: Math.random() * 6,
-      roam: Math.random() * 5,
-    });
-  }
+  // Personerna placeras av schemat (js/game/people.js) när spelet startar.
 }
 function isWall(w, x, y) {
   return w.grid[Math.floor(y)]?.[Math.floor(x)] ?? 3;
@@ -361,4 +324,17 @@ function placeTrees(w) {
         sprite: spruceSprite(Math.floor(r() * 3)),
       });
   }
+}
+
+// Närmaste lediga punkt (gångbar och inte för nära något annat man kan använda).
+function freeSpotNear(w, x, y, minGap = 1.5) {
+  for (let r = 1.5; r < 6; r += 0.5)
+    for (let a = 0; a < 6.28; a += 0.4) {
+      const px = Math.floor(x + Math.cos(a) * r) + 0.5,
+        py = Math.floor(y + Math.sin(a) * r) + 0.5;
+      if (!walkable(w, px, py, 0.4)) continue;
+      if (w.objects.some((o) => o.action && Math.hypot(o.x - px, o.y - py) < minGap)) continue;
+      return [px, py];
+    }
+  return [x, y + 1];
 }

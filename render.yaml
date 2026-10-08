@@ -7,3 +7,8 @@ services:
     buildCommand: cd server && npm install --omit=dev
     startCommand: node server/server.js
     healthCheckPath: /health
+    envVars:
+      # Lägg in adressen till en Postgres-databas här så att konton och sparningar
+      # finns kvar när servern startas om. Utan den sparas de bara tills nästa omstart.
+      - key: DATABASE_URL
+        sync: false

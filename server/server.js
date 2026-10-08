@@ -5,7 +5,9 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { WebSocketServer } = require('ws');
+const { openStore } = require('./store');
 
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.resolve(__dirname, '..');
@@ -36,7 +38,14 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, players: players.size }));
+    res.end(JSON.stringify({ ok: true, players: players.size, accounts: !!store }));
+    return;
+  }
+  if (url.startsWith('/api/')) {
+    handleApi(req, res, url).catch((e) => {
+      console.error(e);
+      json(res, 500, { error: 'Något gick fel på servern.' });
+    });
     return;
   }
   const rel = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
@@ -57,6 +66,147 @@ const server = http.createServer((req, res) => {
     res.end(data);
   });
 });
+
+// ---- Konton och sparning ----
+// Lösenord lagras som scrypt-hash med salt. Inloggningen ger en slumpad nyckel (token) som
+// webbläsaren skickar med. Servern sparar bara en hash av nyckeln.
+let store = null;
+const MAX_SAVE = 300 * 1024;
+function json(res, code, body) {
+  res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+function readBody(req, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0,
+      tooBig = Number(req.headers['content-length']) > limit;
+    const chunks = [];
+    // För stora förfrågningar läses färdigt utan att sparas, så att svaret (413) hinner fram.
+    if (tooBig) reject(Object.assign(new Error('för stor'), { code: 413 }));
+    req.on('data', (c) => {
+      if (tooBig) return;
+      size += c.length;
+      if (size > limit) {
+        tooBig = true;
+        chunks.length = 0;
+        reject(Object.assign(new Error('för stor'), { code: 413 }));
+      } else chunks.push(c);
+    });
+    req.on('end', () => {
+      if (tooBig) return;
+      try {
+        resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+      } catch {
+        reject(Object.assign(new Error('trasig json'), { code: 400 }));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+const accountKey = (name) => name.toLowerCase();
+const validName = (n) => typeof n === 'string' && /^[\p{L}\p{N} _.-]{2,20}$/u.test(n.trim());
+const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+function hashPassword(password, salt) {
+  return new Promise((resolve, reject) =>
+    crypto.scrypt(password, salt, 32, (err, key) =>
+      err ? reject(err) : resolve(key.toString('hex')),
+    ),
+  );
+}
+// Högst 10 inloggningsförsök per minut och adress.
+const attempts = new Map();
+function tooMany(req) {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
+      .split(',')[0]
+      .trim(),
+    now = Date.now(),
+    list = (attempts.get(ip) || []).filter((t) => now - t < 60000);
+  list.push(now);
+  attempts.set(ip, list);
+  return list.length > 10;
+}
+async function newSession(key) {
+  const token = crypto.randomBytes(32).toString('hex');
+  await store.putSession(sha(token), key);
+  return token;
+}
+async function sessionKey(req) {
+  const m = /^Bearer ([0-9a-f]{64})$/.exec(req.headers.authorization || '');
+  if (!m) return null;
+  const s = await store.getSession(sha(m[1]));
+  return s ? s.key : null;
+}
+async function handleApi(req, res, url) {
+  if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
+  try {
+    if (url === '/api/register' && req.method === 'POST') {
+      if (tooMany(req)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
+      const { name, password } = await readBody(req, 2048);
+      if (!validName(name))
+        return json(res, 400, {
+          error:
+            'Namnet ska vara 2–20 tecken: bokstäver, siffror, mellanslag, punkt eller bindestreck.',
+        });
+      if (typeof password !== 'string' || password.length < 6 || password.length > 200)
+        return json(res, 400, { error: 'Lösenordet ska vara minst 6 tecken.' });
+      const key = accountKey(name.trim()),
+        salt = crypto.randomBytes(16).toString('hex'),
+        hash = await hashPassword(password, salt);
+      if (!(await store.createUser(key, { name: name.trim(), salt, hash, created: Date.now() })))
+        return json(res, 409, { error: 'Namnet är redan upptaget.' });
+      return json(res, 200, { token: await newSession(key), name: name.trim() });
+    }
+    if (url === '/api/login' && req.method === 'POST') {
+      if (tooMany(req)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });
+      const { name, password } = await readBody(req, 2048);
+      const key = validName(name) ? accountKey(name.trim()) : '',
+        user = key && (await store.getUser(key));
+      const hash = await hashPassword(String(password || ''), user ? user.salt : 'ingen');
+      if (!user || !crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(user.hash, 'hex')))
+        return json(res, 401, { error: 'Fel namn eller lösenord.' });
+      const saved = await store.getSave(key);
+      return json(res, 200, {
+        token: await newSession(key),
+        name: user.name,
+        savedAt: saved?.savedAt || 0,
+      });
+    }
+    if (url === '/api/logout' && req.method === 'POST') {
+      const m = /^Bearer ([0-9a-f]{64})$/.exec(req.headers.authorization || '');
+      if (m) await store.deleteSession(sha(m[1]));
+      return json(res, 200, { ok: true });
+    }
+    if (url === '/api/save') {
+      const key = await sessionKey(req);
+      if (!key) return json(res, 401, { error: 'Logga in igen.' });
+      if (req.method === 'GET') {
+        const saved = await store.getSave(key),
+          user = await store.getUser(key);
+        return json(res, 200, {
+          name: user?.name,
+          save: saved ? JSON.parse(saved.data) : null,
+          savedAt: saved?.savedAt || 0,
+        });
+      }
+      if (req.method === 'PUT') {
+        const body = await readBody(req, MAX_SAVE);
+        if (!body.save || typeof body.save !== 'object' || Array.isArray(body.save))
+          return json(res, 400, { error: 'Ingen sparning skickades.' });
+        const savedAt = Date.now();
+        await store.putSave(key, JSON.stringify(body.save), savedAt);
+        return json(res, 200, { savedAt });
+      }
+    }
+    return json(res, 404, { error: 'Finns inte.' });
+  } catch (e) {
+    if (e.code === 413) {
+      res.setHeader('connection', 'close');
+      return json(res, 413, { error: 'Sparningen är för stor.' });
+    }
+    if (e.code === 400) return json(res, 400, { error: 'Trasig förfrågan.' });
+    throw e;
+  }
+}
 
 // ---- Spelare ----
 // id -> { ws, id, name, character, color, world, x, y, a, moving, lastChat, alive }
@@ -189,4 +339,19 @@ setInterval(() => {
   }
 }, 15000);
 
-server.listen(PORT, () => console.log('Arre simulator körs på http://localhost:' + PORT));
+openStore()
+  .then((s) => {
+    store = s;
+    console.log('Konton sparas i ' + s.kind);
+  })
+  .catch((e) => console.error('Kunde inte öppna lagringen, konton är avstängda:', e.message))
+  .finally(() =>
+    server.listen(PORT, () => console.log('Arre simulator körs på http://localhost:' + PORT)),
+  );
+for (const sig of ['SIGTERM', 'SIGINT'])
+  process.on(sig, () => {
+    try {
+      store?.flush();
+    } catch {}
+    process.exit(0);
+  });

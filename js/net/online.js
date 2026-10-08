@@ -18,7 +18,8 @@ const chatLog = [];
 
 // Servern ligger på samma adress som sidan. ?server=wss://… går också att ange för test.
 // Sidan frågar /health först, så att spelet inte försöker ansluta där ingen server finns.
-let serverFound = null; // null = inte kollat än, true/false = svar
+let serverFound = null, // null = inte kollat än, true/false = svar
+  serverInfo = null;
 function customServer() {
   try {
     return (
@@ -42,8 +43,10 @@ async function findServer() {
     return;
   }
   try {
-    const r = await fetch('/health', { cache: 'no-store' });
-    serverFound = r.ok && (await r.json()).ok === true;
+    const r = await fetch('/health', { cache: 'no-store' }),
+      info = r.ok ? await r.json() : null;
+    serverFound = info?.ok === true;
+    serverInfo = serverFound ? info : null;
   } catch {
     serverFound = false;
   }
@@ -78,7 +81,12 @@ async function onlineConnect() {
     const p = profile(),
       out = outfits.find((o) => o.id === state.outfit);
     ws.send(
-      JSON.stringify({ t: 'hello', name: p.name, character: p.id, color: out?.color || p.color }),
+      JSON.stringify({
+        t: 'hello',
+        name: playerName(),
+        character: p.id,
+        color: out?.color || p.color,
+      }),
     );
   };
   ws.onmessage = (e) => {
@@ -305,3 +313,36 @@ function updateOnlineBadge() {
         : '○ offline';
   $('chatBtn').hidden = net.status !== 'online';
 }
+
+// Klick på "N online" visar vilka som är inne.
+$('onlineBadge').style.cursor = 'pointer';
+$('onlineBadge').addEventListener('click', () => {
+  if (net.status !== 'online' || modal) return;
+  const list = [...remotes.values()];
+  dialog(
+    list.length + 1 + ' online',
+    '<div class="course"><span><strong>' +
+      esc(playerName()) +
+      '</strong> (du)</span><span class="badge">' +
+      esc(PLACE_TEXT[world?.id] || 'hemma') +
+      '</span></div>' +
+      list
+        .map(
+          (r) =>
+            '<div class="course"><span>' +
+            esc(r.name) +
+            '</span><span class="badge">' +
+            esc(
+              r.world.startsWith('home')
+                ? 'hemma'
+                : r.world.startsWith('work')
+                  ? 'på extrajobbet'
+                  : PLACE_TEXT[r.world] || r.world,
+            ) +
+            '</span></div>',
+        )
+        .join(''),
+    [{ label: 'Stäng', primary: true, run: close }],
+    'Spelare',
+  );
+});

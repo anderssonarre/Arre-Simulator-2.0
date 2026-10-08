@@ -29,9 +29,21 @@ function menu() {
           else close();
         },
       },
+      { label: 'Veckoschema', run: showWeek },
       { label: 'Studieplan', run: showCourses },
       { label: 'Campus och vänner', run: showMap },
       { label: 'Kontroller', run: showControls },
+      { label: 'Spelarnamn: ' + playerName() + ' · byt', run: renameDialog },
+      ...(accountsAvailable()
+        ? [
+            {
+              label: account.token
+                ? 'Konto: ' + account.name + ' · logga ut'
+                : 'Logga in och spara online',
+              run: () => (account.token ? logout().then(menu) : accountDialog()),
+            },
+          ]
+        : []),
       { label: 'Platsbilder och ritningsunderlag', run: showSources },
       {
         label: 'Grafik: ' + (highDetail ? 'HD' : 'Mobil') + ' · byt',
@@ -84,7 +96,7 @@ function showMap() {
             '<div class="course"><span>' +
             esc(p.name) +
             '<br><small style="color:var(--muted)">' +
-            worlds[p.place].name +
+            esc(whereIs(p.id)?.text || '') +
             '</small></span><span class="badge">' +
             relationName(relation(p)) +
             '</span></div>',
@@ -150,3 +162,28 @@ $('fullButton').onclick = async () => {
     toast('Helskärm stöds inte i den här webbläsaren.');
   }
 };
+
+function renameDialog() {
+  dialog(
+    'Spelarnamn',
+    '<p>Namnet syns för andra när ni spelar online.</p><label class="field"><span>Namn</span><input id="renameInput" maxlength="20" value="' +
+      esc(playerName()) +
+      '"></label>',
+    [
+      {
+        label: 'Spara',
+        primary: true,
+        run: () => {
+          state.nickname = cleanNick($('renameInput').value);
+          $('nickInput').value = state.nickname;
+          save();
+          onlineConnect();
+          menu();
+        },
+      },
+      { label: 'Avbryt', run: menu },
+    ],
+    'Inställningar',
+  );
+  setTimeout(() => $('renameInput')?.select(), 50);
+}

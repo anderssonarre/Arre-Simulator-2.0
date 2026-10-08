@@ -110,6 +110,8 @@ function save() {
   state.x = job ? 17.5 : player.x;
   state.y = job ? 17.5 : player.y;
   state.a = player.a;
+  state.savedAt = Date.now();
+  scheduleCloudSave();
   try {
     localStorage.setItem(SAVE, JSON.stringify(state));
     $('saving').textContent = 'Sparat';

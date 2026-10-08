@@ -86,7 +86,7 @@
       <div class="modal">
         <div class="row">
           <span class="eyebrow">Ett fristående campusäventyr</span
-          ><span class="badge">Campus Vasa HD · offline</span>
+          ><span class="badge" id="startBadge">Campus Vasa HD · offline</span>
         </div>
         <h1>Arre simulator <span style="color: var(--mint)">2.0</span></h1>
         <p class="introText">
@@ -100,6 +100,19 @@
             >WASD / pilar: gå · mus / dra: se dig omkring · E: interagera · Shift: spring · Esc:
             pausa</span
           ><br />Sparar automatiskt i den här webbläsaren. Exportera en säkerhetskopia i menyn.
+        </div>
+        <div class="startExtra">
+          <label class="field"
+            ><span>Ditt spelarnamn</span
+            ><input
+              id="nickInput"
+              maxlength="20"
+              autocomplete="nickname"
+              placeholder="Visas för andra när ni spelar online"
+          /></label>
+          <div id="accountRow" class="accountRow" hidden>
+            <span id="accountText"></span><button id="accountButton" type="button">Logga in</button>
+          </div>
         </div>
         <div class="actions">
           <button class="primary" id="newButton">Starta ett nytt liv →</button
@@ -123,7 +136,11 @@
     <script src="js/core.js"></script>
     <script src="js/data/characters.js"></script>
     <script src="js/data/curriculum.js"></script>
+    <script src="js/data/events.js"></script>
+    <script src="js/data/dialogue.js"></script>
+    <script src="js/data/schedules.js"></script>
     <script src="js/state.js"></script>
+    <script src="js/game/calendar.js"></script>
     <script src="js/graphics/sprites.js"></script>
     <script src="js/graphics/trees.js"></script>
     <script src="js/data/photos.js"></script>
@@ -140,11 +157,13 @@
     <script src="js/game/jobs.js"></script>
     <script src="js/game/events.js"></script>
     <script src="js/game/homeparty.js"></script>
+    <script src="js/game/people.js"></script>
     <script src="js/ui/menu.js"></script>
     <script src="js/game/movement.js"></script>
     <script src="js/game/update.js"></script>
     <script src="js/render/render.js"></script>
     <script src="js/net/online.js"></script>
+    <script src="js/net/account.js"></script>
     <script src="js/input.js"></script>
     <script src="js/main.js"></script>
   </body>

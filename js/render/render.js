@@ -360,7 +360,7 @@ function render() {
         if (
           o.label &&
           !o.virtual &&
-          it.depth < (o.remote ? 16 : 5.5) &&
+          it.depth < (o.remote || o.bubbleUntil > performance.now() ? 16 : 5.5) &&
           Math.abs(it.lateral) < it.depth * 0.75 &&
           lineOfSight(o)
         )
@@ -387,7 +387,7 @@ function render() {
     if (
       o.label &&
       !o.virtual &&
-      it.depth < (o.remote ? 16 : 5.5) &&
+      it.depth < (o.remote || o.bubbleUntil > performance.now() ? 16 : 5.5) &&
       Math.abs(it.lateral) < it.depth * 0.75 &&
       lineOfSight(o)
     )
@@ -401,11 +401,12 @@ function render() {
       if (o.remote.chatUntil > nowMs) drawBubble(o.remote.chat, x, py - 26);
       continue;
     }
+    if (o.bubbleUntil > nowMs) drawBubble(o.bubble, x, py - 26);
     const label =
       near && o.x === near.x && o.y === near.y
         ? o.label
         : o.profile
-          ? o.profile.name
+          ? o.profile.name.split(' ')[0] + (o.activity ? ' · ' + ACTIVITY_TEXT[o.activity] : '')
           : o.type === 'portal'
             ? o.label.split('·')[0]
             : null;

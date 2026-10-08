@@ -1,6 +1,18 @@
 // Mål, statusfält och tid
 'use strict';
 function objective() {
+  // En pågående föreläsning i en kurs som inte är klar går före allt annat.
+  if (!job && state && !state.graduated)
+    for (let k = 0; k < 3; k++)
+      if (!state.courses[k].pass && lectureNow(k) && !state.lecturesSeen?.[state.day + ':' + k])
+        return {
+          title: 'Föreläsning nu: ' + course(k).name,
+          detail:
+            LECTURE_ROOM[k].name +
+            ' · till ' +
+            lectureNow(k).till +
+            ':00. Räknas som ett studiepass.',
+        };
   if (job)
     return {
       title: job.title,
@@ -57,7 +69,13 @@ function updateHUD() {
   $('money').textContent = state.money + ' €';
   const h = Math.floor(state.hour),
     m = Math.floor((state.hour - h) * 60);
-  $('time').textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  $('time').textContent =
+    capital(weekday(state.day)) +
+    ' ' +
+    String(h).padStart(2, '0') +
+    ':' +
+    String(m).padStart(2, '0');
+  updateLectureLabels();
   for (const k of ['hunger', 'happy', 'energy']) {
     $(k + 'Bar').style.width = state.stats[k] + '%';
     $(k + 'Value').textContent = Math.round(state.stats[k]);

@@ -9,8 +9,11 @@ COPY index.html ./
 COPY css css
 COPY js js
 COPY img img
-COPY server/server.js server/
-ENV PORT=8080
+COPY server/server.js server/store.js server/
+# Konton och sparningar hamnar i /app/data. Montera en volym där för att behålla dem:
+#   docker run -p 8080:8080 -v arre-data:/app/data arre-simulator
+RUN mkdir -p /app/data && chown node:node /app/data
+ENV PORT=8080 DATA_DIR=/app/data
 EXPOSE 8080
 USER node
 CMD ["node", "server/server.js"]
