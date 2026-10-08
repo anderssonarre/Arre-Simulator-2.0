@@ -187,6 +187,7 @@ function revelerChat(o) {
           advance(20);
           gain('happy', 4);
           addXp('socialt', 6);
+          addRumor('hjälpte');
           const n = nightPeople.find((x) => x.o === o);
           if (n) removeReveler(n);
           close();

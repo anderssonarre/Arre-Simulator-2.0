@@ -72,6 +72,9 @@ function buildPrompt(b) {
       ? 'Du har varit på fest (kanske Ollis tisdag) och är glad och lite berusad, det märks på hur du pratar.'
       : '',
     c.courses ? 'Terminens kurser: ' + str(c.courses, 120) + '.' : '',
+    c.mood ? 'Ditt humör idag: ' + str(c.mood, 30) + '. Låt det märkas lite.' : '',
+    c.friends ? 'Dina vänner och ovänner på campus: ' + str(c.friends, 160) + '.' : '',
+    c.rumor ? 'Skvaller du har hört om spelaren (nämn det gärna): ' + str(c.rumor, 160) : '',
     mem.length ? 'Det här minns du om ' + str(c.playerName, 30) + ':\n' + mem.join('\n') : '',
     'Svara på svenska som en finlandssvensk student, kort: en eller två meningar, högst 35 ord. Håll dig i rollen, var vänlig och passande för alla åldrar.',
     'Svara ENDAST med JSON: {"svar": "<din replik>", "handling": "<en av: ' +

@@ -13,6 +13,7 @@ const EFFECT_KEYS = [
   'färdighet',
   'följs',
   'betalaSkuld',
+  'rykte',
 ];
 const CONDITION_KEYS = [
   'kursEjKlar',
@@ -112,6 +113,7 @@ function applyEffect(e = {}) {
   if (e.flagga === 'dubbelLön') state.doubleJobDay = state.day;
   for (const [k, n] of Object.entries(e.färdighet || {})) addXp(k, n);
   if (e.betalaSkuld) payDebt();
+  if (e.rykte) addRumor(e.rykte.typ, {}, e.rykte.vet || []);
   if (e.följs) state.storyQueue.push({ id: e.följs.id, day: state.day + (e.följs.omDagar || 1) });
   if (e.meddelande) setTimeout(() => toast(fillText(e.meddelande)), 300);
 }

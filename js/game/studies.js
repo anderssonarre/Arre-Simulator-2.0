@@ -192,6 +192,7 @@ function examResult(i, picks, answers, need) {
     track('exam', { pass: true, grade, retake: !!c.failed });
     c.pass = true;
     recordPass(i, grade);
+    if (grade === 5) addRumor('femma', { kurs: cs.name }, witnessesHere());
     addXp(courseSkill(i), XP.tentaGodkänd);
     gain('happy', 4 + grade * 2);
     save();
@@ -221,6 +222,7 @@ function examResult(i, picks, answers, need) {
   c.study = 1;
   c.retake = true;
   c.failed = true;
+  addRumor('underkänd', { kurs: cs.name }, witnessesHere());
   gain('energy', -3);
   gain('happy', -5);
   save();

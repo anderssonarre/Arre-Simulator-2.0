@@ -71,6 +71,7 @@ function partyPrompt() {
         primary: true,
         run: () => {
           party = true;
+          addRumor('fest', {}, witnessesHere(14));
           addXp('socialt', XP.fest);
           gain('happy', 25);
           gain('energy', -8);
@@ -109,6 +110,7 @@ function fridayParty() {
         disabled: done,
         run: () => {
           state.fridayParty = key;
+          addRumor('fredagsfest', {}, witnessesHere(14));
           party = true;
           addXp('socialt', XP.fest * 2);
           gain('happy', 25 + bonus);

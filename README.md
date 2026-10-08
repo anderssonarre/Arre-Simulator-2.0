@@ -71,6 +71,7 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 - `js/data/dialogue.js`: allt personerna säger.
 - `js/data/schedules.js`: vem som går på vilka föreläsningar och vad alla gör på dagarna.
 - `js/data/curriculum.js`: kurser och tentafrågor.
+- `js/data/society.js`: vem som är vän med vem från början, och skvallret folk sprider om dig.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

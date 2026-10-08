@@ -9,6 +9,7 @@ const ACTIVITY_TEXT = {
   jobbar: 'jobbar',
   paus: 'tar en paus',
   promenerar: 'promenerar',
+  umgås: 'umgås med vänner',
 };
 const PLACE_TEXT = {
   w33: 'i W33',
@@ -56,6 +57,11 @@ function planFor(id, day, hour) {
   }
   for (const [spec, from, to, where, activity] of S.egna[id] || [])
     if (dayMatches(spec, day) && hour >= from && hour < to) return { where, activity };
+  // Bästa vänner umgås ibland på kvällen i W33.
+  if (state?.society && hour >= 17 && hour < 21) {
+    const best = allIds().find((o) => o !== state.character && npcRel(id, o) >= 70);
+    if (best && seeded(day * 31 + hour * 0)() < 0.45) return { where: 'w33', activity: 'umgås' };
+  }
   if (isWeekend(day) || id === 'ossi') return { where: 'hemma' };
   const p = [...characters, ...extra].find((c) => c.id === id),
     d = S.dag;

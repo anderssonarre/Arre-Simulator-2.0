@@ -29,6 +29,7 @@
 //   färdighet                         { teknik: 15 } ger erfarenhet i en färdighet
 //   följs                             { id: 'annan-händelse', omDagar: 3 } startar en kedja
 //   betalaSkuld                       true betalar så mycket av skulden som pengarna räcker till
+//   rykte                             { typ: 'stipendium', vet: ['axel'] } startar skvaller (typer i society.js)
 //
 // Villkor (villkor och kräver):
 //   kursEjKlar: 1          kurs 1 är inte klar och har färre än två studiepass
@@ -134,7 +135,14 @@ const EVENT_DATA = [
         text: 'Följ med · +20 glädje, −30 energi',
         effekt: { glädje: 20, energi: -30, relation: { axel: 8 } },
       },
-      { text: 'Stanna hemma · +15 energi', effekt: { energi: 15, relation: { axel: -3 } } },
+      {
+        text: 'Stanna hemma · +15 energi',
+        effekt: {
+          energi: 15,
+          relation: { axel: -3 },
+          rykte: { typ: 'skippade', vet: ['otto', 'lumberjack'] },
+        },
+      },
     ],
   },
   {
@@ -343,7 +351,9 @@ const EVENT_DATA = [
     uppföljning: true,
     titel: 'Svar på stipendiet',
     text: 'Mejlet börjar med "Grattis". Ditt betygssnitt och din motivering övertygade juryn.',
-    val: [{ text: 'Yes! · +150 €', effekt: { pengar: 150, glädje: 20 } }],
+    val: [
+      { text: 'Yes! · +150 €', effekt: { pengar: 150, glädje: 20, rykte: { typ: 'stipendium' } } },
+    ],
   },
   {
     id: 'axel-gokart',

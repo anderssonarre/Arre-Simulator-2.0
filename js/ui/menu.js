@@ -104,6 +104,7 @@ function menu() {
   );
 }
 function showMap() {
+  const society = state.society ? societyHtml() : '';
   const people = [...characters, ...extra].filter((p) => p.id !== state.character);
   dialog(
     'Hitta på campus',
@@ -119,7 +120,8 @@ function showMap() {
             relationName(relation(p)) +
             '</span></div>',
         )
-        .join(''),
+        .join('') +
+      society,
     [{ label: 'Tillbaka till menyn', run: menu }],
     'Campusguide',
   );

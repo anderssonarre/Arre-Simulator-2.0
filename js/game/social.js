@@ -60,6 +60,9 @@ function chat(p) {
     p,
   );
   if (!hist.length) remember(p, 'npc', greet);
+  // Har personen hört något om dig, eller om någon annan? Sägs en gång.
+  const gossip = tellRumor(p) || (Math.random() < 0.6 ? tellNews(p) : null);
+  if (gossip) remember(p, 'npc', gossip);
   // Säger vad hen håller på med, en gång per aktivitet och dag.
   const me = people.get(p.id)?.obj,
     act = me?.activity,
@@ -82,7 +85,9 @@ function chat(p) {
       relationName(r) +
       ' (' +
       r +
-      ')</span><div class="history">' +
+      ') · ' +
+      moodWord(p.id) +
+      '</span><div class="history">' +
       history +
       '</div><input id="chatInput" type="text" maxlength="180" placeholder="Skriv en egen replik …" aria-label="Din replik"><p class="sub">' +
       (aiAvailable()
@@ -158,6 +163,9 @@ function reply(p, text, type) {
   const newDay = state.socialDay[p.id] !== state.day;
   const slow = p.personality === 'shy' || p.personality === 'cold';
   let delta = bad ? -7 : newDay ? (slow ? 3 : 7) : 1;
+  // Humöret påverkar: en glad person blir lättare vän, en nere person svårare.
+  const mood = state.society?.mood[p.id] ?? 60;
+  if (newDay && !bad) delta += mood >= 78 ? 2 : mood < 35 ? -2 : 0;
   if (type === 'invite' && r < 15) delta = 0;
   if (homeParty?.guests.includes(p.id) && delta > 0) delta *= 2;
   state.relations[p.id] = clamp(r + socialBoost(delta), -100, 100);
@@ -189,6 +197,11 @@ function reply(p, text, type) {
       gain('happy', 8);
       advance(30);
       response = say(DIALOGUE.kaffe, p);
+      addRumor(
+        'kaffe',
+        { med: p.name.split(' ')[0] },
+        witnessesHere().filter((id) => id !== p.id),
+      );
       toast('Kaffe med ' + p.name.split(' ')[0] + ' · +8 glädje · 30 minuter');
     } else response = say(DIALOGUE.kaffeIgen, p);
   }
