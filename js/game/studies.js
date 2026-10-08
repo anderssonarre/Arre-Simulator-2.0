@@ -56,6 +56,7 @@ function study(i, buddy = null) {
   gain('energy', -8);
   advance(40);
   addXp(courseSkill(i), XP.studiepass);
+  tutorialDone('föreläsning');
   if (buddy) {
     addXp('socialt', XP.pluggaMedVän);
     gain('happy', 5);
@@ -229,35 +230,52 @@ function examResult(i, picks, answers, need) {
     'Tentamen',
   );
 }
+// Hemma: vila eller sov. Offline spolas tiden fram, online sover man medan klockan går
+// (natten går sex gånger fortare för alla, så en natt tar ungefär en och en halv minut).
 function sleep() {
-  const done = state.courses.every((c) => c.pass);
+  const done = state.courses.every((c) => c.pass),
+    online = sharedClock(),
+    night = state.hour >= 21 || state.hour < CLOCK.morning;
   dialog(
     'En stund hemma',
-    '<p>Vila, sov till morgonen' +
+    '<p>Vila, sov' +
       (done && state.term < 8 ? ' eller avsluta terminen' : '') +
-      '.</p>',
+      '.</p>' +
+      (online
+        ? '<p class="sub">Online är klockan gemensam. Du sover medan tiden går, och natten går sex gånger fortare för alla.</p>'
+        : ''),
     [
       {
-        label: 'Vila 1 timme · +35 energi',
+        label: online ? 'Ta en tupplur · 1 timme' : 'Vila 1 timme · +35 energi',
         run: () => {
+          close();
+          tutorialDone('sov');
+          if (online) return startSleep(60, 35, 0, 'Tupplur');
           advance(60);
           gain('energy', 35);
-          close();
           save();
           toast('Lite vila gjorde gott.');
         },
       },
       {
-        label: sharedClock() ? 'Sov ordentligt · +75 energi' : 'Sov till morgonen · +75 energi',
+        label: online
+          ? night
+            ? 'Sov till morgonen · +75 energi'
+            : 'Sov till morgonen (går först efter kl. 21)'
+          : 'Sov till morgonen · +75 energi',
+        disabled: online && !night,
         run: () => {
+          close();
+          tutorialDone('sov');
+          if (online) {
+            const now = state.day * 1440 + state.hour * 60,
+              morning =
+                (state.hour >= CLOCK.morning ? state.day + 1 : state.day) * 1440 +
+                CLOCK.morning * 60;
+            return startSleep(morning - now, 75, 20, 'Natt');
+          }
           gain('energy', 75);
           gain('hunger', -20);
-          close();
-          if (sharedClock()) {
-            save();
-            toast('Du sov gott. Online är klockan gemensam, så tiden spolas inte fram.');
-            return;
-          }
           state.day++;
           state.hour = 8;
           save();
@@ -295,6 +313,47 @@ function sleep() {
     ],
   );
 }
+// Sömnläge: energin fylls på i takt med att speltiden går, tills tiden är ute eller du vaknar.
+function startSleep(minutes, energy, hunger, title) {
+  const now = state.day * 1440 + state.hour * 60;
+  sleeping = { from: now, until: now + minutes, energy, hunger, given: 0, title };
+  document.exitPointerLock?.();
+  keys.clear();
+  $('sleepTitle').textContent = title === 'Natt' ? 'Du sover' : 'Tupplur';
+  $('sleepOverlay').hidden = false;
+  sleepTick();
+}
+function sleepTick() {
+  if (!sleeping) return;
+  const s = sleeping,
+    now = state.day * 1440 + state.hour * 60,
+    p = clamp((now - s.from) / Math.max(1, s.until - s.from), 0, 1),
+    share = p - s.given;
+  if (share > 0) {
+    gain('energy', s.energy * share);
+    if (s.hunger) gain('hunger', -s.hunger * share);
+    s.given = p;
+  }
+  $('sleepText').textContent =
+    clockText(state.hour) + (p < 1 ? ' · vaknar ' + clockText((s.until / 60) % 24) : '');
+  if (p >= 1) wakeUp();
+}
+function wakeUp() {
+  if (!sleeping) return;
+  const full = sleeping.given >= 1,
+    night = sleeping.title === 'Natt';
+  sleeping = null;
+  $('sleepOverlay').hidden = true;
+  save();
+  toast(
+    full
+      ? night
+        ? 'God morgon! Klockan är ' + clockText(state.hour) + '.'
+        : 'Pigg igen efter tuppluren.'
+      : 'Du vaknade tidigt. Energi ' + Math.round(state.stats.energy) + '.',
+  );
+}
+$('wakeButton').onclick = wakeUp;
 // Energin tog slut: du somnar där du står och vaknar hemma nästa morgon.
 function passOut() {
   if (job) return;

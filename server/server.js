@@ -13,11 +13,15 @@ const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.resolve(__dirname, '..');
 const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 40;
 const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
-// Gemensam spelklocka: en sekund i verkligheten är en spelminut, precis som i spelet.
-// Räknas från en fast tidpunkt, så alla får samma tid och den överlever omstarter.
-// Minut 0 är måndag kl. 08:00 på dag 1.
-const CLOCK_EPOCH = Date.UTC(2026, 0, 1);
-const clockMinutes = () => (Date.now() - CLOCK_EPOCH) / 1000 + 8 * 60;
+// Gemensam spelklocka och fredagsfest. Samma uträkning som i spelet (js/shared/clock.js),
+// räknad från en fast tidpunkt så att alla får samma tid och den överlever omstarter.
+const { partyStatus } = require('../js/shared/clock.js');
+const PARTY_FORCE = process.env.PARTY_FORCE === '1'; // för test: festen pågår alltid
+const clockMessage = () => ({
+  t: 'clock',
+  now: Date.now(),
+  party: partyStatus(Date.now(), PARTY_FORCE),
+});
 
 // ---- Statiska filer ----
 const TYPES = {
@@ -278,7 +282,7 @@ wss.on('connection', (ws) => {
       send(ws, {
         t: 'welcome',
         id: me.id,
-        clock: clockMinutes(),
+        clock: clockMessage(),
         players: [...players.values()].filter((p) => p !== me).map(publicInfo),
       });
       broadcast({ t: 'join', p: publicInfo(me) }, me);
@@ -333,7 +337,7 @@ setInterval(() => {
 
 // Klockan skickas ut varje halvminut så att ingen hinner glida isär.
 setInterval(() => {
-  if (players.size) broadcast({ t: 'clock', minutes: clockMinutes() });
+  if (players.size) broadcast(clockMessage());
 }, 30000);
 
 // Släng anslutningar som slutat svara.

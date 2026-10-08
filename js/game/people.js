@@ -39,6 +39,12 @@ function planFor(id, day, hour) {
     if (['fre', 'lör'].includes(weekday(partyDay)) && h >= S.fest.från && h < S.fest.till)
       return { where: 'w33', activity: 'fest' };
   }
+  // Ollis tisdag: festfolket är ute på campus natten mellan tisdag och onsdag.
+  if (S.festfolk.includes(id)) {
+    const night = hour < 3 ? day - 1 : day;
+    if (weekday(night) === 'tis' && (hour >= 22 || hour < 3))
+      return { where: 'outdoor', activity: 'fest' };
+  }
   // Föreläsningar: kurskamrater och lärare.
   for (let i = 0; i < 3; i++) {
     const l = lectureNow(i, day, hour);
@@ -105,7 +111,7 @@ function spotsFor(where, activity, lecture) {
     const st = w.objects.find((o) => o.lectureIndex === lecture);
     list = near(st.x, st.y, 12);
   } else if (activity === 'lunch') list = near(23.5, 21.5, 14);
-  else if (activity === 'fest') list = near(36.5, 12.5, 14);
+  else if (activity === 'fest' && where === 'w33') list = near(36.5, 12.5, 14);
   else if (activity === 'tränar') list = near(6.5, 8.5, 8);
   else if (activity === 'jobbar' && where === 'outdoor') {
     const job = w.objects.find((o) => o.type === 'job');
@@ -359,6 +365,7 @@ function applyPlan(pp, plan, snap) {
 }
 function setupPeople() {
   people.clear();
+  nightPeople.length = 0;
   for (const w of Object.values(worlds)) w.objects = w.objects.filter((o) => !o.profile || o.guest);
   for (const p of [...characters, ...extra]) {
     const o = {

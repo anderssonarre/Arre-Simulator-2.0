@@ -13,6 +13,17 @@ function objective() {
             lectureNow(k).till +
             ':00. Räknas som ett studiepass.',
         };
+  const t = !job && tutorialStep();
+  if (t)
+    return {
+      title: 'Första dagen · ' + t.title,
+      detail: t.detail,
+    };
+  if (!job && partyNow() && !state.graduated)
+    return {
+      title: 'Fredagsfest på Filicia Castle',
+      detail: 'W33 · alla online är där till ' + CLOCK.party.to + '.00. Mer glädje ju fler ni är.',
+    };
   if (job)
     return {
       title: job.title,

@@ -169,7 +169,7 @@ function onlineMessage(m) {
     }
     addChatLine(m.name, m.text, m.id === net.id);
   } else if (m.t === 'clock') {
-    setServerClock(m.minutes, false);
+    setServerClock(m, false);
   } else if (m.t === 'full') {
     toast('Servern är full just nu. Du spelar ensam så länge.');
     net.manualClose = true;
@@ -177,24 +177,33 @@ function onlineMessage(m) {
 }
 // ---- Gemensam klocka ----
 // Online följer alla serverns klocka, så veckodag och tid är samma för alla.
+// Servern skickar sin tid i verkligheten; spelminuterna räknas fram med samma
+// funktion som servern använder (js/shared/clock.js), även när natten går fortare.
 // Ditt eget dagnummer (dag 1, dag 2 ...) behålls: vid anslutning hoppar det fram
 // till närmaste dag med serverns veckodag, och följer sedan servern.
-function setServerClock(minutes, fresh) {
-  if (!Number.isFinite(minutes)) return;
-  const serverDay = Math.floor(minutes / 1440) + 1;
+function setServerClock(m, fresh) {
+  if (!m || !Number.isFinite(m.now)) return;
+  const wasParty = net.party?.active;
+  net.party = m.party || null;
+  const base = { now: m.now, at: performance.now() };
   if (fresh || net.clock?.offset === undefined) {
+    const serverDay = Math.floor(gameMinutesAt(m.now) / 1440) + 1;
     let day = state ? state.day : 1;
     while (weekdayIndex(day) !== weekdayIndex(serverDay)) day++;
-    net.clock = { minutes, at: performance.now(), offset: day - serverDay };
-  } else net.clock = { ...net.clock, minutes, at: performance.now() };
+    net.clock = { ...base, offset: day - serverDay };
+  } else net.clock = { ...net.clock, ...base };
   syncClock();
+  if (state && net.party?.active && !wasParty) partyStarted();
+}
+function serverNow() {
+  return net.clock.now + (performance.now() - net.clock.at);
 }
 function sharedClock() {
   return net.status === 'online' && net.clock;
 }
 function syncClock() {
   if (!sharedClock() || !state) return;
-  const minutes = net.clock.minutes + (performance.now() - net.clock.at) / 1000,
+  const minutes = gameMinutesAt(serverNow()),
     serverDay = Math.floor(minutes / 1440) + 1;
   state.day = serverDay + net.clock.offset;
   state.hour = (minutes % 1440) / 60;

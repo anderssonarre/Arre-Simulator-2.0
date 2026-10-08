@@ -845,3 +845,30 @@ body.touch .toolbar #fullButton {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 13px;
 }
+/* Sömn */
+#sleepOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 40%, #0b1a2acc, #02060cf2);
+}
+#sleepOverlay[hidden] {
+  display: none;
+}
+.sleepBox {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  padding: 22px 28px;
+  border-radius: 16px;
+  text-align: center;
+}
+.sleepBox strong {
+  font-size: 20px;
+}
+.sleepBox span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

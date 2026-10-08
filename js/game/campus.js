@@ -9,6 +9,7 @@ function lunch() {
     return toast('Lunchen kostar ' + price + ' €. Ett extrajobb ger dig råd.');
   state.money -= price;
   state.lunches++;
+  tutorialDone('lunch');
   gain('hunger', 55);
   gain('happy', 5);
   advance(15);
@@ -41,10 +42,29 @@ function wardrobe() {
     'Din stil',
   );
 }
+// ---- Fredagsfesten ----
+// Online startar servern en fest på Filicia Castle varje fredag 20–22 finsk tid (js/shared/clock.js).
+function partyNow() {
+  return !!(sharedClock() && net.party?.active);
+}
+function partyStarted() {
+  toast('Fredagsfest på Filicia Castle i W33! Alla som är online är välkomna till 22.00.');
+  sound('win');
+  updateHUD();
+}
+// Nästa fredagsfest som text, t.ex. "fredag 20.00" eller "pågår till 22.00".
+function partyText() {
+  const p = CLOCK.party;
+  if (partyNow()) return 'pågår nu, till ' + p.to + '.00';
+  return 'fredagar ' + p.from + '.00–' + p.to + '.00 finsk tid';
+}
 function partyPrompt() {
+  if (partyNow()) return fridayParty();
   dialog(
     'Filicia Castle',
-    '<p>Axel och Otto har laddat upp för en campusfest. Musik, färger och ett välbehövligt avbrott från tentorna.</p>',
+    '<p>Axel och Otto har laddat upp för en campusfest. Musik, färger och ett välbehövligt avbrott från tentorna.</p><p class="sub">Fredagsfest för alla online: ' +
+      partyText() +
+      '.</p>',
     [
       {
         label: party ? 'Festen pågår · dansa' : 'Starta festen och dansa',
@@ -63,5 +83,44 @@ function partyPrompt() {
       { label: 'Inte nu', run: close },
     ],
     'Campusfest',
+  );
+}
+// Den gemensamma festen ger mer ju fler riktiga spelare som är där, en gång per fest.
+function fridayParty() {
+  const key = net.party.nextAt,
+    friends = remotesHere().length,
+    bonus = Math.min(20, friends * 5),
+    done = state.fridayParty === key;
+  dialog(
+    'Fredagsfest',
+    '<p>Hela campus är på Filicia Castle. ' +
+      (friends
+        ? friends + (friends === 1 ? ' annan spelare är' : ' andra spelare är') + ' här just nu.'
+        : 'Inga andra spelare här än. Ju fler ni är, desto bättre fest.') +
+      '</p><div class="info">+25 glädje · +' +
+      bonus +
+      ' för kompisarna här · socialt +' +
+      XP.fest * 2 +
+      ' XP</div>',
+    [
+      {
+        label: done ? 'Du har redan dansat på den här festen' : 'Dansa',
+        primary: true,
+        disabled: done,
+        run: () => {
+          state.fridayParty = key;
+          party = true;
+          addXp('socialt', XP.fest * 2);
+          gain('happy', 25 + bonus);
+          gain('energy', -8);
+          close();
+          save();
+          sound('win');
+          toast('Fredagsfest! +' + (25 + bonus) + ' glädje.');
+        },
+      },
+      { label: 'Inte nu', run: close },
+    ],
+    'Fredagsfest',
   );
 }

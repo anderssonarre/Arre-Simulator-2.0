@@ -105,6 +105,7 @@ function finishJob() {
     double = state.doubleJobDay === state.day,
     pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1) * payBoost());
   addXp('arbetsvana', XP.jobbpass);
+  tutorialDone('jobb');
   addXp(JOB_SKILL[p.id] || 'teknik', XP.jobbpass);
   state.money += pay;
   state.runs++;

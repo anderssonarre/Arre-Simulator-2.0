@@ -17,6 +17,8 @@ function ensureProgress() {
   s.termStartDay = Number.isInteger(s.termStartDay) ? s.termStartDay : s.day;
   s.lastPassDay = Number.isFinite(s.lastPassDay) ? s.lastPassDay : 0;
   for (const c of s.courses) c.lectures ??= 0;
+  // Äldre sparningar har redan spelat: ingen introduktion.
+  if (!Array.isArray(s.tutorial)) s.tutorial = null;
 }
 
 // ---- Färdigheter ----
@@ -185,7 +187,7 @@ function storyTick() {
     state.storyDay = state.day;
     state.storyPending = true;
   }
-  if (state.storyPending && active && !modal && !job && state.hour >= 7) {
+  if (state.storyPending && active && !modal && !job && !sleeping && !tutorialEnding && state.hour >= 7) {
     state.storyPending = false;
     morningEvent(0.55);
   }

@@ -81,6 +81,7 @@ function attendLecture(i) {
     delete c.retake;
   }
   c.lectures = (c.lectures || 0) + 1;
+  tutorialDone('föreläsning');
   addXp(courseSkill(i), XP.föreläsning);
   const minutes = Math.max(20, Math.round((l.till - state.hour) * 60));
   advance(minutes);
@@ -127,7 +128,8 @@ function showWeek() {
           items.push([l.från, course(i).name + ' · ' + LECTURE_ROOM[i].name, 'Föreläsning']),
         ),
     );
-    if (d === 4 || d === 5) items.push([20, 'Filicia Castle · W33', 'Fest']);
+    if (d === 4) items.push([20, 'Fredagsfest för alla online · Filicia Castle', 'Fest']);
+    if (d === 5) items.push([20, 'Filicia Castle · W33', 'Fest']);
     items.sort((a, b) => a[0] - b[0]);
     rows.push(
       '<div class="course' +

@@ -72,6 +72,13 @@
       />
       <button type="submit" class="primary">Skicka</button>
     </form>
+    <div id="sleepOverlay" hidden>
+      <div class="sleepBox glass">
+        <strong id="sleepTitle">Du sover</strong>
+        <span id="sleepText"></span>
+        <button id="wakeButton" class="primary">Vakna</button>
+      </div>
+    </div>
     <div id="lockHint" class="glass">Klicka i bilden för att styra med musen</div>
     <div id="toast" class="glass" role="status"></div>
     <div id="saving">Sparat</div>
@@ -134,6 +141,7 @@
     </div>
     <input id="importFile" type="file" accept=".json,application/json" hidden />
     <script src="js/core.js"></script>
+    <script src="js/shared/clock.js"></script>
     <script src="js/data/characters.js"></script>
     <script src="js/data/curriculum.js"></script>
     <script src="js/data/events.js"></script>
@@ -161,8 +169,10 @@
     <script src="js/game/jobs.js"></script>
     <script src="js/game/events.js"></script>
     <script src="js/game/progress.js"></script>
+    <script src="js/game/tutorial.js"></script>
     <script src="js/game/homeparty.js"></script>
     <script src="js/game/people.js"></script>
+    <script src="js/game/nightlife.js"></script>
     <script src="js/ui/menu.js"></script>
     <script src="js/game/movement.js"></script>
     <script src="js/game/update.js"></script>

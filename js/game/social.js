@@ -182,6 +182,7 @@ function reply(p, text, type) {
         ' är nu din vän.' +
         (studyTopics.some((t) => t.includes(p.topic)) ? ' Ni kan plugga tillsammans.' : ''),
     );
+  tutorialDone('prata');
   remember(p, 'you', text);
   remember(p, 'npc', response);
   gain('happy', bad ? -3 : newDay ? 5 : 1);

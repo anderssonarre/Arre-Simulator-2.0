@@ -491,4 +491,22 @@ const EVENT_DATA = [
       { text: 'Nästa gång', effekt: { relation: { albin: -1 } } },
     ],
   },
+  {
+    id: 'onsdag-efter-ollis',
+    taggar: ['vardag', 'social'],
+    person: 'axel',
+    upprepas: true,
+    vikt: 3,
+    dagar: ['ons'],
+    titel: 'Onsdag efter Ollis',
+    text: 'Halva campus ser ut att ha varit på Ollis tisdag. Axel sitter i W33 med solglasögon inomhus och en liter vatten.',
+    val: [
+      {
+        text: 'Bjud honom på kaffe · −2 €',
+        kräver: { pengarMinst: 2 },
+        effekt: { pengar: -2, relation: { axel: 5 }, glädje: 3 },
+      },
+      { text: 'Skratta åt honom', effekt: { glädje: 4, relation: { axel: -1 } } },
+    ],
+  },
 ];

@@ -359,7 +359,13 @@ function render() {
       sh = (o.height || 1) * scale,
       spr = o.sprite,
       sw = spr ? (sh * spr.width) / spr.height : 0,
-      px = W / 2 + it.lateral * scale - sw / 2;
+      // Berusade (nattfolk och festfolk ute) vinglar åt sidorna.
+      tipsy = o.drunk || (o.activity === 'fest' && w.id === 'outdoor'),
+      px =
+        W / 2 +
+        it.lateral * scale -
+        sw / 2 +
+        (tipsy ? Math.sin(frame * 0.05 + (o.phase || 0)) * scale * 0.09 : 0);
     let bob = o.profile ? Math.sin(frame * 0.055 + (o.phase || 0)) * scale * 0.005 : 0;
     if (party && o.profile && w.id === 'w33' && o.x > 33 && o.y < 16)
       bob = Math.sin(frame * 0.17 + o.phase) * scale * 0.045;

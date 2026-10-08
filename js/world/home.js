@@ -741,6 +741,7 @@ function cookAtHome() {
   if (state.money < 3)
     return toast('Kylskåpet är tomt. Det kostar 3 € att handla till en enkel middag.');
   state.money -= 3;
+  tutorialDone('lunch');
   gain('hunger', 35);
   gain('happy', 2);
   advance(25);

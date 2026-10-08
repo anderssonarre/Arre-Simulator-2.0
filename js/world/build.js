@@ -232,6 +232,7 @@ function changeWorld(id, spawn) {
   touch.x = touch.y = 0;
   close();
   sound();
+  tutorialDone('world:' + id);
   updateHUD();
   save();
 }

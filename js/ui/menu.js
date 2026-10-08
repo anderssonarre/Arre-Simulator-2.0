@@ -29,6 +29,9 @@ function menu() {
           else close();
         },
       },
+      ...(tutorialStep()
+        ? [{ label: 'Hoppa över introduktionen', run: skipTutorial }]
+        : []),
       { label: 'Veckoschema', run: showWeek },
       { label: 'Studieplan och betyg', run: showCourses },
       { label: 'Färdigheter och ekonomi', run: showProgress },

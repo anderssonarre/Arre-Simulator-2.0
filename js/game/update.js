@@ -49,6 +49,22 @@ function update(dt) {
   onlineTick(dt);
   storyTick();
   if (!active || modal || document.hidden) return;
+  if (sleeping) {
+    // Under sömnen står allt still för dig, men världen och klockan går vidare.
+    if (!sharedClock()) {
+      const hours = state.hour + (dt * clockRate(state.hour)) / 60;
+      state.day += Math.floor(hours / 24);
+      state.hour = hours % 24;
+    }
+    sleepTick();
+    peopleTick(dt);
+    hudTimer += dt;
+    if (hudTimer > 0.2) {
+      hudTimer = 0;
+      updateHUD();
+    }
+    return;
+  }
   const f =
       (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -
       (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) -
@@ -72,8 +88,8 @@ function update(dt) {
     $('jobHUD').style.display = 'none';
   }
   if (!sharedClock()) {
-    // Online går klockan efter servern (se online.js).
-    const hours = state.hour + dt / 60;
+    // Online går klockan efter servern (se online.js). Natten går fortare, se js/shared/clock.js.
+    const hours = state.hour + (dt * clockRate(state.hour)) / 60;
     state.day += Math.floor(hours / 24);
     state.hour = hours % 24;
   }
@@ -86,6 +102,7 @@ function update(dt) {
     state.stats.happy = Math.max(0, state.stats.happy - dt * 0.06);
   }
   if (state.stats.energy <= 0 && !modal && !job) passOut();
+  if (partyNow() && world.id === 'w33') party = true;
   if (party && world.id === 'w33' && player.x > 13 && player.y < 9)
     state.stats.happy = clamp(state.stats.happy + dt * 0.3, 0, 100);
   noticeTimer -= dt;
@@ -117,6 +134,7 @@ function update(dt) {
   }
   partyTick(dt);
   peopleTick(dt);
+  nightlifeTick(dt);
   saveTimer += dt;
   if (saveTimer > 12) {
     saveTimer = 0;
