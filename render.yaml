@@ -12,3 +12,6 @@ services:
       # finns kvar när servern startas om. Utan den sparas de bara tills nästa omstart.
       - key: DATABASE_URL
         sync: false
+      # Valfritt: Claude-nyckel för AI-samtal med personerna (se README).
+      - key: ANTHROPIC_API_KEY
+        sync: false

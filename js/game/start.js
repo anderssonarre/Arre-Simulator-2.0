@@ -24,6 +24,10 @@ function start(s) {
   updateHUD();
   save();
   toast('Välkommen, ' + profile().name.split(' ')[0] + '. Ditt liv på campus börjar nu.');
+  if (Array.isArray(s.tutorial) && !s.tutorial.length && !s.startTracked) {
+    s.startTracked = true;
+    setTimeout(() => track('start'), 2500);
+  }
   if (tutorialStep()) setTimeout(() => tutorialStep() && toast(tutorialStep().tip), 4200);
   setupPeople();
   onlineConnect();

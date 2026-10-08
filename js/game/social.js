@@ -84,8 +84,24 @@ function chat(p) {
       r +
       ')</span><div class="history">' +
       history +
-      '</div><input id="chatInput" type="text" maxlength="180" placeholder="Skriv en egen replik …" aria-label="Din replik"><p class="sub">Lokala dialoger som minns tidigare repliker. Inget internet krävs.</p>',
+      '</div><input id="chatInput" type="text" maxlength="180" placeholder="Skriv en egen replik …" aria-label="Din replik"><p class="sub">' +
+      (aiAvailable()
+        ? 'Personerna svarar med AI (Claude Haiku) och minns vad ni pratat om.'
+        : 'Lokala dialoger som minns tidigare repliker. Inget internet krävs.') +
+      '</p>',
     [
+      ...(aiOffer[p.id] === 'kaffe'
+        ? [
+            {
+              label: 'Ja, gärna kaffe!',
+              primary: true,
+              run: () => {
+                delete aiOffer[p.id];
+                reply(p, 'Ja, gärna kaffe!', 'invite');
+              },
+            },
+          ]
+        : []),
       { label: 'Hur går det idag?', run: () => reply(p, 'Hur går det idag?', 'hello') },
       {
         label: 'Prata om ' + p.topic,
@@ -184,7 +200,13 @@ function reply(p, text, type) {
     );
   tutorialDone('prata');
   remember(p, 'you', text);
-  remember(p, 'npc', response);
+  if (aiAvailable() && !bad && type !== 'invite') {
+    // Personen "skriver": svaret från AI fylls i när det kommer.
+    const entry = { who: 'npc', text: '…', pending: true };
+    state.histories[p.id].push(entry);
+    state.histories[p.id] = state.histories[p.id].slice(-16);
+    aiReply(p, text, entry, response);
+  } else remember(p, 'npc', response);
   gain('happy', bad ? -3 : newDay ? 5 : 1);
   advance(3);
   save();

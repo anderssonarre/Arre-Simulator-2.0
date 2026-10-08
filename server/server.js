@@ -8,6 +8,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { WebSocketServer } = require('ws');
 const { openStore } = require('./store');
+const ai = require('./ai');
+const stats = require('./stats');
 
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = path.resolve(__dirname, '..');
@@ -47,7 +49,27 @@ const server = http.createServer((req, res) => {
   }
   if (url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(JSON.stringify({ ok: true, players: players.size, accounts: !!store }));
+    res.end(
+      JSON.stringify({ ok: true, players: players.size, accounts: !!store, ai: ai.enabled() }),
+    );
+    return;
+  }
+  if (url === '/stats') {
+    if (!store) return res.writeHead(503).end('Statistiken är inte igång.');
+    const key = process.env.STATS_KEY,
+      show = !key || new URL(req.url, 'http://x').searchParams.get('key') === key;
+    Promise.all([store.getStats(), show ? store.getFeedback(40) : null])
+      .then(([s, f]) => {
+        res.writeHead(200, {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-store',
+        });
+        res.end(stats.statsPage(s, f));
+      })
+      .catch((e) => {
+        console.error(e);
+        res.writeHead(500).end();
+      });
     return;
   }
   if (url.startsWith('/api/')) {
@@ -145,8 +167,56 @@ async function sessionKey(req) {
   const s = await store.getSession(sha(m[1]));
   return s ? s.key : null;
 }
+const eventLog = new Map();
+function eventFlood(ip) {
+  const now = Date.now(),
+    list = (eventLog.get(ip) || []).filter((t) => now - t < 36e5);
+  list.push(now);
+  eventLog.set(ip, list);
+  return list.length > 300;
+}
+const noAi = (res) => res.writeHead(204, { 'cache-control': 'no-store' }).end();
+const clientIp = (req) =>
+  (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 async function handleApi(req, res, url) {
+  // AI-samtal med personerna. Svarar 204 när AI inte finns eller taket är nått: då tar spelet
+  // sina färdiga repliker i stället.
+  if (url === '/api/talk' && req.method === 'POST') {
+    if (!ai.enabled()) return noAi(res);
+    let body;
+    try {
+      body = await readBody(req, 8192);
+    } catch {
+      return json(res, 413, {});
+    }
+    if (!body || typeof body.text !== 'string' || !body.text.trim()) return json(res, 400, {});
+    if (!ai.allowed(clientIp(req))) return noAi(res);
+    try {
+      return json(res, 200, await ai.talk(body));
+    } catch (e) {
+      console.error('AI:', e.message);
+      return noAi(res);
+    }
+  }
   if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
+  // Anonym statistik och "tyck till". Högst 300 per timme och adress.
+  if ((url === '/api/event' || url === '/api/feedback') && req.method === 'POST') {
+    if (eventFlood(clientIp(req))) return json(res, 429, {});
+    let body;
+    try {
+      body = await readBody(req, 4096);
+    } catch {
+      return json(res, 400, {});
+    }
+    if (url === '/api/feedback') {
+      const f = stats.cleanFeedback(body);
+      if (f) await store.addFeedback(f);
+      return json(res, f ? 200 : 400, {});
+    }
+    const c = stats.countersFor(body);
+    if (c) await store.addStats(c);
+    return json(res, c ? 200 : 400, {});
+  }
   try {
     if (url === '/api/register' && req.method === 'POST') {
       if (tooMany(req)) return json(res, 429, { error: 'För många försök. Vänta en minut.' });

@@ -9,7 +9,7 @@ COPY index.html ./
 COPY css css
 COPY js js
 COPY img img
-COPY server/server.js server/store.js server/
+COPY server/server.js server/store.js server/ai.js server/stats.js server/
 # Konton och sparningar hamnar i /app/data. Montera en volym där för att behålla dem:
 #   docker run -p 8080:8080 -v arre-data:/app/data arre-simulator
 RUN mkdir -p /app/data && chown node:node /app/data

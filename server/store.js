@@ -7,7 +7,7 @@ const path = require('node:path');
 
 function fileStore(dir) {
   const file = path.join(dir, 'arre-db.json');
-  let db = { users: {}, saves: {}, sessions: {} };
+  let db = { users: {}, saves: {}, sessions: {}, stats: {}, feedback: [] };
   try {
     db = { ...db, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
   } catch {}
@@ -49,6 +49,22 @@ function fileStore(dir) {
       delete db.sessions[hash];
       persist();
     },
+    // Anonyma räknare för statistiksidan.
+    async addStats(delta) {
+      for (const [k, n] of Object.entries(delta)) db.stats[k] = (db.stats[k] || 0) + n;
+      persist();
+    },
+    async getStats() {
+      return { ...db.stats };
+    },
+    async addFeedback(f) {
+      db.feedback.push(f);
+      db.feedback = db.feedback.slice(-200);
+      persist();
+    },
+    async getFeedback(n) {
+      return db.feedback.slice(-n).reverse();
+    },
     flush,
   };
 }
@@ -66,6 +82,10 @@ async function pgStore(url, pgModule) {
     key text primary key, data text not null, saved_at bigint not null)`);
   await pool.query(`create table if not exists arre_sessions (
     hash text primary key, key text not null, created bigint not null)`);
+  await pool.query(`create table if not exists arre_stats (
+    key text primary key, n double precision not null)`);
+  await pool.query(`create table if not exists arre_feedback (
+    id serial primary key, created bigint not null, fun text, stuck text, missing text)`);
   return {
     kind: 'postgres',
     async getUser(key) {
@@ -107,6 +127,30 @@ async function pgStore(url, pgModule) {
     },
     async deleteSession(hash) {
       await pool.query('delete from arre_sessions where hash = $1', [hash]);
+    },
+    async addStats(delta) {
+      for (const [k, n] of Object.entries(delta))
+        await pool.query(
+          'insert into arre_stats (key, n) values ($1, $2) on conflict (key) do update set n = arre_stats.n + excluded.n',
+          [k, n],
+        );
+    },
+    async getStats() {
+      const r = await pool.query('select key, n from arre_stats');
+      return Object.fromEntries(r.rows.map((x) => [x.key, Number(x.n)]));
+    },
+    async addFeedback(f) {
+      await pool.query(
+        'insert into arre_feedback (created, fun, stuck, missing) values ($1, $2, $3, $4)',
+        [f.created, f.fun, f.stuck, f.missing],
+      );
+    },
+    async getFeedback(n) {
+      const r = await pool.query(
+        'select created, fun, stuck, missing from arre_feedback order by id desc limit $1',
+        [n],
+      );
+      return r.rows.map((x) => ({ ...x, created: Number(x.created) }));
     },
     flush() {},
   };

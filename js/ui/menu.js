@@ -48,6 +48,7 @@ function menu() {
             },
           ]
         : []),
+      ...(serverInfo ? [{ label: 'Tyck till om spelet', run: feedbackDialog }] : []),
       { label: 'Platsbilder och ritningsunderlag', run: showSources },
       {
         label: 'Grafik: ' + (highDetail ? 'HD' : 'Mobil') + ' · byt',

@@ -1,0 +1,15 @@
+name: Tester
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd server && npm install --omit=dev
+      - name: Syntaxkoll av alla skript
+        run: for f in js/*.js js/*/*.js server/*.js; do node --check "$f" || exit 1; done
+      - name: Tester
+        run: node --test tests/*.test.js

@@ -17,6 +17,9 @@ function ensureProgress() {
   s.termStartDay = Number.isInteger(s.termStartDay) ? s.termStartDay : s.day;
   s.lastPassDay = Number.isFinite(s.lastPassDay) ? s.lastPassDay : 0;
   for (const c of s.courses) c.lectures ??= 0;
+  // Svar från AI som aldrig hann komma innan spelet stängdes.
+  for (const id of Object.keys(s.histories || {}))
+    s.histories[id] = s.histories[id].filter((h) => !h.pending);
   // Äldre sparningar har redan spelat: ingen introduktion.
   if (!Array.isArray(s.tutorial)) s.tutorial = null;
 }
@@ -132,6 +135,8 @@ function weeklyEconomy() {
   }
   if (state.debt > 0 && missing === 0) payDebt();
   if (state.debt > 0) gain('happy', -8);
+  track('week', { debt: state.debt, jobs: state.weekJobs || 0 });
+  state.weekJobs = 0;
   // Vänner man inte har träffat på länge svalnar lite.
   const cooled = [];
   for (const [id, r] of Object.entries(state.relations)) {
@@ -187,7 +192,15 @@ function storyTick() {
     state.storyDay = state.day;
     state.storyPending = true;
   }
-  if (state.storyPending && active && !modal && !job && !sleeping && !tutorialEnding && state.hour >= 7) {
+  if (
+    state.storyPending &&
+    active &&
+    !modal &&
+    !job &&
+    !sleeping &&
+    !tutorialEnding &&
+    state.hour >= 7
+  ) {
     state.storyPending = false;
     morningEvent(0.55);
   }

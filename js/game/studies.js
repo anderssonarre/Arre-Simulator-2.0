@@ -178,6 +178,7 @@ function examResult(i, picks, answers, need) {
   if (right >= need) {
     const grade = examGrade(i, right, picks.length),
       reasons = gradeReasons(i, right, picks.length);
+    track('exam', { pass: true, grade, retake: !!c.failed });
     c.pass = true;
     recordPass(i, grade);
     addXp(courseSkill(i), XP.tentaGodkänd);
@@ -205,6 +206,7 @@ function examResult(i, picks, answers, need) {
     return;
   }
   const wrong = picks.filter((_, n) => !answers[n]);
+  track('exam', { pass: false, retake: !!c.failed });
   c.study = 1;
   c.retake = true;
   c.failed = true;
@@ -299,6 +301,7 @@ function sleep() {
                   { study: 0, pass: false, lectures: 0 },
                 ];
                 state.termStartDay = state.day;
+                track('term');
                 gain('energy', 80);
                 gain('happy', 15);
                 close();

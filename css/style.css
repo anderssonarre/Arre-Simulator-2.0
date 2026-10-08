@@ -872,3 +872,17 @@ body.touch .toolbar #fullButton {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+/* Tyck till */
+#fbFun,
+#fbStuck,
+#fbMissing {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+/* På smala skärmar hamnar meddelanden under målrutan i stället för över den. */
+@media (max-width: 600px) {
+  #toast {
+    top: 38%;
+    max-width: 88%;
+  }
+}

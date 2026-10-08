@@ -30,6 +30,26 @@ Hem och extrajobb är privata. Online följer alla serverns klocka (en sekund ä
 spelminut), så veckodag och tid är samma för alla. Sömn ger energi men spolar inte fram
 tiden när man är online.
 
+Natten (23–07) går sex gånger fortare för alla. Fredagar 20–22 finsk tid blir det fest på
+Filicia Castle för alla som är online.
+
+### AI-samtal (valfritt)
+
+Sätt miljövariabeln `ANTHROPIC_API_KEY` på servern (Render: Environment) så svarar personerna
+med Claude Haiku och minns vad ni pratat om. Nyckeln finns bara på servern. Taket styrs med
+`AI_DAILY_LIMIT` (samtal per dygn, standard 1500) och `AI_HOURLY_LIMIT` (per spelare och timme,
+standard 60). Utan nyckel, eller när taket är nått, används de färdiga replikerna.
+
+### Statistik och "Tyck till"
+
+Spelet skickar anonyma siffror till servern (sessionslängd, tentaresultat, skuld per vecka och hur
+långt nya spelare kommer under första dagen). De visas på `/stats` jämfört med balansmålen. Svaren
+från "Tyck till" i menyn visas också där. Sätt `STATS_KEY` för att kräva `/stats?key=...` för svaren.
+
+### Tester
+
+`node --test tests/*.test.js` kör de snabba testerna. GitHub kör dem också vid varje push.
+
 Render bygger inte om av sig självt när repot ägs av någon annan. Efter en push:
 Manual Deploy → Deploy latest commit.
 
