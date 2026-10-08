@@ -103,7 +103,9 @@ function finishJob() {
   job = null;
   const happyBonus = state.stats.happy >= 70,
     double = state.doubleJobDay === state.day,
-    pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1));
+    pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1) * payBoost());
+  addXp('arbetsvana', XP.jobbpass);
+  addXp(JOB_SKILL[p.id] || 'teknik', XP.jobbpass);
   state.money += pay;
   state.runs++;
   advance(60);
@@ -119,11 +121,18 @@ function finishJob() {
       ' är avslutat. Du får <strong style="color:var(--mint)">' +
       pay +
       ' €</strong>.</p>' +
-      (happyBonus || double
+      (happyBonus || double || skillLevel('arbetsvana')
         ? '<p>' +
           [
             double ? 'Dubbel lön från Ossi idag.' : '',
             happyBonus ? 'Ditt goda humör gav 25 % bonus.' : '',
+            skillLevel('arbetsvana')
+              ? 'Arbetsvana nivå ' +
+                skillLevel('arbetsvana') +
+                ' gav +' +
+                Math.round((payBoost() - 1) * 100) +
+                ' %.'
+              : '',
           ]
             .filter(Boolean)
             .join(' ') +
@@ -323,6 +332,7 @@ function showGymTiming() {
           advance(20);
           gain('energy', -5);
           gain('happy', 12);
+          addXp('kondition', XP.gymset);
           close();
           save();
           toast('Bra set! +12 glädje, −5 energi.');

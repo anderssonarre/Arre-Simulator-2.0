@@ -819,3 +819,29 @@ body.touch .toolbar #fullButton {
     display: none;
   }
 }
+/* Färdigheter och ekonomi */
+.skillbar {
+  height: 5px;
+  width: min(220px, 52vw);
+  margin-top: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.skillbar i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+}
+#dialogBody h3 {
+  margin: 16px 0 6px;
+  font-size: 15px;
+}
+.ledger {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+}

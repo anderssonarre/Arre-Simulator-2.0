@@ -13,8 +13,9 @@ function relation(p) {
   return state.relations[p.id] || 0;
 }
 // Ändrar relationen till en person med n poäng.
+// Socialt gör att positiva ändringar blir lite större.
 function bump(id, n) {
-  state.relations[id] = clamp((state.relations[id] || 0) + n, -100, 100);
+  state.relations[id] = clamp((state.relations[id] || 0) + socialBoost(n), -100, 100);
 }
 // Vilka ämnen i en persons profil som hjälper i respektive kurs (0 = W33, 1 och 2 = Technobothnia).
 const studyTopics = [
@@ -143,7 +144,8 @@ function reply(p, text, type) {
   let delta = bad ? -7 : newDay ? (slow ? 3 : 7) : 1;
   if (type === 'invite' && r < 15) delta = 0;
   if (homeParty?.guests.includes(p.id) && delta > 0) delta *= 2;
-  state.relations[p.id] = clamp(r + delta, -100, 100);
+  state.relations[p.id] = clamp(r + socialBoost(delta), -100, 100);
+  if (newDay && !bad) addXp('socialt', XP.samtal);
   state.socialDay[p.id] = state.day;
   const keyword = DIALOGUE.nyckelord.find((k) => k.ord.some((o) => lower.includes(o)));
   let response = bad
@@ -167,6 +169,7 @@ function reply(p, text, type) {
     if (state.hangout[p.id] !== state.day) {
       state.hangout[p.id] = state.day;
       bump(p.id, 4);
+      addXp('socialt', XP.kaffe);
       gain('happy', 8);
       advance(30);
       response = say(DIALOGUE.kaffe, p);

@@ -80,6 +80,8 @@ function attendLecture(i) {
     c.study = c.retake ? 2 : c.study + 1;
     delete c.retake;
   }
+  c.lectures = (c.lectures || 0) + 1;
+  addXp(courseSkill(i), XP.föreläsning);
   const minutes = Math.max(20, Math.round((l.till - state.hour) * 60));
   advance(minutes);
   gain('energy', -5);
@@ -99,7 +101,11 @@ function attendLecture(i) {
       tipList(cs, [0, 1, 2, 3, 4]) +
       '<p class="sub">' +
       (pass ? 'Räknas som ett studiepass. ' : '') +
-      'Energi −5' +
+      'Höjer betyget på tentan. ' +
+      SKILLS[courseSkill(i)].namn +
+      ' +' +
+      XP.föreläsning +
+      ' XP · energi −5' +
       (mates.length ? ' · relation +2 med kurskamraterna' : '') +
       '</p>',
     [{ label: 'Klar', primary: true, run: close }],

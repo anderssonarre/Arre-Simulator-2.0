@@ -10,8 +10,21 @@ const EFFECT_KEYS = [
   'studiepass',
   'flagga',
   'meddelande',
+  'färdighet',
+  'följs',
+  'betalaSkuld',
 ];
-const CONDITION_KEYS = ['kursEjKlar', 'pengarMinst', 'relationMinst'];
+const CONDITION_KEYS = [
+  'kursEjKlar',
+  'pengarMinst',
+  'pengarHögst',
+  'skuldMinst',
+  'relationMinst',
+  'färdighetMinst',
+  'snittMinst',
+  'tentaRedo',
+];
+const TAGS = ['vardag', 'chans', 'kris', 'följd', 'social', 'studier'];
 const EVENT_KEYS = [
   'id',
   'titel',
@@ -22,6 +35,9 @@ const EVENT_KEYS = [
   'dagar',
   'villkor',
   'val',
+  'taggar',
+  'vikt',
+  'uppföljning',
 ];
 const allPeople = () => [...characters, ...extra];
 
@@ -38,6 +54,7 @@ function checkContent() {
       warn(e, 'okänd person "' + e.person + '"');
     for (const d of e.dagar || []) if (!WEEKDAYS.includes(d)) warn(e, 'okänd dag "' + d + '"');
     if (!Array.isArray(e.val) || !e.val.length) warn(e, 'behöver minst ett val');
+    for (const t of e.taggar || []) if (!TAGS.includes(t)) warn(e, 'okänd tagg "' + t + '"');
     for (const v of e.val || []) {
       for (const k of Object.keys(v.effekt || {}))
         if (!EFFECT_KEYS.includes(k)) warn(e, 'okänd effekt "' + k + '"');
@@ -45,6 +62,11 @@ function checkContent() {
         if (!CONDITION_KEYS.includes(k)) warn(e, 'okänt krav "' + k + '"');
       for (const id of Object.keys(v.effekt?.relation || {}))
         if (!allPeople().some((p) => p.id === id)) warn(e, 'okänd person "' + id + '" i relation');
+      for (const k of Object.keys(v.effekt?.färdighet || {}))
+        if (!SKILLS[k]) warn(e, 'okänd färdighet "' + k + '"');
+      const f = v.effekt?.följs;
+      if (f && !EVENT_DATA.some((x) => x.id === f.id))
+        warn(e, 'följs av okänd händelse "' + f.id + '"');
     }
     for (const k of Object.keys(e.villkor || {}))
       if (!CONDITION_KEYS.includes(k)) warn(e, 'okänt villkor "' + k + '"');
@@ -62,6 +84,12 @@ function conditionsMet(c = {}) {
     if (!k || k.pass || k.study >= 2 || k.retake) return false;
   }
   if (c.pengarMinst != null && state.money < c.pengarMinst) return false;
+  if (c.pengarHögst != null && state.money > c.pengarHögst) return false;
+  if (c.skuldMinst != null && (state.debt || 0) < c.skuldMinst) return false;
+  if (c.snittMinst != null && (!state.transcript?.length || gradeAverage() < c.snittMinst))
+    return false;
+  if (c.tentaRedo && !state.courses.some((k) => !k.pass && k.study >= 2 && !k.retake)) return false;
+  for (const [k, n] of Object.entries(c.färdighetMinst || {})) if (skillLevel(k) < n) return false;
   for (const [id, n] of Object.entries(c.relationMinst || {}))
     if ((state.relations[id] || 0) < n) return false;
   return true;
@@ -82,24 +110,37 @@ function applyEffect(e = {}) {
   }
   if (e.flagga === 'lunchkampanj') state.cheapLunchDay = state.day;
   if (e.flagga === 'dubbelLön') state.doubleJobDay = state.day;
+  for (const [k, n] of Object.entries(e.färdighet || {})) addXp(k, n);
+  if (e.betalaSkuld) payDebt();
+  if (e.följs) state.storyQueue.push({ id: e.följs.id, day: state.day + (e.följs.omDagar || 1) });
   if (e.meddelande) setTimeout(() => toast(fillText(e.meddelande)), 300);
 }
-// Visar en slumpad händelse som passar just nu. chance styr hur ofta något händer.
+// Berättaren väljer en händelse som passar läget. Uppföljningar i en kedja går först.
+// chance styr hur ofta något händer en vanlig dag.
 function morningEvent(chance = 0.5) {
-  if (Math.random() > chance) return;
   state.seenEvents ??= [];
-  const today = weekday(state.day),
-    list = EVENT_DATA.filter(
-      (e) =>
-        (e.upprepas || !state.seenEvents.includes(e.id)) &&
-        (e.frånTermin || 1) <= state.term &&
-        e.person !== state.character &&
-        (!e.dagar || e.dagar.includes(today)) &&
-        conditionsMet(e.villkor),
-    );
-  if (!list.length) return;
-  const e = rand(list);
+  let e = dueChainEvent();
+  if (!e) {
+    if (Math.random() > chance) return;
+    const today = weekday(state.day),
+      list = EVENT_DATA.filter(
+        (x) =>
+          !x.uppföljning &&
+          (x.upprepas || !state.seenEvents.includes(x.id)) &&
+          (x.frånTermin || 1) <= state.term &&
+          x.person !== state.character &&
+          (!x.dagar || x.dagar.includes(today)) &&
+          conditionsMet(x.villkor),
+      );
+    if (!list.length) return;
+    const mood = storyMood();
+    e = weightedPick(list, (x) => storyWeight(x, mood));
+  }
   if (!e.upprepas) state.seenEvents.push(e.id);
+  if (e.taggar?.includes('kris')) state.lastCrisisDay = state.day;
+  showEvent(e);
+}
+function showEvent(e) {
   save();
   dialog(
     fillText(e.titel),
@@ -118,4 +159,5 @@ function morningEvent(chance = 0.5) {
     'Händelse',
   );
 }
-checkContent();
+// Kollas när allt har laddats, eftersom färdigheterna ligger i en senare fil.
+addEventListener('load', checkContent);

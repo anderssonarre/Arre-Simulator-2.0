@@ -66,7 +66,8 @@ function updateHUD() {
   $('place').textContent = world.name + (party ? ' · Filicia fest' : '');
   $('mapTitle').textContent =
     world.id === 'outdoor' ? 'CAMPUS' : world.id === 'home' ? 'HEMMET' : world.id.toUpperCase();
-  $('money').textContent = state.money + ' €';
+  $('money').textContent = state.money + ' €' + (state.debt ? ' · skuld ' + state.debt : '');
+  $('money').style.color = state.debt ? '#ed807b' : '';
   const h = Math.floor(state.hour),
     m = Math.floor((state.hour - h) * 60);
   $('time').textContent =

@@ -55,7 +55,9 @@ function study(i, buddy = null) {
   delete c.retake;
   gain('energy', -8);
   advance(40);
+  addXp(courseSkill(i), XP.studiepass);
   if (buddy) {
+    addXp('socialt', XP.pluggaMedVän);
     gain('happy', 5);
     bump(buddy.id, 3);
     state.studiedWith ??= {};
@@ -72,6 +74,11 @@ function study(i, buddy = null) {
       '</p><p>Dagens anteckningar:</p>' +
       tipList(cs, tips) +
       '<p class="sub">Studietid: 40 minuter. Energi: −8.' +
+      ' ' +
+      SKILLS[courseSkill(i)].namn +
+      ' +' +
+      XP.studiepass +
+      ' XP.' +
       (c.study >= 2 ? ' Du är redo för tentan.' : '') +
       '</p>',
     [{ label: 'Tillbaka till campuslivet', primary: true, run: close }],
@@ -124,7 +131,23 @@ function exam(i) {
         ? '<div class="info">Du är ' +
           problem +
           ' och har svårt att tänka klart. Därför krävs alla rätt. Ta hand om dig först om du vill ha bättre chans.</div>'
-        : ''),
+        : '') +
+      (skillHelps(i)
+        ? '<div class="info">Din ' +
+          SKILLS[courseSkill(i)].namn.toLowerCase() +
+          ' (nivå ' +
+          skillLevel(courseSkill(i)) +
+          ') gör att du direkt ser ett fel svar på varje fråga.</div>'
+        : '<p class="sub">' +
+          SKILLS[courseSkill(i)].namn +
+          ' nivå ' +
+          skillNeeded() +
+          ' skulle stryka ett fel svar per fråga och höja betyget. Du har nivå ' +
+          skillLevel(courseSkill(i)) +
+          '.</p>') +
+      (c.lectures
+        ? ''
+        : '<p class="sub">Tips: en föreläsning i kursen höjer betyget ett steg.</p>'),
     [
       { label: 'Börja tentan', primary: true, run: () => examQuestion(i, picks, [], need) },
       { label: 'Inte än', run: close },
@@ -136,11 +159,12 @@ function examQuestion(i, picks, answers, need) {
   const cs = course(i),
     n = answers.length;
   if (n === picks.length) return examResult(i, picks, answers, need);
-  const q = cs.questions[picks[n]];
+  const q = cs.questions[picks[n]],
+    options = skillHelps(i) ? [q[1], q[2 + Math.floor(Math.random() * 2)]] : q.slice(1, 4);
   quiz(
     cs.name + ' · fråga ' + (n + 1) + ' / ' + picks.length,
     q[0],
-    q.slice(1, 4),
+    options,
     () => examQuestion(i, picks, [...answers, true], need),
     () => examQuestion(i, picks, [...answers, false], need),
   );
@@ -151,21 +175,29 @@ function examResult(i, picks, answers, need) {
     right = answers.filter(Boolean).length;
   advance(30);
   if (right >= need) {
+    const grade = examGrade(i, right, picks.length),
+      reasons = gradeReasons(i, right, picks.length);
     c.pass = true;
-    gain('happy', right === picks.length ? 12 : 8);
+    recordPass(i, grade);
+    addXp(courseSkill(i), XP.tentaGodkänd);
+    gain('happy', 4 + grade * 2);
     save();
     sound('win');
     dialog(
-      'Godkänd!',
+      'Godkänd med betyg ' + grade + '!',
       '<p>' +
         right +
         ' av ' +
         picks.length +
         ' rätt. Du klarade ' +
         esc(cs.name) +
-        '.' +
-        (right === picks.length ? ' Full pott!' : '') +
-        '</p>',
+        ' och fick 5 studiepoäng.</p><div class="info">' +
+        reasons +
+        '</div><p class="sub">Snitt hittills: ' +
+        gradeAverage().toFixed(1).replace('.', ',') +
+        ' · ' +
+        credits() +
+        ' sp</p>',
       [{ label: 'Fortsätt', primary: true, run: close }],
       'Tentamen',
     );
@@ -174,6 +206,7 @@ function examResult(i, picks, answers, need) {
   const wrong = picks.filter((_, n) => !answers[n]);
   c.study = 1;
   c.retake = true;
+  c.failed = true;
   gain('energy', -3);
   gain('happy', -5);
   save();
@@ -229,7 +262,6 @@ function sleep() {
           state.hour = 8;
           save();
           toast('Ny dag. Klockan är 08:00.');
-          morningEvent();
         },
       },
       ...(done && state.term < 8
@@ -244,17 +276,17 @@ function sleep() {
                   state.hour = 8;
                 }
                 state.courses = [
-                  { study: 0, pass: false },
-                  { study: 0, pass: false },
-                  { study: 0, pass: false },
+                  { study: 0, pass: false, lectures: 0 },
+                  { study: 0, pass: false, lectures: 0 },
+                  { study: 0, pass: false, lectures: 0 },
                 ];
+                state.termStartDay = state.day;
                 gain('energy', 80);
                 gain('happy', 15);
                 close();
                 updateHUD();
                 save();
                 toast('Välkommen till termin ' + state.term + '!');
-                morningEvent(0.8);
               },
             },
           ]
@@ -306,6 +338,10 @@ function homeDesk() {
             ' har klarat åtta terminer och examensprovet.</p><div class="info">' +
             state.runs +
             ' extrajobb · ' +
+            credits() +
+            ' sp med snittet ' +
+            gradeAverage().toFixed(1).replace('.', ',') +
+            ' · ' +
             state.lunches +
             ' luncher · ' +
             Object.values(state.relations).filter((r) => r >= 40).length +
@@ -333,7 +369,7 @@ function showCourses() {
     'Din studieplan',
     '<p>Termin ' +
       state.term +
-      ' av 8. Varje kurs kräver två studiepass och en tenta med tre frågor där två rätt krävs.</p>' +
+      ' av 8. Varje kurs kräver två studiepass och en tenta med tre frågor där två rätt krävs. Betyget blir 1–5: alla rätt, föreläsningar och färdighet höjer, omtenta sänker.</p>' +
       curriculum[state.term - 1]
         .map(
           (q, i) =>
@@ -341,13 +377,25 @@ function showCourses() {
             esc(q.name) +
             '</span><span class="badge">' +
             (state.courses[i].pass
-              ? '✓ Godkänd'
+              ? '✓ Betyg ' + (state.courses[i].grade || '–')
               : state.courses[i].retake
                 ? 'Omtenta · repetera först'
                 : state.courses[i].study + ' / 2 studiepass') +
             '</span></div>',
         )
-        .join(''),
+        .join('') +
+      '<h3>Studieutdrag</h3><div class="info">' +
+      credits() +
+      ' sp · snitt ' +
+      (state.transcript.length ? gradeAverage().toFixed(1).replace('.', ',') : '–') +
+      (state.transcript.length
+        ? '<br>' +
+          state.transcript
+            .slice(-9)
+            .map((t) => 'T' + t.term + ' ' + esc(t.name) + ': ' + t.grade)
+            .join('<br>')
+        : '') +
+      '</div>',
     [{ label: 'Tillbaka', primary: true, run: close }],
     'Studieplan',
   );

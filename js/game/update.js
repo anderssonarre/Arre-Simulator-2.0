@@ -47,6 +47,7 @@ function update(dt) {
   }
   updatePointerHint();
   onlineTick(dt);
+  storyTick();
   if (!active || modal || document.hidden) return;
   const f =
       (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -
@@ -77,7 +78,7 @@ function update(dt) {
     state.hour = hours % 24;
   }
   state.stats.hunger = Math.max(0, state.stats.hunger - dt * 0.07);
-  state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025);
+  state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025 * energyDrain());
   state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018);
   if (state.stats.hunger <= 0) {
     // Utan mat tar både ork och humör slut fortare.

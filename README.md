@@ -44,12 +44,15 @@ servern och kan fortsättas från andra datorer. Utan inloggning sparas allt i w
 
 ## Skriva innehåll utan kod
 
-Tre filer är rena innehållsfiler som vem som helst kan redigera:
+De här filerna är rena innehållsfiler som vem som helst kan redigera:
 
-- `js/data/events.js`: händelser som dyker upp på morgonen, med val och effekter.
+- `js/data/events.js`: händelser med val och effekter. Berättaren väljer bland dem efter läget
+  (taggar som `chans`, `kris` och `följd`), och `följs` gör kedjor där något händer några dagar senare.
 - `js/data/dialogue.js`: allt personerna säger.
 - `js/data/schedules.js`: vem som går på vilka föreläsningar och vad alla gör på dagarna.
 - `js/data/curriculum.js`: kurser och tentafrågor.
+- `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
+  hyra och studiestöd.
 
 Instruktionerna står överst i varje fil. Skriver man fel visar webbläsarens konsol en varning.
 

@@ -4,6 +4,7 @@ function start(s) {
   const nick = cleanNick($('nickInput').value);
   if (nick) s.nickname = nick;
   state = s;
+  ensureProgress();
   active = true;
   job = null;
   party = false;

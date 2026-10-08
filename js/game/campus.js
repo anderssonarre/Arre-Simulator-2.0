@@ -51,6 +51,7 @@ function partyPrompt() {
         primary: true,
         run: () => {
           party = true;
+          addXp('socialt', XP.fest);
           gain('happy', 25);
           gain('energy', -8);
           advance(45);
