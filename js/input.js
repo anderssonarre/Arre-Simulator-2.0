@@ -67,11 +67,42 @@ view.addEventListener('click', () => {
     } catch {}
   }
 });
+// Mus: 0,0025 radianer per pixel vid normal känslighet. Samma skala åt båda håll.
+const MOUSE_RAD = 0.0025;
 document.addEventListener('mousemove', (e) => {
   if (!active || modal || document.pointerLockElement !== view) return;
-  player.a += e.movementX * 0.0028;
-  pitch = clamp(pitch + e.movementY * 0.003, -0.7, 0.7);
+  // Vissa webbläsare skickar enstaka jättehopp när musen låses. Ignorera dem.
+  if (Math.abs(e.movementX) > 300 || Math.abs(e.movementY) > 300) return;
+  turnView(e.movementX * MOUSE_RAD * controls.sens, e.movementY * MOUSE_RAD * controls.sens);
 });
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === view) mouseDrag = null;
+  updatePointerHint();
+});
+// Om musen inte går att låsa (t.ex. i en inbäddad vy) kan man dra med musen för att titta.
+let mouseDrag = null;
+view.addEventListener('mousedown', (e) => {
+  if (!active || modal || document.pointerLockElement === view) return;
+  mouseDrag = { x: e.clientX, y: e.clientY };
+});
+document.addEventListener('mousemove', (e) => {
+  if (!mouseDrag || modal || document.pointerLockElement === view) return;
+  turnView(
+    (e.clientX - mouseDrag.x) * MOUSE_RAD * controls.sens,
+    (e.clientY - mouseDrag.y) * MOUSE_RAD * controls.sens,
+  );
+  mouseDrag.x = e.clientX;
+  mouseDrag.y = e.clientY;
+});
+document.addEventListener('mouseup', () => (mouseDrag = null));
+function updatePointerHint() {
+  const show =
+    active &&
+    !modal &&
+    !document.body.classList.contains('touch') &&
+    document.pointerLockElement !== view;
+  document.body.classList.toggle('unlocked', show);
+}
 const touchMode = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
 if (touchMode) {
   document.body.classList.add('touch');
@@ -85,10 +116,11 @@ view.addEventListener('pointerdown', (e) => {
   look = { id: e.pointerId, x: e.clientX, y: e.clientY };
   view.setPointerCapture(e.pointerId);
 });
+// Touch: att dra över hela skärmens bredd vrider ungefär 180° vid normal känslighet.
 view.addEventListener('pointermove', (e) => {
   if (!look || look.id !== e.pointerId || modal) return;
-  player.a += (e.clientX - look.x) * 0.007;
-  pitch = clamp(pitch + (e.clientY - look.y) * 0.005, -0.7, 0.7);
+  const k = (Math.PI / Math.max(320, view.clientWidth)) * controls.sens;
+  turnView((e.clientX - look.x) * k, (e.clientY - look.y) * k);
   look.x = e.clientX;
   look.y = e.clientY;
 });
@@ -106,9 +138,13 @@ function stickMove(e) {
   const r = $('stick').getBoundingClientRect(),
     dx = e.clientX - r.left - r.width / 2,
     dy = e.clientY - r.top - r.height / 2,
-    scale = Math.max(1, Math.hypot(dx, dy) / 38);
-  touch.x = dx / scale / 38;
-  touch.y = dy / scale / 38;
+    dist = Math.hypot(dx, dy),
+    scale = Math.max(1, dist / 38),
+    // Död zon i mitten och mjuk kurva så att små rörelser går att styra exakt.
+    amount = clamp((dist / 38 - 0.12) / 0.88, 0, 1),
+    strength = dist > 0 ? (amount * amount * (3 - 2 * amount)) / (dist / 38 || 1) : 0;
+  touch.x = (dx / 38) * strength;
+  touch.y = (dy / 38) * strength;
   $('knob').style.transform = 'translate(' + dx / scale + 'px,' + dy / scale + 'px)';
 }
 $('stick').addEventListener('pointermove', stickMove);

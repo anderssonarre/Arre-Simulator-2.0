@@ -18,7 +18,7 @@ function menu() {
       state.lunches +
       ' luncher</p></div><img src="' +
       portrait +
-      '" alt="Din karaktär" style="height:85px"></div><div class="keys">WASD / pilar: gå eller kör · Shift: spring<br>Mus efter klick / dra på skärmen: se dig omkring<br>E: interagera · Esc: meny · På mobil: vänster spak + dra på höger sida<br>Behov och klocka pausas medan menyer är öppna.</div>',
+      '" alt="Din karaktär" style="height:85px"></div><div class="keys">WASD: gå eller kör · pilar: gå och vrid · Shift: spring<br>Klicka i bilden och styr med musen · dra på skärmen på mobil<br>E: interagera · Esc: meny · känslighet och synfält under Kontroller<br>Behov och klocka pausas medan menyer är öppna.</div>',
     [
       {
         label: 'Fortsätt spela',
@@ -31,6 +31,7 @@ function menu() {
       },
       { label: 'Studieplan', run: showCourses },
       { label: 'Campus och vänner', run: showMap },
+      { label: 'Kontroller', run: showControls },
       { label: 'Platsbilder och ritningsunderlag', run: showSources },
       {
         label: 'Grafik: ' + (highDetail ? 'HD' : 'Mobil') + ' · byt',

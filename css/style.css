@@ -233,6 +233,20 @@ canvas#view {
   text-align: center;
   pointer-events: none;
 }
+#lockHint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 34px);
+  display: none;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+body.unlocked #lockHint {
+  display: block;
+}
 kbd {
   display: inline-grid;
   place-items: center;

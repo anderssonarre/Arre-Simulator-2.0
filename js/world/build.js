@@ -308,6 +308,7 @@ function changeWorld(id, spawn) {
   const s = spawn || world.spawn;
   Object.assign(player, s);
   pitch = 0;
+  resetMotion();
   near = null;
   party = false;
   keys.clear();

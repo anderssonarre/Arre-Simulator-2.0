@@ -18,7 +18,7 @@ js/
   data/               Karaktärer, kläder, kursfrågor, bildlista
   graphics/           Figurer, föremål och texturer
   world/build.js      Bygger alla världar (hem, campus, W33, Technobothnia, gym)
-  game/               Spellogik: start, HUD, studier, lunch, samtal, jobb, händelser, uppdatering
+  game/               Spellogik: rörelse och kamera, studier, samtal, jobb, händelser m.m.
   ui/                 Meny, karta, bildvisare
   render/render.js    Ritar 3D-vyn och minikartan
   input.js            Tangentbord, mus och touch

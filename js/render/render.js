@@ -17,14 +17,16 @@ window.addEventListener('resize', resize);
 function render() {
   const w = world || worlds.outdoor,
     day = state?.hour ?? 10;
-  horizon = clamp(H * 0.5 + pitch * H * 0.25, H * 0.25, H * 0.75);
-  const focal = W / (2 * 0.72),
-    eye = 0.58,
+  // Titta upp/ner flyttar horisonten. Huvudgungen höjer och sänker ögat lite.
+  horizon = clamp(H * 0.5 + pitch * H * 0.42 + camera.bob * H * 0.006, H * 0.08, H * 0.92);
+  const plane = camera.plane,
+    focal = W / (2 * plane),
+    eye = 0.58 + Math.abs(camera.bob) * 0.02 - 0.01 * camera.bobAmount,
     angle = player.a,
     dirX = Math.cos(angle),
     dirY = Math.sin(angle),
-    planeX = -dirY * 0.72,
-    planeY = dirX * 0.72;
+    planeX = -dirY * plane,
+    planeY = dirX * plane;
   const light =
     day >= 7 && day <= 18 ? 1 : day >= 6 && day < 7 ? 0.6 : day > 18 && day < 21 ? 0.7 : 0.32;
   const sky = ctx.createLinearGradient(0, 0, 0, horizon);

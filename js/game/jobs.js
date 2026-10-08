@@ -74,6 +74,7 @@ function startJob() {
     world = w;
     Object.assign(player, w.spawn);
     pitch = 0;
+    resetMotion();
     toast('W / spak fram: gas. S / bak: broms/back. A/D: styr. E vid stoppen.');
     updateHUD();
   } else showChallenge();

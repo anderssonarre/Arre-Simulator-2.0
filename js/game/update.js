@@ -34,10 +34,6 @@ function updateNear() {
 function interact() {
   if (active && !modal && near) near.action();
 }
-function move(dx, dy, r = 0.18) {
-  if (walkable(world, player.x + dx, player.y, r)) player.x += dx;
-  if (walkable(world, player.x, player.y + dy, r)) player.y += dy;
-}
 function update(dt) {
   if (job?.type === 'challenge' && !paused && $('dialogTag').textContent === 'Timingövning') {
     job.phase += dt * (job.gymOnly ? 2.1 : 2.2 + job.stage * 0.35);
@@ -45,29 +41,15 @@ function update(dt) {
     if ($('timingCursor'))
       $('timingCursor').style.left = clamp(((Math.sin(job.phase) + 1) / 2) * 100, 0, 99) + '%';
   }
+  updatePointerHint();
   if (!active || modal || document.hidden) return;
   const f =
       (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -
       (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) -
       touch.y,
     r = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0) + touch.x;
-  const turn = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
-  player.a += turn * dt * 1.9;
   if (job?.type === 'drive') {
-    const max = job.key === 'vilhelm' ? 2.5 : 5;
-    job.speed = clamp(job.speed + f * dt * 3.5, -1.8, max);
-    if (Math.abs(f) < 0.06) job.speed *= Math.exp(-dt * 1.4);
-    player.a += r * dt * 1.55 * clamp(job.speed / 2, -1, 1);
-    const dx = Math.cos(player.a) * job.speed * dt,
-      dy = Math.sin(player.a) * job.speed * dt;
-    if (walkable(world, player.x + dx, player.y + dy, 0.3)) move(dx, dy, 0.3);
-    else {
-      job.speed = 0;
-      if (noticeTimer <= 0) {
-        toast('För nära väggen. Backa och styr undan.');
-        noticeTimer = 3;
-      }
-    }
+    drive(dt, f, r);
     $('jobHUD').style.display = 'block';
     $('jobHUD').innerHTML =
       '<div>' +
@@ -80,17 +62,7 @@ function update(dt) {
       (job.stage ? 'Leverera till andra markeringen' : 'Stanna vid första markeringen') +
       '</div>';
   } else {
-    const length = Math.max(1, Math.hypot(f, r)),
-      sprint =
-        (keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.run) &&
-        state.stats.energy > 10 &&
-        state.stats.hunger > 5,
-      speed = sprint ? 3.6 : 2.1;
-    move(
-      ((Math.cos(player.a) * f - Math.sin(player.a) * r) * speed * dt) / length,
-      ((Math.sin(player.a) * f + Math.cos(player.a) * r) * speed * dt) / length,
-    );
-    if (sprint && (f || r)) state.stats.energy = Math.max(0, state.stats.energy - dt * 0.65);
+    walk(dt, f, r, keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.run);
     $('jobHUD').style.display = 'none';
   }
   const hours = state.hour + dt / 60;

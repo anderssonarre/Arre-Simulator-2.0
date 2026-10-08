@@ -13,6 +13,7 @@ function start(s) {
   Object.assign(player, { x: s.x, y: s.y, a: s.a });
   if (!walkable(world, player.x, player.y)) Object.assign(player, world.spawn);
   pitch = 0;
+  resetMotion();
   $('start').hidden = true;
   document.body.classList.add('playing');
   close();
