@@ -106,6 +106,7 @@ function update(dt) {
       }
     }
   }
+  partyTick(dt);
   saveTimer += dt;
   if (saveTimer > 12) {
     saveTimer = 0;

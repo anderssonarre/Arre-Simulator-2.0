@@ -16,10 +16,12 @@ js/
   core.js             Hjälpfunktioner
   state.js            Speltillstånd, ljud, sparning, dialogrutor
   data/               Karaktärer, kläder, kursfrågor, bildlista
-  graphics/           Figurer, föremål och texturer
-  world/build.js      Bygger alla världar (hem, campus, W33, Technobothnia, gym)
+  graphics/           Figurer, föremål, träd och texturer
+  world/build.js      Bygger campus, W33, Technobothnia och gym, dörrar och träd
+  world/home.js       Hemmet: möbler, ljus, fönster, spegel och vad man kan göra där
   game/               Spellogik: rörelse och kamera, studier, samtal, jobb, händelser m.m.
   ui/                 Meny, karta, bildvisare
+  render/geometry.js  3D-möbler, ljuskarta, dörrar och spegel
   render/render.js    Ritar 3D-vyn och minikartan
   input.js            Tangentbord, mus och touch
   main.js             Bygger världarna och startar spelet (laddas sist)

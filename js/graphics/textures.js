@@ -247,3 +247,49 @@ function scenery(type) {
 function sceneProp(w, x, y, type, height, z = 0) {
   obj(w, x, y, type, '', null, { height, z, sprite: scenery(type) });
 }
+// Bostadshuset där du bor: ljusgul puts, vita fönster med balkongräcke.
+wallTextures.push(
+  (() => {
+    const c = document.createElement('canvas');
+    c.width = 128;
+    c.height = 256;
+    const g = c.getContext('2d'),
+      r = seeded(1010);
+    g.fillStyle = '#e4d39f';
+    g.fillRect(0, 0, 128, 256);
+    for (let i = 0; i < 2600; i++) {
+      g.fillStyle = r() > 0.5 ? '#ffffff12' : '#6b5a2a10';
+      g.fillRect(r() * 128, r() * 256, 1 + r() * 2, 1);
+    }
+    g.fillStyle = '#9a9a92';
+    g.fillRect(0, 0, 128, 8);
+    g.fillStyle = '#b8b2a2';
+    g.fillRect(0, 238, 128, 18);
+    g.fillStyle = '#d7c58f';
+    g.fillRect(0, 118, 128, 4);
+    // Två våningar med fönster. Nedre våningens fönster ligger vid sidan så att dörren får plats.
+    for (const [x, y] of [
+      [14, 26],
+      [74, 26],
+    ]) {
+      g.fillStyle = '#f6f4ee';
+      g.fillRect(x - 3, y - 3, 46, 66);
+      g.fillStyle = '#5f7f8e';
+      g.fillRect(x, y, 40, 60);
+      g.fillStyle = '#a9c6cc';
+      g.fillRect(x + 4, y + 4, 12, 52);
+      g.fillStyle = '#f6f4ee';
+      g.fillRect(x + 19, y, 3, 60);
+      g.fillStyle = '#ffffffaa';
+      g.fillRect(x - 5, y + 62, 50, 3);
+    }
+    g.fillStyle = '#f6f4ee';
+    g.fillRect(4, 148, 22, 50);
+    g.fillRect(102, 148, 22, 50);
+    g.fillStyle = '#5f7f8e';
+    g.fillRect(7, 151, 16, 44);
+    g.fillRect(105, 151, 16, 44);
+    return c;
+  })(),
+);
+facadeHeights[10] = 2.6;

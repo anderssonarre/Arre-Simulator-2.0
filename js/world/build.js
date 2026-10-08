@@ -39,22 +39,18 @@ function station(w, x, y, type, label, action) {
     sprite: propSprite(type, type === 'exam' ? '#ffcb83' : '#92e2bf'),
   });
 }
+// En portal är en dörr: själva dörren ritas i väggen (doorAt), markören är osynlig och visar bara etiketten.
 function portal(w, x, y, label, target, spawn) {
-  station(w, x, y, 'portal', label, () => changeWorld(target, spawn));
+  const o = station(w, x, y, 'portal', label, () => changeWorld(target, spawn));
+  o.hidden = true;
+  o.height = 1.3;
+  return o;
 }
 function deco(w, x, y, type, height = 1.1) {
   obj(w, x, y, type, '', null, { height, sprite: propSprite(type) });
 }
 function build() {
-  let w = makeWorld('home', 'Hemmet', 12);
-  w.spawn = { x: 5.5, y: 8, a: -Math.PI / 2 };
-  deco(w, 3.5, 3.5, 'bed', 0.65);
-  deco(w, 8.5, 3.5, 'desk', 0.8);
-  deco(w, 2.5, 7.5, 'wardrobe', 1.25);
-  station(w, 3.5, 4.5, 'rest', 'Vila / sov', sleep);
-  station(w, 8.5, 4.5, 'study', 'Skrivbord / examensprov', homeDesk);
-  station(w, 3.5, 7.5, 'wardrobe', 'Garderoben', wardrobe);
-  portal(w, 6.5, 10, 'Gå till campus', 'outdoor', { x: 39.5, y: 19.5, a: -Math.PI / 2 });
+  let w = buildHome();
   w = makeWorld('outdoor', 'Wolffskavägen · campus', 64, true);
   w.spawn = { x: 39.5, y: 19.5, a: -Math.PI / 2 };
   w.wallHeight = 2.4;
@@ -69,10 +65,16 @@ function build() {
   rect(w, 14, 56, 20, 4, 8);
   rect(w, 29, 48, 5, 9, 8);
   rect(w, 3, 30, 3, 8, 7);
-  portal(w, 52.5, 15.8, 'W33 · gå in', 'w33');
-  portal(w, 24.5, 40.5, 'Technobothnia · gå in', 'tech');
-  portal(w, 24.5, 42.1, 'Wasa Sports Club · träning', 'gym');
-  portal(w, 48.5, 57.5, 'Gå hem', 'home');
+  // Dörrar in i husen. Bostadshuset längst söderut är där du bor.
+  rect(w, 45, 58, 7, 4, 10);
+  doorAt(w, 54, 15);
+  doorAt(w, 24, 38);
+  doorAt(w, 24, 43);
+  doorAt(w, 48, 58);
+  portal(w, 54.5, 16.45, 'W33 · gå in', 'w33');
+  portal(w, 24.5, 39.45, 'Technobothnia · gå in', 'tech');
+  portal(w, 24.5, 42.55, 'Wasa Sports Club · träning', 'gym');
+  portal(w, 48.5, 57.45, 'Gå hem', 'home');
   station(w, 18.5, 17.5, 'job', 'Starta ditt extrajobb', startJobPrompt);
   station(w, 44.5, 21.5, 'photo', 'W33 · se platsbilderna', () => showPhotos(1));
   station(w, 35.5, 32.5, 'photo', 'Technobothnia · se platsbilderna', () => showPhotos(6));
@@ -80,32 +82,13 @@ function build() {
   sign(w, 25.5, 39.3, 'TECHNOBOTHNIA', 0.4, 1.5);
   sign(w, 25.5, 42.7, 'WASA SPORTS CLUB', 0.38, 1.55);
   sign(w, 43.5, 24, 'Wolffskavägen', 0.34, 1.2);
-  sceneProp(w, 52.5, 15.3, 'canopy', 1.65);
   sceneProp(w, 53.5, 15.2, 'towerglass', 4.3);
   for (let x = 7; x < 30; x += 3) sceneProp(w, x, 39.1, 'saw', 1.5, 2.1);
   for (let y = 29; y < 38; y += 3) sceneProp(w, 31.15, y, 'saw', 1.3, 2.1);
   sceneProp(w, 10, 30, 'chimney', 9);
   sceneProp(w, 16, 27, 'chimney', 7);
-  for (const [x, y, h] of [
-    [34, 24, 3.4],
-    [35, 29, 3.7],
-    [33, 35, 3.2],
-    [35, 40, 3.8],
-    [33, 46, 3.6],
-    [40, 27, 3.6],
-    [40, 34, 3.5],
-    [40, 42, 3.2],
-    [40, 50, 3.5],
-    [6, 18, 3],
-    [12, 18, 3.3],
-    [24, 19, 3.5],
-    [31, 18, 3.3],
-    [46, 32, 3.5],
-    [48, 42, 3.6],
-    [52, 51, 3.3],
-  ])
-    deco(w, x + 0.5, y + 0.5, 'tree', h);
   for (const y of [23, 34, 45, 55]) sceneProp(w, 42.5, y, 'lamp', 3.7);
+  placeTrees(w);
   w = makeWorld('w33', 'W33 · entréplanet', 48);
   w.grid.forEach((row) => row.fill(1));
   rect(w, 3, 16, 40, 14, 0);
@@ -139,7 +122,8 @@ function build() {
   station(w, 23.5, 26.5, 'exam', 'Programmeringstenta', () => exam(0));
   station(w, 23.5, 21.5, 'food', 'Lunch · 8 €', lunch);
   station(w, 35.5, 12.5, 'party', 'Filicia Castle · fest', partyPrompt);
-  portal(w, 37.5, 28.5, 'Ut till Wolffskavägen', 'outdoor', { x: 52.5, y: 17.5, a: Math.PI / 2 });
+  doorAt(w, 37, 30);
+  portal(w, 37.5, 29.55, 'Ut till Wolffskavägen', 'outdoor', { x: 54.5, y: 17.0, a: Math.PI / 2 });
   sign(w, 37, 24, 'ENTRÉ');
   sign(w, 20, 21.5, 'RESTAURANG');
   sign(w, 13, 25, 'STUDIEPLATSER');
@@ -203,7 +187,8 @@ function build() {
   station(w, 49.5, 27, 'exam', 'Matematiktenta', () => exam(1));
   station(w, 24.5, 32.5, 'study', 'Studera konstruktion', () => study(2));
   station(w, 26.5, 35.5, 'exam', 'Konstruktionstenta', () => exam(2));
-  portal(w, 32.5, 40.5, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41, a: 0 });
+  doorAt(w, 32, 42);
+  portal(w, 32.5, 41.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 40.15, a: Math.PI / 2 });
   sign(w, 32.5, 38.5, 'TECHNOBOTHNIA');
   sign(w, 23.5, 27, 'ROBOTIK');
   sign(w, 24.5, 34, 'MASKINLABB');
@@ -248,7 +233,8 @@ function build() {
     toast('En lugn stund. +8 glädje, +5 energi.');
     save();
   });
-  portal(w, 8.5, 16, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41, a: 0 });
+  doorAt(w, 8, 17);
+  portal(w, 8.5, 16.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41.85, a: -Math.PI / 2 });
   const spots = {
     w33: [
       [17.5, 27.5],
@@ -296,14 +282,17 @@ function isWall(w, x, y) {
   return w.grid[Math.floor(y)]?.[Math.floor(x)] ?? 3;
 }
 function walkable(w, x, y, r = 0.18) {
-  return [
-    [-r, -r],
-    [r, -r],
-    [-r, r],
-    [r, r],
-  ].every(([dx, dy]) => !isWall(w, x + dx, y + dy));
+  return (
+    [
+      [-r, -r],
+      [r, -r],
+      [-r, r],
+      [r, r],
+    ].every(([dx, dy]) => !isWall(w, x + dx, y + dy)) && !hitsSolid(w, x, y, r)
+  );
 }
 function changeWorld(id, spawn) {
+  if (homeParty && id !== 'home') endHomeParty(true);
   world = worlds[id];
   const s = spawn || world.spawn;
   Object.assign(player, s);
@@ -317,4 +306,59 @@ function changeWorld(id, spawn) {
   sound();
   updateHUD();
   save();
+}
+
+// Träd växer bara på gräs: inte på vägar, trottoarer, i hus eller framför dörrar.
+function placeTrees(w) {
+  const r = seeded(2026),
+    placed = [],
+    blockers = w.objects.filter((o) => o.action || o.type === 'lamp' || o.type === 'sign'),
+    nearWall = (x, y, d) => {
+      for (let yy = Math.floor(y - d); yy <= Math.floor(y + d); yy++)
+        for (let xx = Math.floor(x - d); xx <= Math.floor(x + d); xx++)
+          if (w.grid[yy]?.[xx] !== 0) {
+            const dx = x - clamp(x, xx, xx + 1),
+              dy = y - clamp(y, yy, yy + 1);
+            if (Math.hypot(dx, dy) < d) return true;
+          }
+      return false;
+    },
+    clearOf = (x, y, list, d) => list.every((o) => Math.hypot(o.x - x, o.y - y) >= d),
+    nearHard = (x, y, d) => {
+      for (let a = 0; a < 6.28; a += 0.8)
+        if (outdoorGround(x + Math.cos(a) * d, y + Math.sin(a) * d) !== 'grass') return true;
+      return false;
+    };
+  for (let y = 2.5; y < 61; y += 1.7)
+    for (let x = 2.5; x < 61; x += 1.7) {
+      const tx = x + (r() - 0.5) * 1.1,
+        ty = y + (r() - 0.5) * 1.1,
+        park = tx > 31 && tx < 36 && ty > 23 && ty < 53,
+        chance = park ? 0.7 : 0.26;
+      if (r() > chance || outdoorGround(tx, ty) !== 'grass') continue;
+      if (nearHard(tx, ty, 0.7) || nearWall(tx, ty, 1.4)) continue;
+      if (!clearOf(tx, ty, blockers, 2.2) || !clearOf(tx, ty, placed, park ? 2.0 : 2.6)) continue;
+      if (Math.hypot(tx - w.spawn.x, ty - w.spawn.y) < 3) continue;
+      placed.push({ x: tx, y: ty });
+    }
+  // Slumpa ordningen så att begränsningen inte bara tar träden i norr.
+  for (let i = placed.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [placed[i], placed[j]] = [placed[j], placed[i]];
+  }
+  for (const t of placed.slice(0, 38)) {
+    const pick = r(),
+      park = t.x > 31 && t.x < 36;
+    if (pick < (park ? 0.45 : 0.3)) deco(w, t.x, t.y, 'tree', 3.1 + r() * 0.8);
+    else if (pick < (park ? 0.9 : 0.65))
+      obj(w, t.x, t.y, 'tree', '', null, {
+        height: 3.6 + r() * 0.9,
+        sprite: birchSprite(Math.floor(r() * 3)),
+      });
+    else
+      obj(w, t.x, t.y, 'tree', '', null, {
+        height: 3.9 + r() * 1.1,
+        sprite: spruceSprite(Math.floor(r() * 3)),
+      });
+  }
 }

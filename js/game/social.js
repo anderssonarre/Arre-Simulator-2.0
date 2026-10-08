@@ -126,6 +126,7 @@ function reply(p, text, type) {
   const slow = p.personality === 'shy' || p.personality === 'cold';
   let delta = bad ? -7 : newDay ? (slow ? 3 : 7) : 1;
   if (type === 'invite' && r < 15) delta = 0;
+  if (homeParty?.guests.includes(p.id) && delta > 0) delta *= 2;
   state.relations[p.id] = clamp(r + delta, -100, 100);
   state.socialDay[p.id] = state.day;
   const lines = {

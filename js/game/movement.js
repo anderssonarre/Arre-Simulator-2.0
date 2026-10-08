@@ -47,35 +47,39 @@ function approach(a, b, rate, dt) {
 }
 
 // ---- Kollision: spelaren är en cirkel som glider längs väggarna ----
+// Puttar ut spelaren ur en rektangel x0..x1, y0..y1 om cirkeln överlappar den.
+function pushOutOfRect(x0, y0, x1, y1, r) {
+  const nx = clamp(player.x, x0, x1),
+    ny = clamp(player.y, y0, y1),
+    dx = player.x - nx,
+    dy = player.y - ny,
+    d = Math.hypot(dx, dy);
+  if (d >= r) return;
+  if (d > 1e-6) {
+    player.x = nx + (dx / d) * r;
+    player.y = ny + (dy / d) * r;
+  } else {
+    // Mitt i rektangeln (borde inte hända): putta ut åt närmaste kant.
+    const left = player.x - x0,
+      right = x1 - player.x,
+      up = player.y - y0,
+      down = y1 - player.y,
+      m = Math.min(left, right, up, down);
+    if (m === left) player.x = x0 - r;
+    else if (m === right) player.x = x1 + r;
+    else if (m === up) player.y = y0 - r;
+    else player.y = y1 + r;
+  }
+}
 function pushOut(w, r) {
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < 4; pass++) {
     const cx = Math.floor(player.x),
       cy = Math.floor(player.y);
     for (let y = cy - 1; y <= cy + 1; y++)
-      for (let x = cx - 1; x <= cx + 1; x++) {
-        if (!isWall(w, x + 0.5, y + 0.5)) continue;
-        const nx = clamp(player.x, x, x + 1),
-          ny = clamp(player.y, y, y + 1),
-          dx = player.x - nx,
-          dy = player.y - ny,
-          d = Math.hypot(dx, dy);
-        if (d >= r) continue;
-        if (d > 1e-6) {
-          player.x = nx + (dx / d) * r;
-          player.y = ny + (dy / d) * r;
-        } else {
-          // Mitt i en vägg (borde inte hända): putta ut åt närmaste kant.
-          const left = player.x - x,
-            right = x + 1 - player.x,
-            up = player.y - y,
-            down = y + 1 - player.y,
-            m = Math.min(left, right, up, down);
-          if (m === left) player.x = x - r;
-          else if (m === right) player.x = x + 1 + r;
-          else if (m === up) player.y = y - r;
-          else player.y = y + 1 + r;
-        }
-      }
+      for (let x = cx - 1; x <= cx + 1; x++)
+        if (isWall(w, x + 0.5, y + 0.5)) pushOutOfRect(x, y, x + 1, y + 1, r);
+    // Möbler är också hinder.
+    for (const s of w.solids || []) pushOutOfRect(s.x0, s.y0, s.x1, s.y1, r);
   }
 }
 // Flyttar spelaren och returnerar hur långt hen faktiskt kom.
