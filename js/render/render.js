@@ -14,19 +14,6 @@ function resize() {
 }
 resize();
 window.addEventListener('resize', resize);
-// Vilken markyta som finns på en punkt utomhus. Används både för att rita marken och för att placera träd.
-function outdoorGround(wx, wy) {
-  const road = (wy > 16 && wy < 21) || (wx > 37 && wx < 42 && wy >= 21);
-  const pavement =
-    (wy > 14 && wy < 23) ||
-    (wx > 35.8 && wx < 43.5 && wy >= 21) ||
-    (wx > 5 && wx < 34 && wy > 38 && wy < 43) ||
-    (wx > 46.5 && wx < 50.5 && wy > 23 && wy < 58);
-  const park = wx > 31 && wx < 36 && wy > 23 && wy < 53;
-  if (road) return 'asphalt';
-  if (pavement && !park) return 'paving';
-  return 'grass';
-}
 const floorRGB = [0, 0, 0];
 function render() {
   const w = world || worlds.outdoor,
@@ -48,6 +35,9 @@ function render() {
     mirrorPlane = w.mirror ? w.mirror.plane : null;
   const light =
     day >= 7 && day <= 18 ? 1 : day >= 6 && day < 7 ? 0.6 : day > 18 && day < 21 ? 0.7 : 0.32;
+  // Färgen på diset långt bort, samma som himlen vid horisonten.
+  const fogRGB = light > 0.8 ? [199, 220, 218] : light > 0.4 ? [212, 167, 130] : [54, 70, 88],
+    fogCss = 'rgba(' + fogRGB.join(',') + ',';
   if (!w.ceiling) {
     const sky = ctx.createLinearGradient(0, 0, 0, horizon);
     if (w.outdoor) {
@@ -85,6 +75,9 @@ function render() {
       outdoor = w.id === 'outdoor',
       workYard = w.id === 'work' && w.outdoor,
       partyFloor = homeParty && w.id === 'home',
+      groundMap = w.ground || null,
+      gRes = w.groundRes || 1,
+      gN = (w.size || 1) * gRes,
       dayK = w.outdoor ? light : Math.max(light, 0.74);
     for (let sy = startY; sy < H; sy += 2) {
       const below = sy >= floorTop;
@@ -111,25 +104,32 @@ function render() {
           g = 0,
           b = 0,
           ground = 'paving',
-          painted = false;
+          painted = false,
+          parking = false;
         if (!below || w.floor) {
           (below ? w.floor : w.ceiling)(wx, wy, floorRGB);
           r = floorRGB[0];
           g = floorRGB[1];
           b = floorRGB[2];
           painted = true;
-        } else if (outdoor) {
-          ground = outdoorGround(wx, wy);
-          if (
-            (wy > 16 && wy < 21 && wx > 48 && wx < 53 && Math.floor(wx * 2) % 2 === 0) ||
-            (Math.abs(wy - 18.5) < 0.055 && Math.floor(wx / 2) % 2 === 0) ||
-            (Math.abs(wx - 39.5) < 0.055 && wy > 23 && Math.floor(wy / 2) % 2 === 0)
-          ) {
-            r = 225;
-            g = 226;
-            b = 213;
+        } else if (groundMap) {
+          const gx = Math.floor(wx * gRes),
+            gy = Math.floor(wy * gRes),
+            v = gx >= 0 && gy >= 0 && gx < gN && gy < gN ? groundMap[gy * gN + gx] : 1;
+          if (v === 1) ground = 'grass';
+          else if (v === 2 || v === 4) ground = 'asphalt';
+          else if (v === 3) {
+            r = 226;
+            g = 227;
+            b = 218;
+            painted = true;
+          } else if (v === 5) {
+            r = 172;
+            g = 172;
+            b = 166;
             painted = true;
           }
+          if (v === 4) parking = true;
         } else if (workYard) {
           ground = 'asphalt';
           if (Math.abs(wx - 8.5) < 0.06 && Math.floor(wy) % 4 < 2) {
@@ -147,6 +147,11 @@ function render() {
           r = texture[ti];
           g = texture[ti + 1];
           b = texture[ti + 2];
+          if (parking) {
+            r *= 1.08;
+            g *= 1.08;
+            b *= 1.1;
+          }
         }
         let fade;
         if (lit) fade = lightAt(w, wx, wy) * distFade;
@@ -158,6 +163,13 @@ function render() {
         r *= fade;
         g *= fade;
         b *= fade;
+        // Dis mot horisonten på stora ytor.
+        if (groundMap && dist > 30) {
+          const f = dist > 200 ? 0.6 : ((dist - 30) / 170) * 0.6;
+          r += (fogRGB[0] - r) * f;
+          g += (fogRGB[1] - g) * f;
+          b += (fogRGB[2] - b) * f;
+        }
         if (partyFloor && below) {
           const glow = partyGlow(wx, wy);
           r += glow[0];
@@ -183,6 +195,10 @@ function render() {
     const cx = (2 * x) / W - 1,
       rx = dirX + planeX * cx,
       ry = dirY + planeY * cx;
+    if (w.segments) {
+      drawSegmentColumn(w, x, castSegments(w, rx, ry, cam, 190), cam, light, fogCss);
+      continue;
+    }
     let mx = Math.floor(player.x),
       my = Math.floor(player.y),
       ddx = Math.abs(1 / rx),
@@ -272,7 +288,8 @@ function render() {
     const dx = o.x - player.x,
       dy = o.y - player.y,
       depth = dx * dirX + dy * dirY;
-    if (depth > 0.1) items.push({ kind: 's', o, depth, lateral: -dx * dirY + dy * dirX });
+    if (depth > 0.1 && depth < 140)
+      items.push({ kind: 's', o, depth, lateral: -dx * dirY + dy * dirX });
   };
   for (const o of w.objects) {
     if (o.profile && !o.guest && onlineChars.has(o.profile.id)) continue;
@@ -529,52 +546,39 @@ function drawBubble(text, x, bottom) {
 function drawMap(w) {
   const c = mapCtx,
     sz = 148,
-    scale = sz / w.size;
-  c.fillStyle = w.outdoor ? '#344c36' : '#14252b';
+    base = minimapBase(w),
+    bs = base.scale,
+    big = w.size > 70,
+    // Stora världar visas som ett utsnitt kring spelaren, små i sin helhet.
+    view = big ? 46 : w.size,
+    scale = sz / view,
+    ox = big ? clamp(player.x - view / 2, 0, w.size - view) : 0,
+    oy = big ? clamp(player.y - view / 2, 0, w.size - view) : 0;
+  c.fillStyle = '#14252b';
   c.fillRect(0, 0, sz, sz);
-  if (w.id === 'outdoor') {
-    c.fillStyle = '#738080';
-    c.fillRect(0, 16 * scale, sz, 5 * scale);
-    c.fillRect(37 * scale, 21 * scale, 5 * scale, sz);
-    c.fillStyle = '#b8b7a4';
-    c.fillRect(48 * scale, 16 * scale, 5 * scale, 5 * scale);
-  }
-  for (let y = 0; y < w.size; y++)
-    for (let x = 0; x < w.size; x++) {
-      if (!w.outdoor && !w.grid[y][x]) {
-        c.fillStyle = '#2c4248';
-        c.fillRect(x * scale, y * scale, scale + 0.2, scale + 0.2);
-      }
-      if (
-        w.grid[y][x] &&
-        (w.outdoor ||
-          [
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1],
-          ].some(([dx, dy]) => w.grid[y + dy]?.[x + dx] === 0))
-      ) {
-        c.fillStyle = w.id === 'outdoor' ? '#a27658' : '#586c74';
-        c.fillRect(x * scale, y * scale, scale + 0.2, scale + 0.2);
-      }
-    }
+  c.imageSmoothingEnabled = false;
+  c.drawImage(base.canvas, ox * bs, oy * bs, view * bs, view * bs, 0, 0, sz, sz);
+  const P = (x, y) => [(x - ox) * scale, (y - oy) * scale];
   for (const o of w.objects) {
     if (o.profile?.id === state?.character || !o.action) continue;
+    if (o.profile && onlineChars.has(o.profile.id) && !o.guest) continue;
+    const [x, y] = P(o.x, o.y);
+    if (x < -3 || y < -3 || x > sz + 3 || y > sz + 3) continue;
     c.fillStyle = o.profile ? '#82b5d9' : '#92e2bf';
     c.beginPath();
-    c.arc(o.x * scale, o.y * scale, w.size > 30 ? 1.8 : 2.3, 0, 7);
+    c.arc(x, y, big ? 2.2 : w.size > 30 ? 1.8 : 2.3, 0, 7);
     c.fill();
   }
-  // Andra spelare som orange prickar.
   c.fillStyle = '#ffcb83';
   for (const r of remotesHere()) {
+    const [x, y] = P(r.x, r.y);
     c.beginPath();
-    c.arc(r.x * scale, r.y * scale, 2.8, 0, 7);
+    c.arc(x, y, 2.8, 0, 7);
     c.fill();
   }
+  const [px, py] = P(player.x, player.y);
   c.save();
-  c.translate(player.x * scale, player.y * scale);
+  c.translate(px, py);
   c.rotate(player.a);
   c.fillStyle = '#ffd18e';
   c.beginPath();

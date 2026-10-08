@@ -105,10 +105,10 @@ function safeStorage() {
 }
 function save() {
   if (!state) return false;
-  state.mapRevision = 2;
+  state.mapRevision = 3;
   state.world = job ? 'outdoor' : world.id;
-  state.x = job ? 17.5 : player.x;
-  state.y = job ? 17.5 : player.y;
+  state.x = job ? jobReturnSpot().x : player.x;
+  state.y = job ? jobReturnSpot().y : player.y;
   state.a = player.a;
   state.savedAt = Date.now();
   scheduleCloudSave();

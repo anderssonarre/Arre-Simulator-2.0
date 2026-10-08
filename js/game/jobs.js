@@ -110,7 +110,7 @@ function finishJob() {
   gain('energy', -12);
   gain('happy', 12);
   $('jobHUD').style.display = 'none';
-  changeWorld('outdoor', { x: 17.5, y: 17.5, a: Math.PI });
+  changeWorld('outdoor', jobReturnSpot());
   sound('win');
   dialog(
     'Passet är klart!',
@@ -138,7 +138,7 @@ function finishJob() {
 function abortJob() {
   job = null;
   $('jobHUD').style.display = 'none';
-  changeWorld('outdoor', { x: 17.5, y: 17.5, a: Math.PI });
+  changeWorld('outdoor', jobReturnSpot());
   toast('Passet avbröts. Ingen lön betalades ut.');
 }
 const tasks = {
@@ -358,4 +358,10 @@ function confirmAbort() {
     ],
     'Extrajobb',
   );
+}
+
+// Där man hamnar efter ett extrajobb: vid jobbmarkeringen på campus.
+function jobReturnSpot() {
+  const o = worlds.outdoor.objects.find((o) => o.type === 'job');
+  return o ? { x: o.x - 0.8, y: o.y, a: 0 } : worlds.outdoor.spawn;
 }

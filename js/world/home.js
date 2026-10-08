@@ -682,6 +682,7 @@ function buildHome() {
     changeWorld('outdoor', { x: 48.5, y: 57.0, a: -Math.PI / 2 }),
   );
   exit.type = 'portal';
+  exit.target = 'outdoor';
   exit.height = 1.2;
   return w;
 }

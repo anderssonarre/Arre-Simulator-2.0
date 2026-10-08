@@ -107,8 +107,10 @@ function spotsFor(where, activity, lecture) {
   } else if (activity === 'lunch') list = near(23.5, 21.5, 14);
   else if (activity === 'fest') list = near(36.5, 12.5, 14);
   else if (activity === 'tränar') list = near(6.5, 8.5, 8);
-  else if (activity === 'jobbar' && where === 'outdoor') list = near(19.5, 18.5, 2);
-  else {
+  else if (activity === 'jobbar' && where === 'outdoor') {
+    const job = w.objects.find((o) => o.type === 'job');
+    list = near(job.x + 1, job.y, 2);
+  } else {
     const base = {
       w33: [
         [17.5, 27.5],
@@ -125,12 +127,14 @@ function spotsFor(where, activity, lecture) {
         [35.5, 34.5],
       ],
       outdoor: [
-        [35.5, 44.5],
-        [44.5, 24.5],
-        [34.5, 20.5],
-        [33.5, 25.5],
-        [45.5, 30.5],
-        [20.5, 23.5],
+        [60.5, 75.5],
+        [45.5, 66.5],
+        [70.5, 95.5],
+        [84.5, 120.5],
+        [128.5, 168.5],
+        [150.5, 158.5],
+        [112.5, 150.5],
+        [30.5, 90.5],
       ],
       gym: [[6.5, 8.5]],
     }[where] || [[w.spawn.x, w.spawn.y]];
@@ -167,20 +171,50 @@ function findPath(w, sx, sy, tx, ty) {
     start = Math.floor(sy) * n + Math.floor(sx),
     goal = Math.floor(ty) * n + Math.floor(tx);
   if (start === goal) return [[tx, ty]];
-  const open = [start],
-    came = new Int32Array(n * n).fill(-1),
+  // A* med en binär hög, så att det går snabbt även på den stora campuskartan.
+  const came = new Int32Array(n * n).fill(-1),
     gs = new Float32Array(n * n).fill(Infinity),
-    inOpen = new Uint8Array(n * n),
-    h = (i) => Math.hypot((i % n) - (goal % n), Math.floor(i / n) - Math.floor(goal / n));
+    closed = new Uint8Array(n * n),
+    gx = goal % n,
+    gy = Math.floor(goal / n),
+    h = (i) => Math.hypot((i % n) - gx, Math.floor(i / n) - gy),
+    heap = [],
+    push = (i, f) => {
+      heap.push([f, i]);
+      let k = heap.length - 1;
+      while (k > 0) {
+        const p = (k - 1) >> 1;
+        if (heap[p][0] <= heap[k][0]) break;
+        [heap[p], heap[k]] = [heap[k], heap[p]];
+        k = p;
+      }
+    },
+    pop = () => {
+      const top = heap[0],
+        last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let k = 0;
+        for (;;) {
+          const l = 2 * k + 1,
+            r = l + 1;
+          let m = k;
+          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+          if (m === k) break;
+          [heap[m], heap[k]] = [heap[k], heap[m]];
+          k = m;
+        }
+      }
+      return top[1];
+    };
   gs[start] = 0;
-  inOpen[start] = 1;
-  const f = (i) => gs[i] + h(i);
+  push(start, h(start));
   let guard = 0;
-  while (open.length && guard++ < 6000) {
-    let bi = 0;
-    for (let k = 1; k < open.length; k++) if (f(open[k]) < f(open[bi])) bi = k;
-    const cur = open.splice(bi, 1)[0];
-    inOpen[cur] = 0;
+  while (heap.length && guard++ < 60000) {
+    const cur = pop();
+    if (closed[cur]) continue;
+    closed[cur] = 1;
     if (cur === goal) break;
     const cx = cur % n,
       cy = Math.floor(cur / n);
@@ -191,17 +225,14 @@ function findPath(w, sx, sy, tx, ty) {
           ny = cy + dy;
         if (nx < 0 || ny < 0 || nx >= n || ny >= n) continue;
         const ni = ny * n + nx;
-        if (!pass[ni] && ni !== goal) continue;
+        if ((!pass[ni] && ni !== goal) || closed[ni]) continue;
         // Inga genvägar genom hörn.
         if (dx && dy && (!pass[cy * n + nx] || !pass[ny * n + cx])) continue;
         const ng = gs[cur] + (dx && dy ? 1.414 : 1);
         if (ng < gs[ni]) {
           gs[ni] = ng;
           came[ni] = cur;
-          if (!inOpen[ni]) {
-            open.push(ni);
-            inOpen[ni] = 1;
-          }
+          push(ni, ng + h(ni));
         }
       }
   }
@@ -236,10 +267,8 @@ function clearLine(w, x0, y0, x1, y1) {
 function doorTo(fromWorld, toWorld) {
   return worlds[fromWorld].objects.find((o) => o.type === 'portal' && o.target === toWorld);
 }
-const CAMPUS_EXITS = [
-  [2.5, 18.5],
-  [61.5, 18.5],
-];
+// Ställen där personer kommer in på och lämnar kartan (där gatorna går ut).
+const campusExits = () => worlds.outdoor.exits;
 function placePerson(pp, where, x, y) {
   if (pp.world) {
     const list = worlds[pp.world].objects,
@@ -260,7 +289,7 @@ function nextLeg(pp) {
   if (!pp.world) {
     if (goal.where === 'hemma') return null;
     // Kommer till campus från vägen.
-    const [x, y] = CAMPUS_EXITS[hashId(pp.p.id) % CAMPUS_EXITS.length];
+    const [x, y] = campusExits()[hashId(pp.p.id) % campusExits().length];
     placePerson(pp, 'outdoor', x, y);
     return nextLeg(pp);
   }
@@ -270,7 +299,7 @@ function nextLeg(pp) {
     return { x: d.x, y: d.y, through: { to: 'outdoor', from: pp.world } };
   }
   if (goal.where === 'hemma') {
-    const [x, y] = CAMPUS_EXITS.reduce((a, b) =>
+    const [x, y] = campusExits().reduce((a, b) =>
       Math.hypot(a[0] - pp.obj.x, a[1] - pp.obj.y) < Math.hypot(b[0] - pp.obj.x, b[1] - pp.obj.y)
         ? a
         : b,
@@ -283,9 +312,14 @@ function nextLeg(pp) {
 function startLeg(pp) {
   pp.leg = nextLeg(pp);
   if (!pp.leg) return;
-  pp.path = findPath(worlds[pp.world], pp.obj.x, pp.obj.y, pp.leg.x, pp.leg.y) || [
-    [pp.leg.x, pp.leg.y],
-  ];
+  pp.path = findPath(worlds[pp.world], pp.obj.x, pp.obj.y, pp.leg.x, pp.leg.y);
+  // Hittas ingen väg flyttar personen direkt dit, hellre än att gå genom en vägg.
+  if (!pp.path) {
+    pp.obj.x = pp.leg.x;
+    pp.obj.y = pp.leg.y;
+    pp.path = [];
+    finishLeg(pp);
+  }
 }
 function finishLeg(pp) {
   const leg = pp.leg;

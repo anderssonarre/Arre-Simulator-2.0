@@ -75,9 +75,11 @@ function pushOut(w, r) {
   for (let pass = 0; pass < 4; pass++) {
     const cx = Math.floor(player.x),
       cy = Math.floor(player.y);
-    for (let y = cy - 1; y <= cy + 1; y++)
-      for (let x = cx - 1; x <= cx + 1; x++)
-        if (isWall(w, x + 0.5, y + 0.5)) pushOutOfRect(x, y, x + 1, y + 1, r);
+    if (w.segments) segPushOut(w, r);
+    else
+      for (let y = cy - 1; y <= cy + 1; y++)
+        for (let x = cx - 1; x <= cx + 1; x++)
+          if (isWall(w, x + 0.5, y + 0.5)) pushOutOfRect(x, y, x + 1, y + 1, r);
     // Möbler är också hinder.
     for (const s of w.solids || []) pushOutOfRect(s.x0, s.y0, s.x1, s.y1, r);
   }

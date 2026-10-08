@@ -8,9 +8,10 @@ function start(s) {
   job = null;
   party = false;
   world = worlds[s.world];
-  if (s.mapRevision !== 2 && s.world !== 'home') {
+  // Kartan över campus byttes i version 3: äldre sparningar börjar vid hemmets dörr.
+  if (s.mapRevision !== 3 && s.world !== 'home') {
     Object.assign(s, world.spawn);
-    s.mapRevision = 2;
+    s.mapRevision = 3;
   }
   Object.assign(player, { x: s.x, y: s.y, a: s.a });
   if (!walkable(world, player.x, player.y)) Object.assign(player, world.spawn);
