@@ -29,9 +29,7 @@ function menu() {
           else close();
         },
       },
-      ...(tutorialStep()
-        ? [{ label: 'Hoppa över introduktionen', run: skipTutorial }]
-        : []),
+      ...(tutorialStep() ? [{ label: 'Hoppa över introduktionen', run: skipTutorial }] : []),
       { label: 'Veckoschema', run: showWeek },
       { label: 'Studieplan och betyg', run: showCourses },
       { label: 'Färdigheter och ekonomi', run: showProgress },
@@ -47,6 +45,9 @@ function menu() {
               run: () => (account.token ? logout().then(menu) : accountDialog()),
             },
           ]
+        : []),
+      ...(net.status === 'online'
+        ? [{ label: 'Spelare, lappar och topplistor', run: showPlayers }]
         : []),
       ...(serverInfo ? [{ label: 'Tyck till om spelet', run: feedbackDialog }] : []),
       { label: 'Platsbilder och ritningsunderlag', run: showSources },

@@ -114,6 +114,7 @@ function save() {
   state.a = player.a;
   state.savedAt = Date.now();
   scheduleCloudSave();
+  scheduleRecord();
   try {
     localStorage.setItem(SAVE, JSON.stringify(state));
     $('saving').textContent = 'Sparat';

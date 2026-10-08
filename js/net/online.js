@@ -54,6 +54,8 @@ async function findServer() {
 // Hem och extrajobb är privata, så de får ett eget namn per spelare.
 function worldKey() {
   if (!world) return 'outdoor';
+  // På besök hemma hos någon: samma hem som värden.
+  if (world.id === 'home' && net.visiting != null) return 'home:' + net.visiting;
   return world.id === 'home' || world.id === 'work' ? world.id + ':' + (net.id ?? 0) : world.id;
 }
 async function onlineConnect() {
@@ -145,6 +147,8 @@ function onlineMessage(m) {
     refreshOnlineChars();
     updateOnlineBadge();
     if (r) toast(r.name + ' gick offline.');
+    if (net.visiting === m.id)
+      toast('Du är kvar hemma hos ' + r?.name.split(' ')[0] + '. Gå ut genom dörren.');
   } else if (m.t === 'states') {
     for (const [id, w, x, y, a, moving, color] of m.list) {
       const r = remotes.get(id);
@@ -170,6 +174,8 @@ function onlineMessage(m) {
     addChatLine(m.name, m.text, m.id === net.id);
   } else if (m.t === 'clock') {
     setServerClock(m, false);
+  } else if (['invite', 'answer', 'notes', 'noteSent'].includes(m.t)) {
+    togetherMessage(m);
   } else if (m.t === 'full') {
     toast('Servern är full just nu. Du spelar ensam så länge.');
     net.manualClose = true;
@@ -351,35 +357,6 @@ function updateOnlineBadge() {
   $('chatBtn').hidden = net.status !== 'online';
 }
 
-// Klick på "N online" visar vilka som är inne.
+// Klick på "N online" visar vilka som är inne, och vad man kan göra tillsammans.
 $('onlineBadge').style.cursor = 'pointer';
-$('onlineBadge').addEventListener('click', () => {
-  if (net.status !== 'online' || modal) return;
-  const list = [...remotes.values()];
-  dialog(
-    list.length + 1 + ' online',
-    '<div class="course"><span><strong>' +
-      esc(playerName()) +
-      '</strong> (du)</span><span class="badge">' +
-      esc(PLACE_TEXT[world?.id] || 'hemma') +
-      '</span></div>' +
-      list
-        .map(
-          (r) =>
-            '<div class="course"><span>' +
-            esc(r.name) +
-            '</span><span class="badge">' +
-            esc(
-              r.world.startsWith('home')
-                ? 'hemma'
-                : r.world.startsWith('work')
-                  ? 'på extrajobbet'
-                  : PLACE_TEXT[r.world] || r.world,
-            ) +
-            '</span></div>',
-        )
-        .join(''),
-    [{ label: 'Stäng', primary: true, run: close }],
-    'Spelare',
-  );
-});
+$('onlineBadge').addEventListener('click', (e) => showPlayers(e));

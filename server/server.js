@@ -199,6 +199,31 @@ async function handleApi(req, res, url) {
     }
   }
   if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
+  // Topplistor: spelet skickar sina siffror, alla kan läsa de bästa.
+  if (url === '/api/records' && req.method === 'GET')
+    return json(res, 200, await store.getRecords());
+  if (url === '/api/record' && req.method === 'POST') {
+    if (eventFlood(clientIp(req))) return json(res, 429, {});
+    let b;
+    try {
+      b = await readBody(req, 1024);
+    } catch {
+      return json(res, 400, {});
+    }
+    const name = typeof b.name === 'string' ? b.name.trim().slice(0, 24) : '';
+    if (!name) return json(res, 400, {});
+    const n = (v, hi) => (Number.isFinite(v) ? Math.min(hi, Math.max(0, v)) : 0);
+    await store.putRecord(name.toLowerCase(), {
+      name,
+      credits: n(b.credits, 200),
+      avg: n(b.avg, 5),
+      courses: n(b.courses, 40),
+      friends: n(b.friends, 40),
+      jobs: n(b.jobs, 100000),
+      at: Date.now(),
+    });
+    return json(res, 200, {});
+  }
   // Anonym statistik och "tyck till". Högst 300 per timme och adress.
   if ((url === '/api/event' || url === '/api/feedback') && req.method === 'POST') {
     if (eventFlood(clientIp(req))) return json(res, 429, {});
@@ -310,6 +335,15 @@ const publicInfo = (p) => ({
 function send(ws, msg) {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
+async function deliverNotes(p) {
+  if (!store) return;
+  try {
+    const list = await store.takeNotes(p.name.toLowerCase());
+    if (list.length) send(p.ws, { t: 'notes', list });
+  } catch (e) {
+    console.error(e);
+  }
+}
 function broadcast(msg, except) {
   const data = JSON.stringify(msg);
   for (const p of players.values())
@@ -356,6 +390,7 @@ wss.on('connection', (ws) => {
         players: [...players.values()].filter((p) => p !== me).map(publicInfo),
       });
       broadcast({ t: 'join', p: publicInfo(me) }, me);
+      deliverNotes(me);
       return;
     }
     if (!me) return;
@@ -375,6 +410,30 @@ wss.on('connection', (ws) => {
       if (!text || now - me.lastChat < 800) return;
       me.lastChat = now;
       broadcast({ t: 'chat', id: me.id, name: me.name, text, world: me.world });
+    } else if (m.t === 'invite' || m.t === 'answer') {
+      // Inbjudningar mellan spelare (hem på besök). Servern skickar bara vidare, högst var tredje sekund.
+      const to = players.get(m.to),
+        now = Date.now();
+      if (!to || to === me || now - (me.lastInvite || 0) < (m.t === 'invite' ? 3000 : 300)) return;
+      me.lastInvite = now;
+      const kind = m.kind === 'home' ? 'home' : null;
+      if (!kind) return;
+      send(to.ws, { t: m.t, from: me.id, name: me.name, kind, accept: !!m.accept });
+    } else if (m.t === 'note') {
+      // Lappar till ett spelarnamn. Finns mottagaren online levereras lappen direkt, annars när hen loggar in.
+      const text = clean(m.text, 200),
+        to = clean(m.to, 24),
+        now = Date.now();
+      if (!text || !to || !store || now - (me.lastNote || 0) < 2000) return;
+      me.lastNote = now;
+      store
+        .addNote(to.toLowerCase(), { from: me.name, text, at: now })
+        .then(() => {
+          for (const p of players.values())
+            if (p.name.toLowerCase() === to.toLowerCase()) deliverNotes(p);
+        })
+        .catch(() => {});
+      send(ws, { t: 'noteSent', to });
     }
   });
   ws.on('pong', () => me && (me.alive = true));

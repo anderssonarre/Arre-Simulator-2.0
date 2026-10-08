@@ -7,7 +7,7 @@ const path = require('node:path');
 
 function fileStore(dir) {
   const file = path.join(dir, 'arre-db.json');
-  let db = { users: {}, saves: {}, sessions: {}, stats: {}, feedback: [] };
+  let db = { users: {}, saves: {}, sessions: {}, stats: {}, feedback: [], notes: {}, records: {} };
   try {
     db = { ...db, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
   } catch {}
@@ -65,6 +65,26 @@ function fileStore(dir) {
     async getFeedback(n) {
       return db.feedback.slice(-n).reverse();
     },
+    // Lappar till en spelare. Högst 20 väntande per mottagare.
+    async addNote(key, note) {
+      db.notes[key] = [...(db.notes[key] || []), note].slice(-20);
+      persist();
+    },
+    async takeNotes(key) {
+      const list = db.notes[key] || [];
+      if (list.length) {
+        delete db.notes[key];
+        persist();
+      }
+      return list;
+    },
+    async putRecord(key, r) {
+      db.records[key] = r;
+      persist();
+    },
+    async getRecords() {
+      return Object.values(db.records);
+    },
     flush,
   };
 }
@@ -84,6 +104,10 @@ async function pgStore(url, pgModule) {
     hash text primary key, key text not null, created bigint not null)`);
   await pool.query(`create table if not exists arre_stats (
     key text primary key, n double precision not null)`);
+  await pool.query(`create table if not exists arre_notes (
+    id serial primary key, key text not null, sender text not null, text text not null, at bigint not null)`);
+  await pool.query(`create table if not exists arre_records (
+    key text primary key, data text not null)`);
   await pool.query(`create table if not exists arre_feedback (
     id serial primary key, created bigint not null, fun text, stuck text, missing text)`);
   return {
@@ -151,6 +175,37 @@ async function pgStore(url, pgModule) {
         [n],
       );
       return r.rows.map((x) => ({ ...x, created: Number(x.created) }));
+    },
+    async addNote(key, note) {
+      await pool.query('insert into arre_notes (key, sender, text, at) values ($1, $2, $3, $4)', [
+        key,
+        note.from,
+        note.text,
+        note.at,
+      ]);
+      await pool.query(
+        'delete from arre_notes where key = $1 and id not in (select id from arre_notes where key = $1 order by id desc limit 20)',
+        [key],
+      );
+    },
+    async takeNotes(key) {
+      const r = await pool.query(
+        'delete from arre_notes where key = $1 returning sender, text, at, id',
+        [key],
+      );
+      return r.rows
+        .sort((a, b) => a.id - b.id)
+        .map((x) => ({ from: x.sender, text: x.text, at: Number(x.at) }));
+    },
+    async putRecord(key, r) {
+      await pool.query(
+        'insert into arre_records (key, data) values ($1, $2) on conflict (key) do update set data = excluded.data',
+        [key, JSON.stringify(r)],
+      );
+    },
+    async getRecords() {
+      const r = await pool.query('select data from arre_records');
+      return r.rows.map((x) => JSON.parse(x.data));
     },
     flush() {},
   };

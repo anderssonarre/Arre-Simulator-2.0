@@ -26,7 +26,9 @@ function study(i, buddy = null) {
   if (c.study >= 2) return toast('Du är redo för tentan. Hitta den gula markeringen.');
   if (state.stats.energy < 12)
     return toast('För trött för ett studiepass. Vila hemma eller gör yoga.');
-  const problem = buddy ? null : focusProblem();
+  // En riktig spelare bredvid dig räknas som studiekamrat.
+  const mate = buddy ? null : studyMate();
+  const problem = buddy || mate ? null : focusProblem();
   if (problem) {
     gain('energy', -5);
     advance(40);
@@ -49,7 +51,7 @@ function study(i, buddy = null) {
     return;
   }
   const all = [0, 1, 2, 3, 4],
-    tips = buddy || c.retake ? all : c.study === 0 ? [0, 1, 2] : [3, 4];
+    tips = buddy || mate || c.retake ? all : c.study === 0 ? [0, 1, 2] : [3, 4];
   const label = c.retake ? 'Repetitionspasset' : 'Studiepass ' + (c.study + 1) + ' / 2';
   c.study = c.retake ? 2 : c.study + 1;
   delete c.retake;
@@ -57,6 +59,11 @@ function study(i, buddy = null) {
   advance(40);
   addXp(courseSkill(i), XP.studiepass);
   tutorialDone('föreläsning');
+  if (mate) {
+    addXp('socialt', XP.pluggaMedVän);
+    addXp(courseSkill(i), 6);
+    gain('happy', 6);
+  }
   if (buddy) {
     addXp('socialt', XP.pluggaMedVän);
     gain('happy', 5);
@@ -71,7 +78,11 @@ function study(i, buddy = null) {
       ' är klart.' +
       (buddy
         ? ' Du pluggade med ' + esc(buddy.name.split(' ')[0]) + ' och ni gick igenom allt.'
-        : '') +
+        : mate
+          ? ' Du pluggade ihop med ' +
+            esc(mate.name.split(' ')[0]) +
+            '. Ni förhörde varandra: alla anteckningar, +6 glädje och extra erfarenhet.'
+          : '') +
       '</p><p>Dagens anteckningar:</p>' +
       tipList(cs, tips) +
       '<p class="sub">Studietid: 40 minuter. Energi: −8.' +

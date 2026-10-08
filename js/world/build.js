@@ -233,6 +233,7 @@ function changeWorld(id, spawn) {
   close();
   sound();
   tutorialDone('world:' + id);
+  leftWorld(id);
   updateHUD();
   save();
 }
