@@ -1,14 +1,19 @@
 // Lunch, garderob och fest
 'use strict';
+function lunchPrice() {
+  return state.cheapLunchDay === state.day ? 4 : 8;
+}
 function lunch() {
-  if (state.money < 8) return toast('Lunchen kostar 8 €. Ett extrajobb ger dig råd.');
-  state.money -= 8;
+  const price = lunchPrice();
+  if (state.money < price)
+    return toast('Lunchen kostar ' + price + ' €. Ett extrajobb ger dig råd.');
+  state.money -= price;
   state.lunches++;
   gain('hunger', 55);
   gain('happy', 5);
   advance(15);
   save();
-  toast('Lunch på W33. +55 mättnad och +5 glädje.');
+  toast('Lunch på W33 för ' + price + ' €. +55 mättnad och +5 glädje.');
   sound('win');
 }
 function wardrobe() {

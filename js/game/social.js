@@ -3,6 +3,23 @@
 function relation(p) {
   return state.relations[p.id] || 0;
 }
+// Ändrar relationen till en person med n poäng.
+function bump(id, n) {
+  state.relations[id] = clamp((state.relations[id] || 0) + n, -100, 100);
+}
+// Vilka ämnen i en persons profil som hjälper i respektive kurs (0 = W33, 1 och 2 = Technobothnia).
+const studyTopics = [
+  ['teknik', 'system'],
+  ['matematik', 'planering'],
+  ['konstruktion', 'teknik'],
+];
+// Kursen som personen kan hjälpa dig med just nu, eller -1.
+function buddyCourse(p) {
+  if (relation(p) < 40 || state.studiedWith?.[p.id] === state.day) return -1;
+  return state.courses.findIndex(
+    (c, i) => !c.pass && (c.study < 2 || c.retake) && studyTopics[i].includes(p.topic),
+  );
+}
 function relationName(n) {
   return n >= 70
     ? 'Nära vän'
@@ -59,9 +76,20 @@ function chat(p) {
         run: () => reply(p, 'Kan vi prata om ' + p.topic + '?', 'topic'),
       },
       {
-        label: 'Vill du hitta på något?',
-        run: () => reply(p, 'Vill du hitta på något?', 'invite'),
+        label: r >= 15 ? 'Ska vi ta en kaffe?' : 'Vill du hitta på något?',
+        run: () => reply(p, r >= 15 ? 'Ska vi ta en kaffe?' : 'Vill du hitta på något?', 'invite'),
       },
+      ...(buddyCourse(p) >= 0
+        ? [
+            {
+              label: 'Plugga ' + course(buddyCourse(p)).name + ' tillsammans',
+              run: () => {
+                close();
+                study(buddyCourse(p), p);
+              },
+            },
+          ]
+        : []),
       {
         label: 'Skicka min replik',
         primary: true,
@@ -141,6 +169,28 @@ function reply(p, text, type) {
                         'Lite mycket idag, men en lunch och lite sällskap hjälper.',
                         'Vi försöker få ihop dagen. Hur går det för dig?',
                       ]);
+  // En kaffe med en bekant ger glädje och närmare relation, en gång per dag och person.
+  state.hangout ??= {};
+  if (type === 'invite' && r >= 15 && !bad) {
+    if (state.hangout[p.id] !== state.day) {
+      state.hangout[p.id] = state.day;
+      bump(p.id, 4);
+      gain('happy', 8);
+      advance(30);
+      response = rand([
+        'Gärna! Vi tar en kaffe i entrén.',
+        'Ja, det behövs. Kaffe på mig den här gången.',
+        'Perfekt timing, jag behövde en paus.',
+      ]);
+      toast('Kaffe med ' + p.name.split(' ')[0] + ' · +8 glädje · 30 minuter');
+    } else response = 'Vi tog ju redan en kaffe idag. Imorgon igen?';
+  }
+  if (relation(p) >= 40 && r < 40)
+    toast(
+      p.name.split(' ')[0] +
+        ' är nu din vän.' +
+        (studyTopics.some((t) => t.includes(p.topic)) ? ' Ni kan plugga tillsammans.' : ''),
+    );
   remember(p, 'you', text);
   remember(p, 'npc', response);
   gain('happy', bad ? -3 : newDay ? 5 : 1);

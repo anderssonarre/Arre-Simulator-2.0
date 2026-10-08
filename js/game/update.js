@@ -99,13 +99,19 @@ function update(dt) {
   state.stats.hunger = Math.max(0, state.stats.hunger - dt * 0.07);
   state.stats.energy = Math.max(0, state.stats.energy - dt * 0.025);
   state.stats.happy = Math.max(0, state.stats.happy - dt * 0.018);
+  if (state.stats.hunger <= 0) {
+    // Utan mat tar både ork och humör slut fortare.
+    state.stats.energy = Math.max(0, state.stats.energy - dt * 0.05);
+    state.stats.happy = Math.max(0, state.stats.happy - dt * 0.06);
+  }
+  if (state.stats.energy <= 0 && !modal && !job) passOut();
   if (party && world.id === 'w33' && player.x > 13 && player.y < 9)
     state.stats.happy = clamp(state.stats.happy + dt * 0.3, 0, 100);
   noticeTimer -= dt;
   if (noticeTimer <= 0 && (state.stats.hunger < 15 || state.stats.energy < 15)) {
     toast(
       state.stats.hunger < 15
-        ? 'Hungrig? Lunch finns i W33 för 8 €.'
+        ? 'Hungrig? Lunch finns i W33 för ' + lunchPrice() + ' €.'
         : 'Du är trött. Vila hemma eller gör yoga på gymmet.',
     );
     noticeTimer = 40;

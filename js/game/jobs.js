@@ -100,7 +100,10 @@ function finishJob() {
   if (!job) return;
   const p = characters.find((c) => c.id === job.key);
   job = null;
-  state.money += p.reward;
+  const happyBonus = state.stats.happy >= 70,
+    double = state.doubleJobDay === state.day,
+    pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1));
+  state.money += pay;
   state.runs++;
   advance(60);
   gain('energy', -12);
@@ -113,8 +116,19 @@ function finishJob() {
     '<p>' +
       esc(p.job) +
       ' är avslutat. Du får <strong style="color:var(--mint)">' +
-      p.reward +
-      ' €</strong>.</p><div class="info">+12 glädje · −12 energi · 1 timme har gått</div>',
+      pay +
+      ' €</strong>.</p>' +
+      (happyBonus || double
+        ? '<p>' +
+          [
+            double ? 'Dubbel lön från Ossi idag.' : '',
+            happyBonus ? 'Ditt goda humör gav 25 % bonus.' : '',
+          ]
+            .filter(Boolean)
+            .join(' ') +
+          '</p>'
+        : '') +
+      '<div class="info">+12 glädje · −12 energi · 1 timme har gått</div>',
     [{ label: 'Tillbaka till campus', primary: true, run: close }],
     'Lön utbetald',
   );

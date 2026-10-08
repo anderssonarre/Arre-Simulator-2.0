@@ -25,15 +25,18 @@ function objective() {
           ? 'Gå hem till skrivbordet och skriv examensprovet.'
           : 'Gå hem och sov för att börja nästa termin.',
     };
-  const course = curriculum[state.term - 1][i][0];
+  const c = state.courses[i],
+    name = course(i).name;
   return {
-    title: (state.courses[i].study < 2 ? 'Studera ' : 'Skriv tenta i ') + course,
+    title: (c.retake ? 'Repetera ' : c.study < 2 ? 'Studera ' : 'Skriv tenta i ') + name,
     detail:
       (i === 0 ? 'W33' : 'Technobothnia') +
       ' · ' +
-      (state.courses[i].study < 2
-        ? 'Två studiepass förbereder dig för tentan.'
-        : 'Besök den gula tentamarkeringen.'),
+      (c.retake
+        ? 'Ett repetitionspass behövs före omtentan.'
+        : c.study < 2
+          ? 'Två studiepass förbereder dig för tentan.'
+          : 'Besök den gula tentamarkeringen.'),
   };
 }
 function updateHUD() {

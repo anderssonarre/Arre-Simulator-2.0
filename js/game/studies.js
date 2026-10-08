@@ -1,24 +1,79 @@
 // Studier, tentor, sömn och examen
 'use strict';
-function study(i) {
+// Kurser i termin 1-8. course(i) ger kursens namn och frågebank.
+function course(i) {
+  return curriculum[state.term - 1][i];
+}
+// Vad som hindrar koncentrationen just nu, eller null om allt är okej.
+function focusProblem() {
+  const s = state.stats;
+  if (s.hunger < 20) return 'hungrig';
+  if (s.energy < 20) return 'trött';
+  if (s.happy < 20) return 'nere';
+  return null;
+}
+function tipList(cs, indexes) {
+  return (
+    '<div class="info">' +
+    indexes.map((n) => '• ' + esc(cs.questions[n][4])).join('<br>') +
+    '</div>'
+  );
+}
+function study(i, buddy = null) {
   const c = state.courses[i],
-    q = curriculum[state.term - 1][i];
+    cs = course(i);
   if (c.pass) return toast('Den här kursen är redan klar.');
   if (c.study >= 2) return toast('Du är redo för tentan. Hitta den gula markeringen.');
   if (state.stats.energy < 12)
     return toast('För trött för ett studiepass. Vila hemma eller gör yoga.');
-  c.study++;
+  const problem = buddy ? null : focusProblem();
+  if (problem) {
+    gain('energy', -5);
+    advance(40);
+    save();
+    dialog(
+      'Svårt att fokusera',
+      '<p>Du är för ' +
+        problem +
+        ' för att få ut något av passet. Det räknades inte.</p><div class="info">' +
+        (problem === 'hungrig'
+          ? 'Ät lunch i W33 först.'
+          : problem === 'trött'
+            ? 'Vila hemma eller gör yoga på gymmet.'
+            : 'Gör något roligt: prata med en vän, träna eller gå på fest.') +
+        '</div><p>Plugga med en vän så hjälper hen dig att fokusera ändå.</p>',
+      [{ label: 'Okej', primary: true, run: close }],
+      'Studier',
+    );
+    sound('bad');
+    return;
+  }
+  const all = [0, 1, 2, 3, 4],
+    tips = buddy || c.retake ? all : c.study === 0 ? [0, 1, 2] : [3, 4];
+  const label = c.retake ? 'Repetitionspasset' : 'Studiepass ' + (c.study + 1) + ' / 2';
+  c.study = c.retake ? 2 : c.study + 1;
+  delete c.retake;
   gain('energy', -8);
   advance(40);
+  if (buddy) {
+    gain('happy', 5);
+    bump(buddy.id, 3);
+    state.studiedWith ??= {};
+    state.studiedWith[buddy.id] = state.day;
+  }
   dialog(
-    q[0],
-    '<p>Studiepass ' +
-      c.study +
-      ' / 2 är klart.</p><div class="info">Dagens anteckning: ' +
-      esc(q[1]) +
-      '<br><strong style="color:var(--mint)">' +
-      esc(q[2]) +
-      '</strong></div><p>Studietid: 40 minuter. Energi: −8.</p>',
+    cs.name,
+    '<p>' +
+      label +
+      ' är klart.' +
+      (buddy
+        ? ' Du pluggade med ' + esc(buddy.name.split(' ')[0]) + ' och ni gick igenom allt.'
+        : '') +
+      '</p><p>Dagens anteckningar:</p>' +
+      tipList(cs, tips) +
+      '<p class="sub">Studietid: 40 minuter. Energi: −8.' +
+      (c.study >= 2 ? ' Du är redo för tentan.' : '') +
+      '</p>',
     [{ label: 'Tillbaka till campuslivet', primary: true, run: close }],
     'Studier',
   );
@@ -53,47 +108,92 @@ function quiz(title, question, answers, onCorrect, onWrong, tag = 'Tentamen') {
 }
 function exam(i) {
   const c = state.courses[i],
-    q = curriculum[state.term - 1][i];
+    cs = course(i);
   if (c.pass) return toast('Tentan är redan godkänd.');
+  if (c.retake) return toast('Gör ett repetitionspass innan omtentan.');
   if (c.study < 2) return toast('Läs två studiepass före tentan.');
+  const problem = focusProblem(),
+    need = problem ? 3 : 2,
+    picks = shuffled([0, 1, 2, 3, 4]).slice(0, 3);
+  dialog(
+    'Tenta i ' + cs.name,
+    '<p>Tre frågor. Du behöver <strong>' +
+      need +
+      ' rätt</strong> för att bli godkänd.</p>' +
+      (problem
+        ? '<div class="info">Du är ' +
+          problem +
+          ' och har svårt att tänka klart. Därför krävs alla rätt. Ta hand om dig först om du vill ha bättre chans.</div>'
+        : ''),
+    [
+      { label: 'Börja tentan', primary: true, run: () => examQuestion(i, picks, [], need) },
+      { label: 'Inte än', run: close },
+    ],
+    'Tentamen',
+  );
+}
+function examQuestion(i, picks, answers, need) {
+  const cs = course(i),
+    n = answers.length;
+  if (n === picks.length) return examResult(i, picks, answers, need);
+  const q = cs.questions[picks[n]];
   quiz(
+    cs.name + ' · fråga ' + (n + 1) + ' / ' + picks.length,
     q[0],
-    q[1],
-    q.slice(2),
-    () => {
-      c.pass = true;
-      gain('happy', 8);
-      advance(30);
-      save();
-      dialog(
-        'Godkänd!',
-        '<p>Du klarade ' + esc(q[0]) + '. En kurs närmare examen.</p>',
-        [{ label: 'Fortsätt', primary: true, run: close }],
-        'Tentamen',
-      );
-    },
-    () => {
-      gain('energy', -3);
-      advance(15);
-      save();
-      dialog(
-        'Inte riktigt',
-        '<p>Läs anteckningen igen. Du kan försöka på nytt utan att förlora dina studiepass.</p>',
-        [
-          {
-            label: 'Läs anteckningen',
-            run: () =>
-              dialog(
-                'Anteckning',
-                '<p>' + esc(q[1]) + '</p><div class="info">' + esc(q[2]) + '</div>',
-                [{ label: 'Stäng', run: close }],
-              ),
-          },
-          { label: 'Tillbaka', run: close },
-        ],
-        'Tentamen',
-      );
-    },
+    q.slice(1, 4),
+    () => examQuestion(i, picks, [...answers, true], need),
+    () => examQuestion(i, picks, [...answers, false], need),
+  );
+}
+function examResult(i, picks, answers, need) {
+  const c = state.courses[i],
+    cs = course(i),
+    right = answers.filter(Boolean).length;
+  advance(30);
+  if (right >= need) {
+    c.pass = true;
+    gain('happy', right === picks.length ? 12 : 8);
+    save();
+    sound('win');
+    dialog(
+      'Godkänd!',
+      '<p>' +
+        right +
+        ' av ' +
+        picks.length +
+        ' rätt. Du klarade ' +
+        esc(cs.name) +
+        '.' +
+        (right === picks.length ? ' Full pott!' : '') +
+        '</p>',
+      [{ label: 'Fortsätt', primary: true, run: close }],
+      'Tentamen',
+    );
+    return;
+  }
+  const wrong = picks.filter((_, n) => !answers[n]);
+  c.study = 1;
+  c.retake = true;
+  gain('energy', -3);
+  gain('happy', -5);
+  save();
+  sound('bad');
+  dialog(
+    'Inte godkänd',
+    '<p>' +
+      right +
+      ' av ' +
+      picks.length +
+      ' rätt, ' +
+      need +
+      ' krävdes. Du behöver ett repetitionspass innan omtentan.</p><p>Det här var svårt:</p>' +
+      '<div class="info">' +
+      wrong
+        .map((k) => esc(cs.questions[k][0]) + '<br><small>' + esc(cs.questions[k][4]) + '</small>')
+        .join('<br><br>') +
+      '</div>',
+    [{ label: 'Tillbaka', primary: true, run: close }],
+    'Tentamen',
   );
 }
 function sleep() {
@@ -124,6 +224,7 @@ function sleep() {
           close();
           save();
           toast('Ny dag. Klockan är 08:00.');
+          morningEvent();
         },
       },
       ...(done && state.term < 8
@@ -146,6 +247,7 @@ function sleep() {
                 updateHUD();
                 save();
                 toast('Välkommen till termin ' + state.term + '!');
+                morningEvent(0.8);
               },
             },
           ]
@@ -153,6 +255,24 @@ function sleep() {
       { label: 'Tillbaka', run: close },
     ],
   );
+}
+// Energin tog slut: du somnar där du står och vaknar hemma nästa morgon.
+function passOut() {
+  if (job) return;
+  changeWorld('home');
+  if (state.hour >= 8) state.day++;
+  state.hour = 8;
+  state.stats.energy = 45;
+  gain('happy', -10);
+  gain('hunger', -15);
+  save();
+  dialog(
+    'Du somnade',
+    '<p>Energin tog slut och du somnade där du stod. Någon hjälpte dig hem.</p><div class="info">Du vaknar hemma klockan 08:00 · −10 glädje · −15 mättnad</div><p>Vila i tid nästa gång, sängen hemma ger mest energi.</p>',
+    [{ label: 'Upp och hoppa', primary: true, run: close }],
+    'Utmattad',
+  );
+  sound('bad');
 }
 function homeDesk() {
   if (state.term === 8 && state.courses.every((c) => c.pass) && !state.graduated) {
@@ -202,14 +322,18 @@ function showCourses() {
     'Din studieplan',
     '<p>Termin ' +
       state.term +
-      ' av 8. Varje kurs kräver två studiepass och en godkänd tenta.</p>' +
+      ' av 8. Varje kurs kräver två studiepass och en tenta med tre frågor där två rätt krävs.</p>' +
       curriculum[state.term - 1]
         .map(
           (q, i) =>
             '<div class="course"><span>' +
-            esc(q[0]) +
+            esc(q.name) +
             '</span><span class="badge">' +
-            (state.courses[i].pass ? '✓ Godkänd' : state.courses[i].study + ' / 2 studiepass') +
+            (state.courses[i].pass
+              ? '✓ Godkänd'
+              : state.courses[i].retake
+                ? 'Omtenta · repetera först'
+                : state.courses[i].study + ' / 2 studiepass') +
             '</span></div>',
         )
         .join(''),
