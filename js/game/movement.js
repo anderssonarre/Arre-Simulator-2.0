@@ -130,7 +130,8 @@ function walk(dt, f, r, sprintHeld) {
     motion.vx *= k;
     motion.vy *= k;
   }
-  if (canRun && len > 0.05) state.stats.energy = Math.max(0, state.stats.energy - dt * 0.65);
+  // Att springa kostar lite extra energi, ungefär 7 per minut.
+  if (canRun && len > 0.05) state.stats.energy = Math.max(0, state.stats.energy - dt * 0.12);
 
   // Huvudgung och lite bredare synfält när man springer.
   const pace = clamp(actual / RUN_SPEED, 0, 1);

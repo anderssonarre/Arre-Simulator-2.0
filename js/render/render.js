@@ -566,7 +566,7 @@ function drawMap(w) {
   c.drawImage(base.canvas, ox * bs, oy * bs, view * bs, view * bs, 0, 0, sz, sz);
   const P = (x, y) => [(x - ox) * scale, (y - oy) * scale];
   for (const o of w.objects) {
-    if (o.profile?.id === state?.character || !o.action) continue;
+    if (o.profile?.id === state?.character || !o.action || o.stranger || o.reveler) continue;
     if (o.profile && onlineChars.has(o.profile.id) && !o.guest) continue;
     const [x, y] = P(o.x, o.y);
     if (x < -3 || y < -3 || x > sz + 3 || y > sz + 3) continue;

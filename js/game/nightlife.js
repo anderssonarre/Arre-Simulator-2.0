@@ -150,9 +150,13 @@ function nightlifeTick(dt) {
       if (walkable(w, nx, ny, 0.2)) {
         o.x = nx;
         o.y = ny;
-      } else {
+      } else if (walkable(w, o.x + ux * step, o.y + uy * step, 0.2)) {
         o.x += ux * step;
         o.y += uy * step;
+      } else {
+        // Har vinglat för långt åt sidan: tillbaka till vägen.
+        o.x = tx;
+        o.y = ty;
       }
     }
     n.talk -= dt;

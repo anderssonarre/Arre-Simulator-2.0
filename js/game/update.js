@@ -56,7 +56,7 @@ function update(dt) {
       state.day += Math.floor(hours / 24);
       state.hour = hours % 24;
     }
-    sleepTick();
+    sleepTick(dt);
     peopleTick(dt);
     hudTimer += dt;
     if (hudTimer > 0.2) {
@@ -135,6 +135,7 @@ function update(dt) {
   partyTick(dt);
   peopleTick(dt);
   nightlifeTick(dt);
+  crowdTick(dt);
   saveTimer += dt;
   if (saveTimer > 12) {
     saveTimer = 0;

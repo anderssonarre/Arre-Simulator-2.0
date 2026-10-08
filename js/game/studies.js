@@ -243,27 +243,26 @@ function examResult(i, picks, answers, need) {
     'Tentamen',
   );
 }
-// Hemma: vila eller sov. Offline spolas tiden fram, online sover man medan klockan går
-// (natten går sex gånger fortare för alla, så en natt tar ungefär en och en halv minut).
+// Hemma: vila eller sov. Offline spolas tiden fram. Online är klockan gemensam, så där sover man
+// en stund i verklig tid och energin fylls på medan man ligger (natten går dessutom fortare för alla).
 function sleep() {
   const done = state.courses.every((c) => c.pass),
-    online = sharedClock(),
-    night = state.hour >= 21 || state.hour < CLOCK.morning;
+    online = sharedClock();
   dialog(
     'En stund hemma',
     '<p>Vila, sov' +
       (done && state.term < 8 ? ' eller avsluta terminen' : '') +
       '.</p>' +
       (online
-        ? '<p class="sub">Online är klockan gemensam. Du sover medan tiden går, och natten går sex gånger fortare för alla.</p>'
+        ? '<p class="sub">Online är klockan gemensam och kan inte spolas fram. Du sover en stund och energin fylls på snabbt. På natten går klockan dessutom sex gånger fortare.</p>'
         : ''),
     [
       {
-        label: online ? 'Ta en tupplur · 1 timme' : 'Vila 1 timme · +35 energi',
+        label: online ? 'Ta en tupplur · +35 energi, 15 sekunder' : 'Vila 1 timme · +35 energi',
         run: () => {
           close();
           tutorialDone('sov');
-          if (online) return startSleep(60, 35, 0, 'Tupplur');
+          if (online) return startSleep(35, 15, 0, 'Tupplur');
           advance(60);
           gain('energy', 35);
           save();
@@ -272,21 +271,12 @@ function sleep() {
       },
       {
         label: online
-          ? night
-            ? 'Sov till morgonen · +75 energi'
-            : 'Sov till morgonen (går först efter kl. 21)'
+          ? 'Sov tills du är utvilad · full energi, 30 sekunder'
           : 'Sov till morgonen · +75 energi',
-        disabled: online && !night,
         run: () => {
           close();
           tutorialDone('sov');
-          if (online) {
-            const now = state.day * 1440 + state.hour * 60,
-              morning =
-                (state.hour >= CLOCK.morning ? state.day + 1 : state.day) * 1440 +
-                CLOCK.morning * 60;
-            return startSleep(morning - now, 75, 20, 'Natt');
-          }
+          if (online) return startSleep(Math.max(40, 100 - state.stats.energy), 30, 15, 'Sömn');
           gain('energy', 75);
           gain('hunger', -20);
           state.day++;
@@ -327,21 +317,21 @@ function sleep() {
     ],
   );
 }
-// Sömnläge: energin fylls på i takt med att speltiden går, tills tiden är ute eller du vaknar.
-function startSleep(minutes, energy, hunger, title) {
-  const now = state.day * 1440 + state.hour * 60;
-  sleeping = { from: now, until: now + minutes, energy, hunger, given: 0, title };
+// Sömnläge (online): energin fylls på i verklig tid tills tiden är ute eller du vaknar.
+function startSleep(energy, seconds, hunger, title) {
+  sleeping = { energy, hunger, seconds, start: performance.now(), elapsed: 0, given: 0, title };
   document.exitPointerLock?.();
   keys.clear();
-  $('sleepTitle').textContent = title === 'Natt' ? 'Du sover' : 'Tupplur';
+  $('sleepTitle').textContent = title === 'Tupplur' ? 'Tupplur' : 'Du sover';
   $('sleepOverlay').hidden = false;
-  sleepTick();
+  sleepTick(0);
 }
-function sleepTick() {
+function sleepTick(dt) {
   if (!sleeping) return;
-  const s = sleeping,
-    now = state.day * 1440 + state.hour * 60,
-    p = clamp((now - s.from) / Math.max(1, s.until - s.from), 0, 1),
+  const s = sleeping;
+  // Räknas på klockan i verkligheten, så att långsamma datorer inte sover längre.
+  s.elapsed = (performance.now() - s.start) / 1000;
+  const p = clamp(s.elapsed / s.seconds, 0, 1),
     share = p - s.given;
   if (share > 0) {
     gain('energy', s.energy * share);
@@ -349,21 +339,24 @@ function sleepTick() {
     s.given = p;
   }
   $('sleepText').textContent =
-    clockText(state.hour) + (p < 1 ? ' · vaknar ' + clockText((s.until / 60) % 24) : '');
+    clockText(state.hour) +
+    ' · energi ' +
+    Math.round(state.stats.energy) +
+    (p < 1 ? ' · vaknar om ' + Math.ceil(s.seconds - s.elapsed) + ' s' : '');
   if (p >= 1) wakeUp();
 }
 function wakeUp() {
   if (!sleeping) return;
   const full = sleeping.given >= 1,
-    night = sleeping.title === 'Natt';
+    nap = sleeping.title === 'Tupplur';
   sleeping = null;
   $('sleepOverlay').hidden = true;
   save();
   toast(
     full
-      ? night
-        ? 'God morgon! Klockan är ' + clockText(state.hour) + '.'
-        : 'Pigg igen efter tuppluren.'
+      ? nap
+        ? 'Pigg igen efter tuppluren.'
+        : 'Utvilad! Klockan är ' + clockText(state.hour) + '.'
       : 'Du vaknade tidigt. Energi ' + Math.round(state.stats.energy) + '.',
   );
 }

@@ -1,6 +1,12 @@
 // Mål, statusfält och tid
 'use strict';
 function objective() {
+  // Fredagsfesten är sällsynt och gemensam, så den går före allt annat.
+  if (!job && partyNow() && !state.graduated)
+    return {
+      title: 'Fredagsfest på Filicia Castle',
+      detail: 'W33 · alla online är där till ' + CLOCK.party.to + '.00. Mer glädje ju fler ni är.',
+    };
   // En pågående föreläsning i en kurs som inte är klar går före allt annat.
   if (!job && state && !state.graduated)
     for (let k = 0; k < 3; k++)
@@ -18,11 +24,6 @@ function objective() {
     return {
       title: 'Första dagen · ' + t.title,
       detail: t.detail,
-    };
-  if (!job && partyNow() && !state.graduated)
-    return {
-      title: 'Fredagsfest på Filicia Castle',
-      detail: 'W33 · alla online är där till ' + CLOCK.party.to + '.00. Mer glädje ju fler ni är.',
     };
   if (job)
     return {

@@ -279,8 +279,17 @@ function buildCampus3d(w, g) {
     }
   }
   q.meshes().forEach((m) => g.add(m));
-  // Platta tak med takpapp och en låg kant.
-  const roofMat = std({ color: 0x4d4f52, roughness: 0.95 });
+  // Platta tak med takpapp och en låg kant av plåt runt om.
+  const roofMat = std({ color: 0x4d4f52, roughness: 0.95 }),
+    edgeMat = std({ color: 0x6d7174, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }),
+    edges = quadBuilder();
+  for (const h of w.houses || [])
+    for (const r of h.rings)
+      r.pts.forEach(([ax, ay], i) => {
+        const [bx, by] = r.pts[(i + 1) % r.pts.length];
+        edges.add('kant', edgeMat, [ax, ay], [bx, by], h.h, h.h + 0.14, 0, 1);
+      });
+  edges.meshes().forEach((m) => g.add(m));
   for (const h of w.houses || []) {
     const [outer, ...holes] = h.rings.map((r) => r.pts);
     const shape = new THREE.Shape(outer.map(([x, y]) => new THREE.Vector2(x, y)));
@@ -840,63 +849,53 @@ function placeSprites(w, day) {
       live.add(key + ':sh');
     }
   };
+  // Personer blir 3D-figurer, allt annat (markörer, föremål) är figurer mot kameran.
+  const figs = new Set(),
+    placeFig = (key, prof, x, y, opts) => {
+      const f = figureFor(key, prof);
+      poseFigure(f, x, y, opts);
+      f.traverse((c) => c.layers.set(opts.layer || 0));
+      root.add(f);
+      figs.add(key);
+    };
   for (const o of w.objects) {
     if (o.r3 || o.hidden || !o.sprite) continue;
     if (o.profile && !o.guest && onlineChars.has(o.profile.id)) continue;
     if (o.profile?.id === state?.character) continue;
     if (o.profile) {
-      const moving = o.targetX != null && Math.hypot(o.targetX - o.x, o.targetY - o.y) > 0.04;
-      o.sprite = npcSprite(o.profile, moving ? Math.floor(frame / 10) % 4 : 0);
+      const near = Math.hypot(o.x - player.x, o.y - player.y) < 3.2;
+      placeFig(o, o.profile, o.x, o.y, {
+        z: o.z || 0,
+        height: o.height || 1.08,
+        phase: o.phase,
+        drunk: o.drunk || (o.activity === 'fest' && w.id === 'outdoor'),
+        dancing:
+          (party && w.id === 'w33' && o.x > 33 && o.y < 16) ||
+          (homeParty && w.id === 'home' && o.dancing),
+        moving: o.targetX != null && Math.hypot(o.targetX - o.x, o.targetY - o.y) > 0.04,
+        faceTo: near ? [player.x, player.y] : null,
+      });
+      continue;
     }
-    let bob = 0,
-      sway = 0;
-    if (o.profile) {
-      const tipsy = o.drunk || (o.activity === 'fest' && w.id === 'outdoor');
-      if (tipsy) sway = Math.sin(frame * 0.05 + (o.phase || 0)) * 0.09;
-      if (
-        (party && w.id === 'w33' && o.x > 33 && o.y < 16) ||
-        (homeParty && w.id === 'home' && o.dancing)
-      )
-        bob = Math.abs(Math.sin(frame * 0.16 + (o.phase || 0))) * 0.05;
-    }
-    const ca = Math.cos(player.a + Math.PI / 2),
-      sa = Math.sin(player.a + Math.PI / 2);
-    add(o, o, o.sprite, o.x + ca * sway, o.y + sa * sway, o.height || 1, (o.z || 0) + bob, {
-      shadow: !!o.profile,
-    });
+    add(o, o, o.sprite, o.x, o.y, o.height || 1, o.z || 0);
   }
   for (const r of remotesHere()) {
-    const moving = r.moving;
-    add(
-      'r' + r.id,
-      r,
-      npcSprite(remoteProfile(r), moving ? Math.floor(frame / 10) % 4 : 0),
-      r.x,
-      r.y,
-      1.08,
-      0,
-      {
-        shadow: true,
-      },
-    );
+    const prof = remoteProfile(r);
+    placeFig('r' + r.id, prof, r.x, r.y, { moving: r.moving, phase: r.id, color: prof.color });
   }
   // Du själv: syns bara i spegeln (lager 1).
   if (R3.selfLayer && w.mirror) {
     const me = profile(),
-      out = outfits.find((x) => x.id === state?.outfit),
-      moving = Math.hypot(motion.vx, motion.vy) > 0.2;
+      out = outfits.find((x) => x.id === state?.outfit);
     if (me)
-      add(
-        'self',
-        null,
-        npcSprite({ ...me, color: out?.color || me.color }, moving ? Math.floor(frame / 9) % 4 : 0),
-        player.x,
-        player.y,
-        1.08,
-        0,
-        { layer: 1 },
-      );
+      placeFig('self', me, player.x, player.y, {
+        layer: 1,
+        moving: Math.hypot(motion.vx, motion.vy) > 0.2,
+        color: out?.color || me.color,
+        faceTo: [player.x + Math.cos(player.a), player.y + Math.sin(player.a)],
+      });
   }
+  for (const [key, f] of FIG.cache) if (!figs.has(key)) root.remove(f);
   for (const [key, s] of R3.sprites)
     if (!live.has(key)) {
       root.remove(s);

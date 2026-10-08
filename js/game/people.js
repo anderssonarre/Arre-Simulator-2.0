@@ -366,6 +366,8 @@ function applyPlan(pp, plan, snap) {
 function setupPeople() {
   people.clear();
   nightPeople.length = 0;
+  crowd.list.length = 0;
+  crowd.world = null;
   for (const w of Object.values(worlds)) w.objects = w.objects.filter((o) => !o.profile || o.guest);
   for (const p of [...characters, ...extra]) {
     const o = {
