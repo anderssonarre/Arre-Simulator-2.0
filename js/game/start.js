@@ -5,6 +5,11 @@ function start(s) {
   if (nick) s.nickname = nick;
   state = s;
   ensureProgress();
+  // Ett nytt liv kan få ett arv från det förra (se career.js).
+  if (s.term === 1 && s.day === 1 && s.runs === 0 && !s.legacyChecked) {
+    s.legacyChecked = true;
+    applyLegacy(s);
+  }
   applyHome(state.home);
   active = true;
   job = null;

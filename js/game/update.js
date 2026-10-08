@@ -144,6 +144,7 @@ function update(dt) {
   partyTick(dt);
   peopleTick(dt);
   nightlifeTick(dt);
+  careerTick();
   vappenCheck();
   crowdTick(dt);
   saveTimer += dt;

@@ -33,6 +33,7 @@ function menu() {
       { label: 'Veckoschema', run: showWeek },
       { label: 'Studieplan och betyg', run: showCourses },
       { label: 'Färdigheter och ekonomi', run: showProgress },
+      { label: 'Framtid: praktik och examensarbete', run: careerOverview },
       { label: 'Campus och vänner', run: showMap },
       { label: 'Kontroller', run: showControls },
       { label: 'Spelarnamn: ' + playerName() + ' · byt', run: renameDialog },

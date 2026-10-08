@@ -389,52 +389,31 @@ function passOut() {
   );
   sound('bad');
 }
+// Skrivbordet hemma: studieplan, examensarbete (från termin 7) och examen.
 function homeDesk() {
-  if (state.term === 8 && state.courses.every((c) => c.pass) && !state.graduated) {
-    quiz(
-      'Examensprovet',
-      'Vad gör ett examensarbete trovärdigt?',
-      [
-        'Planering, källor, analys och verifiering',
-        'Gissa resultatet utan mätningar',
-        'Hoppa över diskussionen',
-      ],
-      () => {
-        state.graduated = true;
-        gain('happy', 40);
-        save();
-        dialog(
-          'Grattis till examen!',
-          '<p>' +
-            esc(profile().name) +
-            ' har klarat åtta terminer och examensprovet.</p><div class="info">' +
-            state.runs +
-            ' extrajobb · ' +
-            credits() +
-            ' sp med snittet ' +
-            gradeAverage().toFixed(1).replace('.', ',') +
-            ' · ' +
-            state.lunches +
-            ' luncher · ' +
-            Object.values(state.relations).filter((r) => r >= 40).length +
-            ' vänner · ' +
-            state.money +
-            ' € kvar.</div><p>Fortsätt utforska eller börja ett nytt liv.</p>',
-          [
-            { label: 'Stanna på campus', primary: true, run: close },
-            { label: 'Exportera min historia', run: exportSave },
-          ],
-          'Examensdagen',
-        );
-      },
-      () => {
-        toast('Tänk på hur resultatet kan kontrolleras.');
-        close();
-      },
-    );
-    return;
-  }
-  showCourses();
+  ensureCareer();
+  const thesisOpen = state.term >= CAREER.examensarbete.frånTermin && !state.graduated,
+    ready =
+      state.term === 8 &&
+      state.courses.every((c) => c.pass) &&
+      state.career.thesis?.grade &&
+      !state.graduated;
+  if (!thesisOpen && !ready) return showCourses();
+  dialog(
+    'Skrivbordet',
+    '<p>' +
+      (ready ? 'Allt är klart. Dags att ta examen!' : 'Studieplanen och examensarbetet.') +
+      '</p>',
+    [
+      ...(ready ? [{ label: 'Ta examen', primary: true, run: graduationDialog }] : []),
+      ...(thesisOpen && !state.career.thesis?.grade
+        ? [{ label: 'Examensarbetet', primary: !ready, run: thesisDesk }]
+        : []),
+      { label: 'Studieplan och betyg', run: showCourses },
+      { label: 'Stäng', run: close },
+    ],
+    'Skrivbordet',
+  );
 }
 function showCourses() {
   dialog(

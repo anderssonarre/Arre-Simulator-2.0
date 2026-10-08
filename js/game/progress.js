@@ -19,6 +19,7 @@ function ensureProgress() {
   for (const c of s.courses) c.lectures ??= 0;
   ensureSociety();
   ensureHome();
+  ensureCareer();
   // Svar från AI som aldrig hann komma innan spelet stängdes.
   for (const id of Object.keys(s.histories || {}))
     s.histories[id] = s.histories[id].filter((h) => !h.pending);
@@ -145,6 +146,7 @@ function weeklyEconomy() {
     if (!state.society.rumors.some((r) => r.kind === 'skuld' && state.day - r.day < 21))
       addRumor('skuld');
   }
+  careerWeek();
   track('week', { debt: state.debt, jobs: state.weekJobs || 0 });
   state.weekJobs = 0;
   // Vänner man inte har träffat på länge svalnar lite.
@@ -183,6 +185,7 @@ function processDays() {
       const real = state.day;
       state.day = state.econDay;
       societyDay();
+      careerDay();
       state.day = real;
     }
     if (weekdayIndex(state.econDay) === 0) {

@@ -137,6 +137,9 @@ function chat(p) {
         },
       },
       ...(p.id === 'ossi' ? [{ label: 'Visa mitt extrajobb', run: startJobPrompt }] : []),
+      ...(p.id === 'ossi' && state.term >= 3
+        ? [{ label: 'Har du några praktikplatser?', run: internshipBoard }]
+        : []),
       ...(p.id === 'axel' || p.id === 'otto' ? [{ label: 'Ordna en fest', run: partyPrompt }] : []),
       {
         label: 'Vi hörs senare',

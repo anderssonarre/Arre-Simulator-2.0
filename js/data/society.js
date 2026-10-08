@@ -39,6 +39,7 @@ const SOCIETY = {
     kaffe: { text: 'Jag såg dig och {med} ta kaffe. Trevligt!', relation: 1 },
     stipendium: { text: 'Du fick ju stipendiet! Grattis!', relation: 3 },
     flytt: { text: 'Har du flyttat till en {till}? Grattis! Får man komma på besök?', relation: 1 },
+    praktik: { text: 'Du fick praktik på {företag}! Snyggt jobbat.', relation: 2 },
     skippade: { text: 'Axel sa att du inte kom på festen. Han var lite besviken.', relation: -1 },
   },
 };

@@ -64,10 +64,17 @@ function objective() {
   const i = state.courses.findIndex((c) => !c.pass);
   if (i < 0)
     return {
-      title: state.term === 8 ? 'Examensprovet väntar' : 'Dags för nästa termin',
+      title:
+        state.term === 8
+          ? state.career?.thesis?.grade
+            ? 'Dags för examen!'
+            : 'Examensarbetet'
+          : 'Dags för nästa termin',
       detail:
         state.term === 8
-          ? 'Gå hem till skrivbordet och skriv examensprovet.'
+          ? state.career?.thesis?.grade
+            ? 'Gå hem till skrivbordet och ta examen.'
+            : 'Skriv examensarbetet vid skrivbordet hemma.'
           : 'Gå hem och sov för att börja nästa termin.',
     };
   const c = state.courses[i],
