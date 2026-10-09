@@ -1,0 +1,28 @@
+# Hämtar OpenStreetMap-data för Vasa centrum (tools/centrum/osm-centrum.json).
+# Körs bara på grenen kartdata-hamta, eftersom Claudes arbetsmiljö inte når Overpass direkt.
+name: Kartdata
+on:
+  push:
+    branches: [kartdata-hamta]
+permissions:
+  contents: write
+jobs:
+  hamta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hämta från Overpass
+        run: |
+          Q='[out:json][timeout:120];(way(63.0912,21.6040,63.0998,21.6250);relation["building"](63.0912,21.6040,63.0998,21.6250);relation["type"="multipolygon"](63.0912,21.6040,63.0998,21.6250);node["natural"="tree"](63.0912,21.6040,63.0998,21.6250);node["amenity"](63.0912,21.6040,63.0998,21.6250);node["shop"](63.0912,21.6040,63.0998,21.6250);node["tourism"](63.0912,21.6040,63.0998,21.6250);node["highway"](63.0912,21.6040,63.0998,21.6250);node["historic"](63.0912,21.6040,63.0998,21.6250);node["leisure"](63.0912,21.6040,63.0998,21.6250););out geom;'
+          for url in https://overpass-api.de/api/interpreter https://overpass.kumi.systems/api/interpreter; do
+            curl -sf --data-urlencode "data=$Q" "$url" -o tools/centrum/osm-centrum.json && break
+          done
+          ls -la tools/centrum
+          python3 -c "import json;d=json.load(open('tools/centrum/osm-centrum.json'));print(len(d['elements']))"
+      - name: Spara
+        run: |
+          git config user.name "kartdata-bot"
+          git config user.email "kartdata-bot@users.noreply.github.com"
+          git add tools/centrum/osm-centrum.json
+          git commit -m "Kartdata för Vasa centrum från OpenStreetMap (ODbL)"
+          git push
