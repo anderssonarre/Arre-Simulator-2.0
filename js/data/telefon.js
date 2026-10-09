@@ -46,4 +46,5 @@ const RESMÅL = {
   ollis: { namn: "Oliver's Inn (Ollis)", värld: 'centrum', ollis: true },
   bilhandeln: { namn: 'Vasa Bilcenter', värld: 'centrum', poi: 'Vaasanpuistikko 17' },
   bron: { namn: 'Brändöbron', värld: 'bron', lat: 63.1024, lon: 21.6016 },
+  wartsila: { namn: 'Wärtsilä i Vasklot', värld: 'vasklot', lat: 63.0920302, lon: 21.5616613 },
 };

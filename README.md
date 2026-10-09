@@ -135,6 +135,7 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   förare) och resmålen.
 - `js/data/hem.js`: var karaktärerna bor (Zeb på Fabriksgatan 3 C, Arvid på sjunde våningen på
   Kyrkoesplanaden 6 / Museigatan 8, med hiss).
+- `js/world/vasklot.js`: Vasklot med Wärtsilä (kartan byggs med `tools/centrum/bygg_karta.py vasklot`).
 - `js/game/traffic.js`: bilarna på gatorna (antal, fart och färger överst i filen). Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,

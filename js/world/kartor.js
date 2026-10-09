@@ -8,6 +8,7 @@ const KARTGEO = {
   outdoor: { lat: 63.1055, lon: 21.595, vrid: 42.7, data: () => CAMPUS },
   bron: { lat: 63.1055, lon: 21.595, vrid: 42.7, data: () => BRON },
   centrum: { lat: 63.09572, lon: 21.61578, vrid: 21.7, data: () => CENTRUM },
+  vasklot: { lat: 63.0920302, lon: 21.5616613, vrid: 5, data: () => VASKLOT },
 };
 const KY_M = 110540;
 const kx = (lat) => Math.cos((lat * Math.PI) / 180) * 111320;

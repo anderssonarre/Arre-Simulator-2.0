@@ -16,6 +16,8 @@ const PEOPLE_SCHEDULE = {
   // Egna rutiner som går före det vanliga dagsschemat.
   // Varje rad: [dagar, från, till, plats, aktivitet]. Dagar: 'vardag', 'helg' eller t.ex. 'mån'.
   egna: {
+    // Jennifer jobbar på Wärtsilä i Vasklot på vardagsmornarna.
+    jennifer: [['vardag', 7.5, 11.5, 'vasklot', 'jobbar']],
     albin: [
       ['vardag', 16, 18.5, 'gym', 'tränar'],
       ['helg', 11, 13, 'gym', 'tränar'],

@@ -18,6 +18,7 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 KARTOR = {
     'centrum': ('osm-utdrag.json', -372.0, -390.0, 440, 4, 'centrum.js', 'CENTRUM', []),
     # Wolffskavägen från campus, över Brändöbron och ner längs Kyrkoesplanaden till centrum.
+    'vasklot': ('osm-utdrag-vasklot.json', -550.0, -330.0, 530, 3, 'vasklot.js', 'VASKLOT', [(-450, -200), (300, -250), (-500, 450)]),
     'bron': ('osm-utdrag-bron.json', -430.0, 200.0, 530, 3, 'bron.js', 'BRON', [(-60, 475), (80, 475)]),
 }
 NAMN = sys.argv[1] if len(sys.argv) > 1 else 'centrum'
@@ -38,6 +39,11 @@ HOUSES = {
     'w24559319': ('stadshus', 9.0, 'Vasa järnvägsstation'),
     'w24559282': ('city:#9fa19c:shop', 27.0, 'Sampotalo'),
     'w28512601': ('city:#b8b4ad:shop', 7.0, 'Hesburger'),
+    # Wärtsilä i Vasklot (namnet som på Google Maps).
+    'w934576174': ('city:#d3d8dc:shop', 18.0, 'Wärtsilä Sustainable Technology Hub'),
+    'w934576175': ('city:#c4cbd0', 22.0, 'Wärtsilä · produktion'),
+    'w88140457': ('city:#b9bdbf', 14.0, 'Wärtsiläs motorlaboratorium'),
+    'w88140424': ('city:#a9adb0', 30.0, 'Vasklot kraftverk'),
     # Arvids hus på bron-kartan: hörnhuset Kyrkoesplanaden 6 / Museigatan 8, åtta våningar.
     'w88206727': ('city:#d6cdb9', 27.4, 'Kyrkoesplanaden 6 / Museigatan 8'),
 }

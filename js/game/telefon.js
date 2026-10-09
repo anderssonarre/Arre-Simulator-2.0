@@ -129,10 +129,10 @@ function phoneMap() {
 
 // ---- Uber och taxi ----
 function destSpot(d) {
-  const w = worlds[d.värld];
+  const w = worlds[destWorld(d)];
   if (d.hem) {
-    const door = w.objects.find((o) => o.type === 'portal' && o.target === 'home');
-    return nearestFree(w, door.x, door.y + 1.5, 6);
+    const s = myHomeDoorSpot();
+    return nearestFree(worlds[s.world], s.x, s.y, 6);
   }
   if (d.torget) return [w.spawn.x, w.spawn.y];
   if (d.ollis) {
@@ -143,10 +143,12 @@ function destSpot(d) {
   if (d.lat) return nearestFree(w, ...geoToTile(d.värld, d.lat, d.lon), 12);
   return nearestFree(w, d.x, d.y, 8);
 }
+// Hem ligger på olika kartor för olika karaktärer (js/data/hem.js).
+const destWorld = (d) => (d.hem ? myHomeDoorSpot().world : d.värld);
 function rideKm(d) {
   const [x, y] = destSpot(d),
     a = tileToGeo(world.id, player.x, player.y),
-    b = tileToGeo(d.värld, x, y);
+    b = tileToGeo(destWorld(d), x, y);
   return Math.hypot((a[0] - b[0]) * 110.54, (a[1] - b[1]) * kx(a[0]) / 1000);
 }
 function ridePrice(km, taxi) {
@@ -243,7 +245,7 @@ function boardRide() {
   uber = null;
   advance(Math.max(4, Math.round((u.km / UBER.fart) * 60) + 2));
   const [x, y] = destSpot(d);
-  changeWorld(d.värld, { x, y, a: player.a });
+  changeWorld(destWorld(d), { x, y, a: player.a });
   questEvent('buss');
   save();
   dialog(

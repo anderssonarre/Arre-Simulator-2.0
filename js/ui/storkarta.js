@@ -134,7 +134,7 @@ function drawBigMap() {
   g.fillStyle = '#5f8fae';
   g.fillRect(0, 0, W, H);
   // Kartorna, var och en vriden till norr uppåt. Bron först, campus och centrum ovanpå.
-  for (const id of ['bron', 'outdoor', 'centrum']) {
+  for (const id of ['vasklot', 'bron', 'outdoor', 'centrum']) {
     const C = KARTGEO[id].data(),
       v = (KARTGEO[id].vrid * Math.PI) / 180,
       [ox, oy] = geoToMeters(KARTGEO[id].lat, KARTGEO[id].lon);

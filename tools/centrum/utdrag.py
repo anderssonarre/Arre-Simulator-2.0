@@ -20,6 +20,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 KARTOR = {
     'centrum': ('osm-centrum.json', 'osm-utdrag.json', 63.09572, 21.61578, 21.7, 420),
     'bron': ('osm-bron.json', 'osm-utdrag-bron.json', 63.1055, 21.595, 42.7, 1200),
+    # Vasklot runt Wärtsilä Smart Technology Hub (origo: Frilundsvägen 5 på Google Maps).
+    'vasklot': ('osm-vasklot.json', 'osm-utdrag-vasklot.json', 63.0920302, 21.5616613, 5.0, 700),
 }
 NAMN = sys.argv[1] if len(sys.argv) > 1 else 'centrum'
 SRC_FIL, UT_FIL, LAT0, LON0, VRID, HALF = KARTOR[NAMN]

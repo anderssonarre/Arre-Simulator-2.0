@@ -717,6 +717,37 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(Math.hypot(ute.x - 219, ute.y - 379) < 5, 'ute på Kyrkoesplanaden vid porten');
     step('Arvid tar hissen till sjunde våningen');
 
+    // Vasklot: bussen till Wärtsilä, där Jennifer jobbar.
+    const vk = await zeb.evaluate(() => {
+      const before = state.money;
+      state.money = 50;
+      changeWorld('centrum');
+      takeBus('vasklot');
+      const r = {
+        world: world.id,
+        shift: world.objects.some((o) => o.label?.startsWith('Wärtsilä · ta ett skift')),
+        hub: world.houses.some((h) => h.name === 'Wärtsilä Sustainable Technology Hub'),
+        water: world.ground.includes(GROUND.WATER),
+        jennifer: (() => {
+          let d = state.day;
+          while (isWeekend(d)) d++;
+          for (let i = 0; i < 6; i++, d++) {
+            if (isWeekend(d)) continue;
+            if (planFor('jennifer', d, 9).where === 'vasklot') return true;
+          }
+          return false;
+        })(),
+      };
+      takeBus('outdoor');
+      state.money = before;
+      return r;
+    });
+    assert.equal(vk.world, 'vasklot');
+    assert.ok(vk.shift && vk.hub, 'Wärtsilä och skiftet finns');
+    assert.ok(vk.water, 'havet runt Vasklot');
+    assert.ok(vk.jennifer, 'Jennifer jobbar på Wärtsilä på vardagsmornarna');
+    step('Vasklot och Wärtsilä');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {

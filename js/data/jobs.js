@@ -52,12 +52,12 @@ const JOBB = {
     stopp: ['Hämta pallen', 'Placera pallen'],
   },
   fabrik: {
-    namn: 'Fabriksskift',
+    namn: 'Fabriksskift på Wärtsilä',
     moment: 'timing',
     lön: 23,
     energi: 12,
     färdighet: 'teknik',
-    text: 'Montering, kvalitetskontroll och packning. Träffa den gröna zonen på varje station.',
+    text: 'Motorproduktionen på Wärtsilä i Vasklot: montering, kvalitetskontroll och packning. Träffa den gröna zonen på varje station.',
     stationer: ['Montering', 'Kvalitetskontroll', 'Packning'],
   },
   ritning: {

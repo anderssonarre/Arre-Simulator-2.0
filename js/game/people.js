@@ -20,6 +20,7 @@ const PLACE_TEXT = {
   outdoor: 'ute på campus',
   centrum: 'i Vasa centrum',
   bron: 'på Brändöbron',
+  vasklot: 'på Wärtsilä i Vasklot',
 };
 const WALK_SPEED_NPC = 1.35;
 // id -> { p, obj, world (null = hemma), path, plan, goal }
