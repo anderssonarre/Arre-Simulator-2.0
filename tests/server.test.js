@@ -142,3 +142,29 @@ test('svaren läses från verktygsanropet, även när personerna kommer som list
     global.fetch = real;
   }
 });
+
+const paper = require('../server/paper.js');
+test('tidningen räknar veckor i finsk tid', () => {
+  assert.equal(paper.weekKey(Date.parse('2026-10-09T09:00:00Z')), '2026-v41');
+  assert.equal(paper.weekKey(Date.parse('2026-10-11T22:30:00Z')), '2026-v42'); // måndag 01:30 i Finland
+  assert.equal(paper.weekKey(Date.parse('2027-01-01T12:00:00Z')), '2026-v53');
+});
+
+test('tidningen tar bara emot kända händelser och kortar allt', () => {
+  assert.equal(paper.cleanHappening({ kind: 'hack', namn: 'x' }), null);
+  assert.equal(paper.cleanHappening({ kind: 'godkand', namn: 'Zeb', kurs: 'Matte', betyg: '9' }), null);
+  const h = paper.cleanHappening({ kind: 'femma', namn: '<b>Zeb</b>'.repeat(10), kurs: 'Matte' });
+  assert.ok(!h.namn.includes('<'));
+  assert.ok(h.namn.length <= 24);
+  assert.equal(paper.factText({ kind: 'femma', namn: 'Zeb', kurs: 'Matte' }), 'Zeb fick en femma i Matte.');
+});
+
+test('utan AI blir numret rubriker av händelserna', () => {
+  const issue = paper.templatePaper('2026-v41', [
+    { kind: 'femma', namn: 'Zeb', kurs: 'Matte' },
+    { kind: 'van', namn: 'Arvid', person: 'Axel' },
+  ]);
+  assert.equal(issue.artiklar.length, 2);
+  assert.equal(paper.templatePaper('2026-v41', []), null);
+  assert.equal(paper.cleanPaper({ artiklar: [] }, 'v'), null);
+});

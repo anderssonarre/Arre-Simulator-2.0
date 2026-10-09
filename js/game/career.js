@@ -169,6 +169,7 @@ function careerTick() {
         run: () => {
           k.praktik = { id, weeksLeft: CAREER.praktikVeckor };
           addRumor('praktik', { företag: c.namn });
+          reportHappening('praktik', { företag: c.namn });
           close();
           save();
           toast('Grattis! Praktiken hos ' + c.namn + ' börjar nu.');
@@ -344,6 +345,7 @@ function graduationDialog() {
 function endingDialog(path) {
   state.graduated = true;
   state.career.ending = path.id;
+  reportHappening('examen', { yrke: String(path.titel || '').toLowerCase() });
   const friends = [...characters, ...extra]
       .filter((p) => (state.relations[p.id] || 0) >= 40)
       .sort((a, b) => state.relations[b.id] - state.relations[a.id]),

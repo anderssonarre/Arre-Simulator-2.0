@@ -39,6 +39,7 @@ function start(s) {
   setupPeople();
   questSync();
   updateConditionsHUD();
+  setTimeout(paperNotice, 4000);
   onlineConnect();
 }
 function choose(id) {

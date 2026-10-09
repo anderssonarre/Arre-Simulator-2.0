@@ -279,6 +279,7 @@ function apartmentDialog() {
           state.home.typ = id;
           applyHome(state.home);
           addRumor('flytt', { till: a.namn.toLowerCase() });
+          reportHappening('flytt', { till: a.namn.toLowerCase() });
           save();
           updateHUD();
           toast('Välkommen till din nya ' + a.namn.toLowerCase() + '!');

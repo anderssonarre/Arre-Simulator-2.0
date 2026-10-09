@@ -148,6 +148,7 @@ function sitzPrompt() {
         run: () => {
           state.money -= price;
           state.sitzDay = state.day;
+          reportHappening('sitz');
           gain('happy', 30 + (overall ? 5 : 0));
           gain('hunger', 50);
           gain('energy', -10);

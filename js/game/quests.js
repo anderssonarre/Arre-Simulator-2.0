@@ -254,6 +254,11 @@ function finishQuest(quest) {
   const b = quest.belöning || {};
   applyEffect(b);
   if (b.märke) addBadge(b.märke);
+  reportHappening('uppdrag', {
+    titel: quest.titel,
+    person: firstName(quest.person),
+    ...(b.märke ? { märke: b.märke } : {}),
+  });
   questSync();
   updateHUD();
   save();

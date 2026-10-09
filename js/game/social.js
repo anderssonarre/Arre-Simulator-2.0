@@ -230,6 +230,7 @@ function reply(p, text, type) {
       toast('Kaffe med ' + p.name.split(' ')[0] + ' · +8 glädje · 30 minuter');
     } else response = say(DIALOGUE.kaffeIgen, p);
   }
+  if (relation(p) >= 40 && r < 40) reportHappening('van', { person: p.name.split(' ')[0] });
   if (relation(p) >= 40 && r < 40)
     toast(
       p.name.split(' ')[0] +

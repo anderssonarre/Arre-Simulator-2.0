@@ -4,7 +4,7 @@
 const http = require('http');
 
 function start(port) {
-  const calls = { vardag: 0, halsa: 0, svara: 0 };
+  const calls = { vardag: 0, halsa: 0, svara: 0, tidning: 0 };
   const server = http.createServer((req, res) => {
     if (req.url === '/calls') return res.end(JSON.stringify(calls));
     let raw = '';
@@ -31,6 +31,9 @@ function start(port) {
       } else if (tool === 'halsa') {
         const who = (sys.match(/ska hälsa på (\S+)/) || [])[1] || '';
         input = { personer: ids.map((id) => ({ id, hälsningar: ['TEST-HEJ ' + who] })) };
+      } else if (tool === 'tidning') {
+        const facts = [...sys.matchAll(/^- (.+)$/gm)].map((m) => m[1]);
+        input = { rubrik: 'TEST-RUBRIK', artiklar: [{ rubrik: 'Veckan', text: facts.join(' ') }] };
       } else input = { svar: 'TEST-SVAR', handling: 'ingen' };
       // Dagsanropet tar en stund, som på riktigt, så att samtidiga spelare hinner fråga samtidigt.
       setTimeout(

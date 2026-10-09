@@ -203,6 +203,7 @@ function examResult(i, picks, answers, need) {
     c.pass = true;
     recordPass(i, grade);
     if (grade === 5) addRumor('femma', { kurs: cs.name }, witnessesHere());
+    reportHappening(grade === 5 ? 'femma' : 'godkand', { kurs: cs.name, betyg: String(grade) });
     addXp(courseSkill(i), XP.tentaGodkänd);
     gain('happy', 4 + grade * 2);
     save();

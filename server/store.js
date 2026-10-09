@@ -7,7 +7,16 @@ const path = require('node:path');
 
 function fileStore(dir) {
   const file = path.join(dir, 'arre-db.json');
-  let db = { users: {}, saves: {}, sessions: {}, stats: {}, feedback: [], notes: {}, records: {} };
+  let db = {
+    users: {},
+    saves: {},
+    sessions: {},
+    stats: {},
+    feedback: [],
+    notes: {},
+    records: {},
+    kv: {},
+  };
   try {
     db = { ...db, ...JSON.parse(fs.readFileSync(file, 'utf8')) };
   } catch {}
@@ -85,6 +94,14 @@ function fileStore(dir) {
     async getRecords() {
       return Object.values(db.records);
     },
+    // Fritt nyckel-värde-lager för campustidningen och AI-uppdragen.
+    async getKv(key) {
+      return db.kv[key] ?? null;
+    },
+    async putKv(key, value) {
+      db.kv[key] = value;
+      persist();
+    },
     flush,
   };
 }
@@ -110,6 +127,8 @@ async function pgStore(url, pgModule) {
     key text primary key, data text not null)`);
   await pool.query(`create table if not exists arre_feedback (
     id serial primary key, created bigint not null, fun text, stuck text, missing text)`);
+  await pool.query(`create table if not exists arre_kv (
+    key text primary key, data text not null)`);
   return {
     kind: 'postgres',
     async getUser(key) {
@@ -206,6 +225,16 @@ async function pgStore(url, pgModule) {
     async getRecords() {
       const r = await pool.query('select data from arre_records');
       return r.rows.map((x) => JSON.parse(x.data));
+    },
+    async getKv(key) {
+      const r = await pool.query('select data from arre_kv where key = $1', [key]);
+      return r.rows[0] ? JSON.parse(r.rows[0].data) : null;
+    },
+    async putKv(key, value) {
+      await pool.query(
+        'insert into arre_kv (key, data) values ($1, $2) on conflict (key) do update set data = excluded.data',
+        [key, JSON.stringify(value)],
+      );
     },
     flush() {},
   };

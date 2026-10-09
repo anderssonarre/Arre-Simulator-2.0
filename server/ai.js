@@ -392,6 +392,7 @@ async function greetings(b) {
   return cleanGreet(out.personer ? byId(out.personer, 'hälsningar') : out, b);
 }
 module.exports = {
+  ask,
   enabled,
   allowed,
   spendDaily,

@@ -41,6 +41,7 @@ async function waitFor(page, fn, what, ms = 20000) {
       ANTHROPIC_BASE_URL: 'http://localhost:' + AI_PORT,
       DATA_DIR: dataDir,
       DATABASE_URL: '',
+      ARRE_TEST: '1',
     },
     stdio: ['ignore', 'inherit', 'inherit'],
   });
@@ -147,15 +148,14 @@ async function waitFor(page, fn, what, ms = 20000) {
       state.life.played = [];
       const ok = startTalk(a, b),
         said = [];
-      for (let i = 0; i < 60 && said.length < 3; i++) {
+      for (let i = 0; i < 100 && said.length < t.lines.length; i++) {
         talkTick();
+        // Bara samtalets egna repliker: en hälsning till dig kan komma emellan.
         for (const o of [a, b])
-          if (
-            o.bubbleUntil > performance.now() &&
-            !said.includes(o.bubble) &&
-            !o.bubble.startsWith('TEST-HEJ') // en hälsning till dig kan komma emellan
-          )
+          if (o.bubbleUntil > performance.now() && t.lines.includes(o.bubble) && !said.includes(o.bubble))
             said.push(o.bubble);
+        // Ingen hälsning får skriva över en replik innan den hunnit synas.
+        for (const o of [a, b]) o.greetedAt = state.day * 24 + state.hour;
         await new Promise((r) => setTimeout(r, 200));
       }
       return { ok, said };
@@ -259,6 +259,28 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(quests.rightHouse, 1, 'kaffe i rätt hus räknas');
     assert.ok(quests.closedLabel.includes('tor'), 'stängt utanför tiden');
     step('sidouppdrag');
+
+    // Campustidningen: händelser blir ett nummer som alla kan läsa.
+    await zeb.evaluate(() => reportHappening('femma', { kurs: 'Matematik', betyg: '5' }));
+    await arvid.evaluate(() => reportHappening('van', { person: 'Axel' }));
+    // En påhittad händelsetyp tas inte emot.
+    const bad = await fetch('http://localhost:' + PORT + '/api/happening', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'hack', namn: 'x', text: 'fritext' }),
+    });
+    assert.equal(bad.status, 400, 'okänd händelse avvisas');
+    await sleep(400);
+    const issue = await zeb.evaluate(async () => (await fetchPaper(true))?.issue);
+    assert.equal(issue?.rubrik, 'TEST-RUBRIK', 'numret skrivs av AI: ' + JSON.stringify(issue));
+    assert.ok(issue.artiklar[0].text.includes('Zeb fick en femma i Matematik'));
+    assert.ok(issue.artiklar[0].text.includes('Arvid och Axel är numera vänner'));
+    assert.ok(!issue.artiklar[0].text.includes('fritext'), 'okända händelser kommer inte med');
+    const again = await arvid.evaluate(async () => (await fetchPaper(true))?.issue);
+    assert.deepEqual(again, issue, 'samma nummer för alla');
+    const stand = await zeb.evaluate(() => worlds.w33.objects.some((o) => o.type === 'paper'));
+    assert.ok(stand, 'tidningsställ i W33');
+    step('campustidningen');
 
     // Personligheter: samma för alla online, olika mellan personer, och de styr vad folk gör.
     const traitsOf2 = (p) =>

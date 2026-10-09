@@ -18,6 +18,7 @@ const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
 // Gemensam spelklocka och fredagsfest. Samma uträkning som i spelet (js/shared/clock.js),
 // räknad från en fast tidpunkt så att alla får samma tid och den överlever omstarter.
 const { partyStatus, gameMinutesAt } = require('../js/shared/clock.js');
+const paper = require('./paper.js');
 const PARTY_FORCE = process.env.PARTY_FORCE === '1'; // för test: festen pågår alltid
 const clockMessage = () => ({
   t: 'clock',
@@ -183,6 +184,42 @@ function eventFlood(ip) {
   return list.length > 300;
 }
 let campusSeed = 1 + Math.floor(Math.random() * 1e6);
+// Ger ut numret för en vecka, en gång. Med AI skriver Haiku, annars blir det rubriker.
+const publishing = new Map();
+async function publishPaper(week) {
+  const done = await store.getKv('paper:' + week);
+  if (done) return done;
+  if (publishing.has(week)) return publishing.get(week);
+  const job = (async () => {
+    const happenings = (await store.getKv('paper-events:' + week)) || [];
+    if (happenings.length < 2) return null;
+    let issue = null;
+    if (ai.enabled() && ai.spendDaily())
+      try {
+        issue = paper.cleanPaper(
+          await ai.ask(
+            paper.buildPaperPrompt(week, happenings.map(paper.factText)),
+            'Skriv numret nu.',
+            2000,
+            40000,
+            paper.PAPER_TOOL,
+          ),
+          week,
+        );
+      } catch (e) {
+        console.error('AI tidning:', e.message);
+      }
+    issue ??= paper.templatePaper(week, happenings);
+    if (issue) {
+      issue.publicerad = Date.now();
+      await store.putKv('paper:' + week, issue);
+      await store.putKv('paper:latest', issue);
+    }
+    return issue;
+  })().finally(() => publishing.delete(week));
+  publishing.set(week, job);
+  return job;
+}
 const noAi = (res) => res.writeHead(204, { 'cache-control': 'no-store' }).end();
 // Vem som räknas mot AI-taket: kontot om man är inloggad, annars spelarens eget id.
 async function aiWho(req) {
@@ -275,6 +312,37 @@ async function handleApi(req, res, url) {
     }
   }
   if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
+  // ---- Campustidningen (server/paper.js) ----
+  // Spelet berättar vad som hänt: bara typ och några korta fält, servern skriver meningarna.
+  if (url === '/api/happening' && req.method === 'POST') {
+    if (eventFlood(clientIp(req))) return json(res, 429, {});
+    let b;
+    try {
+      b = await readBody(req, 1024);
+    } catch {
+      return json(res, 400, {});
+    }
+    const h = paper.cleanHappening(b);
+    if (!h) return json(res, 400, {});
+    const key = 'paper-events:' + paper.weekKey(),
+      list = (await store.getKv(key)) || [];
+    list.push({ ...h, at: Date.now() });
+    await store.putKv(key, list.slice(-200));
+    return json(res, 200, { ok: true });
+  }
+  if (url === '/api/paper' && req.method === 'GET') {
+    // Testerna kan be om att veckan som pågår ges ut direkt (bara med ARRE_TEST=1).
+    const now = process.env.ARRE_TEST === '1' && /[?&]publish=now\b/.test(req.url);
+    const issue = await publishPaper(now ? paper.weekKey() : paper.lastWeekKey());
+    const latest = issue || (await store.getKv('paper:latest'));
+    const thisWeek = (await store.getKv('paper-events:' + paper.weekKey())) || [];
+    return json(res, 200, {
+      issue: latest || null,
+      week: paper.weekKey(),
+      nytt: thisWeek.slice(-6).reverse().map(paper.factText),
+      antal: thisWeek.length,
+    });
+  }
   // Topplistor: spelet skickar sina siffror, alla kan läsa de bästa.
   if (url === '/api/records' && req.method === 'GET')
     return json(res, 200, await store.getRecords());

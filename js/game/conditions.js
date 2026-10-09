@@ -85,6 +85,7 @@ function passOutDrunk() {
   state.money -= lost;
   gain('happy', -12);
   addRumor('däckade', {}, witnessesHere());
+  reportHappening('dackade');
   save();
   dialog(
     'Du däckade',

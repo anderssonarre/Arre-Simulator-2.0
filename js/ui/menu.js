@@ -37,6 +37,7 @@ function menu() {
       { label: 'Campus och vänner', run: showMap },
       { label: 'Sidouppdrag', run: showQuests },
       { label: 'Väskan', run: showBag },
+      { label: 'Campustidningen', run: showPaper },
       { label: 'Kontroller', run: showControls },
       { label: 'Spelarnamn: ' + playerName() + ' · byt', run: renameDialog },
       ...(accountsAvailable()
