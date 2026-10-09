@@ -40,7 +40,7 @@ const TUTORIAL = [
     id: 'jobb',
     title: 'Gör ett extrajobb',
     detail:
-      'Jobbet startar vid markeringen mellan Technobothnia och Wasa Sports Club. Det ger pengar till hyran.',
+      'Jobbtavlan står mellan Technobothnia och Wasa Sports Club. Där jobbar du ett pass och kan söka fler jobb med annan lön.',
     tip: 'Du blir bättre på det du gör. Färdigheter och ekonomi finns i menyn (Esc).',
   },
   {

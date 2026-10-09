@@ -206,7 +206,7 @@ async function waitFor(page, fn, what, ms = 20000) {
       const offer = questOfferFor('ossi')?.id;
       const mark = questMark('ossi');
       acceptQuest(questById('ossis-cykel'));
-      const goal = objective().title;
+      const goal = questObjective().title; // målrutan visar föreläsningar först, så uppdragets eget mål
       const markers = () => worlds.outdoor.objects.filter((o) => o.type === 'quest');
       const first = markers().length;
       markers()[0].action();
@@ -356,6 +356,48 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.deepEqual([traits.before, traits.after, traits.friends], [0, 1, 2], 'dragen upptäcks steg för steg');
     assert.ok(Number.isFinite(traits.seed), 'servern delar ett slumpfrö');
     step('personligheter');
+
+    // Jobb: sök, få svar nästa dag, och jobba ett pass med en annan lön.
+    const jobs = await arvid.evaluate(() => {
+      close();
+      state.jobs = null;
+      state.cond = null;
+      const start = [...myJobs()];
+      // Bartender kräver socialt nivå 1, som Arvid inte har från början.
+      state.skills.socialt = 0;
+      const locked = applyProblem('bartender');
+      // Kioskjobbet: sök, och svaret kommer nästa dag.
+      const chans = JOBB.kiosk.chans;
+      JOBB.kiosk.chans = 0.99;
+      applyJob('kiosk');
+      close();
+      const pending = !!state.jobs.applied.kiosk;
+      state.jobs.applied.kiosk.day = state.day - 1;
+      jobsTick();
+      JOBB.kiosk.chans = chans;
+      const got = hasJob('kiosk');
+      // Ett pass i kiosken mitt på dagen: kioskens lön, inte bussens.
+      state.hour = 10;
+      state.stats.energy = 90;
+      const money = state.money;
+      startJob('kiosk');
+      const working = job?.title;
+      finishJob();
+      close();
+      const paid = state.money - money;
+      // Bartender har bara kvällspass.
+      state.jobs.have.push('bartender');
+      const closed = shiftProblem('bartender');
+      state.jobs.have = state.jobs.have.filter((id) => id !== 'bartender');
+      return { start, locked, pending, got, working, paid, closed };
+    });
+    assert.deepEqual(jobs.start, ['buss'], 'Arvid börjar med bussjobbet');
+    assert.ok(jobs.locked?.includes('Socialt nivå 1'), 'krav som inte är uppfyllda syns');
+    assert.ok(jobs.pending && jobs.got, 'ansökan får svar nästa dag');
+    assert.equal(jobs.working, 'Kioskbiträde i W33');
+    assert.ok(jobs.paid >= 16 && jobs.paid < 24, 'kioskens lön: ' + jobs.paid);
+    assert.ok(jobs.closed?.includes('18'), 'bartender bara på kvällen');
+    step('söka jobb och jobba med olika lön');
 
     // Väskan, butikerna och tillstånden.
     const bag = await arvid.evaluate(() => {

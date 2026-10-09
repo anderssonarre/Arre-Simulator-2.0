@@ -27,6 +27,7 @@ const KINDS = {
   praktik: (h) => h.namn + ' fick praktikplats på ' + h.företag + '.',
   examen: (h) => h.namn + ' tog examen och blev ' + h.yrke + '.',
   flytt: (h) => h.namn + ' flyttade till en ' + h.till + '.',
+  jobb: (h) => h.namn + ' fick jobb som ' + h.yrke + '.',
 };
 const FIELDS = ['kurs', 'betyg', 'titel', 'person', 'märke', 'företag', 'yrke', 'till'];
 
@@ -108,7 +109,7 @@ function templatePaper(week, happenings) {
     'Uppdrag och overallmärken': ['uppdrag'],
     'Nya vänner': ['van'],
     'Kvällarna på Filicia': ['sitz', 'dackade'],
-    'Framtiden': ['praktik', 'examen', 'flytt'],
+    'Framtiden': ['praktik', 'examen', 'flytt', 'jobb'],
   };
   const artiklar = Object.entries(groups)
     .map(([rubrik, kinds]) => ({

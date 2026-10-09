@@ -156,7 +156,7 @@ function chat(p) {
           if (t) reply(p, t, 'free');
         },
       },
-      ...(p.id === 'ossi' ? [{ label: 'Visa mitt extrajobb', run: startJobPrompt }] : []),
+      ...(p.id === 'ossi' ? [{ label: 'Jobbtavlan: lediga jobb', run: jobBoard }] : []),
       ...(p.id === 'ossi' && state.term >= 3
         ? [{ label: 'Har du några praktikplatser?', run: internshipBoard }]
         : []),

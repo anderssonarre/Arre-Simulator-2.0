@@ -1,75 +1,65 @@
 // Extrajobb och utmaningar
 'use strict';
+// Extrajobben styrs av js/data/jobs.js. Man kan ha flera jobb (state.jobs.have) och söker
+// nya på jobbtavlan (js/game/jobboard.js). Här finns själva passen.
+// Gamla anrop (Ossi i samtalet, jobbmarkeringen) öppnar jobbtavlan.
 function startJobPrompt() {
-  const p = profile();
+  jobBoard();
+}
+// Visar vad passet går ut på och startar det.
+function jobPrompt(id) {
+  const def = JOBB[id];
   dialog(
-    p.job,
-    '<p>Ditt personliga extrajobb ger <strong>' +
-      p.reward +
-      ' €</strong> när hela passet är klart.</p><div class="info">' +
-      {
-        arvid:
-          'Kör bussen till Stefaan, stanna och plocka upp honom. Kör sedan till campus och släpp av honom.',
-        zeb: 'Hämta godset vid lastzonen och leverera det vid terminalen. Sakta ner före varje stopp.',
-        vilhelm: 'Styr trucken genom lagret, hämta en pall och lämna den i lagerzonen.',
-        jennifer:
-          'Montering, kvalitetskontroll och packning. Träffa den gröna zonen på varje station.',
-        axel: 'Läs ritningens krav och välj skala, måttsättning och vy i rätt ordning.',
-        albin: 'Rodd, cykel och styrka. Hitta rytmen och träffa den gröna zonen tre gånger.',
-        rasmus:
-          'Lös tre problem i följd. Ett fel avslutar inte passet, men du behöver försöka igen.',
-        ida: 'Ge tre tydliga order till teamen i rätt ordning.',
-      }[p.id] +
-      '</div><p>Passet förbrukar energi. Du kan avbryta i menyn utan lön.</p>',
+    def.namn,
+    '<p>Ett pass ger <strong>' +
+      def.lön +
+      ' €</strong>' +
+      (def.dricks ? ' plus dricks' : '') +
+      ' när hela passet är klart.</p><div class="info">' +
+      esc(def.text) +
+      '</div><p>Passet kostar ' +
+      def.energi +
+      ' energi. Du kan avbryta i menyn utan lön.</p>',
     [
-      { label: 'Starta passet →', primary: true, disabled: state.stats.energy < 15, run: startJob },
-      { label: 'Inte nu', run: close },
+      { label: 'Starta passet →', primary: true, run: () => startJob(id) },
+      { label: 'Tillbaka', run: jobBoard },
     ],
     'Extrajobb',
   );
 }
-function startJob() {
-  if (state.stats.energy < 15) return toast('Vila först. Minst 15 energi krävs.');
-  if (isDrunk()) return toast('Du kan inte jobba full. Kom tillbaka när ruset gått över.');
+function startJob(id = myJobs()[0]) {
+  const def = JOBB[id];
+  if (!def) return;
+  const why = shiftProblem(id);
+  if (why) return toast(why);
   close();
-  const p = profile();
   job = {
-    key: p.id,
-    title: p.job,
+    key: id,
+    def,
+    moment: def.moment,
+    title: def.namn,
     stage: 0,
-    type: ['arvid', 'zeb', 'vilhelm'].includes(p.id) ? 'drive' : 'challenge',
+    type: ['buss', 'lastbil', 'truck'].includes(def.moment) ? 'drive' : 'challenge',
     speed: 0,
   };
   if (job.type === 'drive') {
-    let w = makeWorld(
-      'work',
-      'Extrajobb · ' + p.job,
-      p.id === 'vilhelm' ? 20 : 48,
-      p.id !== 'vilhelm',
-    );
-    if (p.id !== 'vilhelm') {
+    const truck = def.moment === 'truck',
+      stops = def.stopp || ['Första stoppet', 'Andra stoppet'];
+    let w = makeWorld('work', 'Extrajobb · ' + def.namn, truck ? 20 : 48, !truck);
+    if (!truck) {
       for (let y = 1; y < 47; y++) {
         for (let x = 1; x < 47; x++) if (x < 4 || x > 13) w.grid[y][x] = 2;
       }
       w.spawn = { x: 8.5, y: 42, a: -Math.PI / 2 };
-      station(w, 8.5, 28.5, 'job', p.id === 'arvid' ? 'Plocka upp Stefaan' : 'Lasta godset', () =>
-        jobStation(0),
-      );
-      station(
-        w,
-        8.5,
-        8.5,
-        'job',
-        p.id === 'arvid' ? 'Släpp av på campus' : 'Lossa vid terminalen',
-        () => jobStation(1),
-      );
+      station(w, 8.5, 28.5, 'job', stops[0], () => jobStation(0));
+      station(w, 8.5, 8.5, 'job', stops[1], () => jobStation(1));
       for (const y of [37.5, 22.5, 13.5]) deco(w, 12.5, y, 'tree', 1.5);
     } else {
       rect(w, 4, 4, 2, 9, 2);
       rect(w, 13, 7, 2, 9, 2);
       w.spawn = { x: 9.5, y: 16.5, a: -Math.PI / 2 };
-      station(w, 9.5, 11.5, 'job', 'Hämta pallen', () => jobStation(0));
-      station(w, 9.5, 3.5, 'job', 'Placera pallen', () => jobStation(1));
+      station(w, 9.5, 11.5, 'job', stops[0], () => jobStation(0));
+      station(w, 9.5, 3.5, 'job', stops[1], () => jobStation(1));
       deco(w, 8.5, 11.5, 'desk', 0.65);
     }
     world = w;
@@ -89,32 +79,31 @@ function jobStation(stage) {
   sound('win');
   if (stage === 0) {
     job.stage = 1;
-    toast(
-      job.key === 'arvid'
-        ? 'Stefaan är ombord. Kör till campus.'
-        : 'Lasten är ombord. Kör till leveransen.',
-    );
+    toast('Klart. Kör vidare: ' + (job.def.stopp?.[1] || 'nästa stopp').toLowerCase() + '.');
     updateHUD();
     save();
   } else finishJob();
 }
 function finishJob() {
   if (!job) return;
-  const p = characters.find((c) => c.id === job.key);
+  const def = job.def;
   job = null;
   let happyBonus = state.stats.happy >= 70,
     double = state.doubleJobDay === state.day,
-    pay = Math.round(p.reward * (happyBonus ? 1.25 : 1) * (double ? 2 : 1) * payBoost());
+    pay = Math.round(def.lön * (happyBonus ? 1.25 : 1) * (double ? 2 : 1) * payBoost());
   const mate = teamBonus();
   if (mate) pay = Math.round(pay * 1.3);
+  // Dricks på vissa jobb, mer när man är på gott humör.
+  const tips = def.dricks ? Math.round(Math.random() * def.dricks * (happyBonus ? 1 : 0.6)) : 0;
+  pay += tips;
   addXp('arbetsvana', XP.jobbpass);
   tutorialDone('jobb');
   state.weekJobs = (state.weekJobs || 0) + 1;
-  addXp(JOB_SKILL[p.id] || 'teknik', XP.jobbpass);
+  addXp(def.färdighet || 'teknik', XP.jobbpass);
   state.money += pay;
   state.runs++;
   advance(60);
-  gain('energy', -12);
+  gain('energy', -(def.energi || 12));
   gain('happy', 12);
   $('jobHUD').style.display = 'none';
   changeWorld('outdoor', jobReturnSpot());
@@ -122,14 +111,15 @@ function finishJob() {
   dialog(
     'Passet är klart!',
     '<p>' +
-      esc(p.job) +
+      esc(def.namn) +
       ' är avslutat. Du får <strong style="color:var(--mint)">' +
       pay +
       ' €</strong>.</p>' +
-      (happyBonus || double || mate || skillLevel('arbetsvana')
+      (happyBonus || double || mate || tips || skillLevel('arbetsvana')
         ? '<p>' +
           [
             double ? 'Dubbel lön från Ossi idag.' : '',
+            tips ? 'Dricks: ' + tips + ' €.' : '',
             happyBonus ? 'Ditt goda humör gav 25 % bonus.' : '',
             mate ? 'Lagbonus +30 % med ' + mate + '.' : '',
             skillLevel('arbetsvana')
@@ -144,7 +134,7 @@ function finishJob() {
             .join(' ') +
           '</p>'
         : '') +
-      '<div class="info">+12 glädje · −12 energi · 1 timme har gått</div>',
+      '<div class="info">+12 glädje · −' + (def.energi || 12) + ' energi · 1 timme har gått</div>',
     [{ label: 'Tillbaka till campus', primary: true, run: close }],
     'Lön utbetald',
   );
@@ -156,54 +146,6 @@ function abortJob() {
   changeWorld('outdoor', jobReturnSpot());
   toast('Passet avbröts. Ingen lön betalades ut.');
 }
-const tasks = {
-  axel: [
-    [
-      'Skala',
-      'En detalj är 100 mm lång. Hur lång är den på ritningen i skala 1:2?',
-      ['50 mm', '200 mm', '100 mm'],
-    ],
-    [
-      'Måttsättning',
-      'Vilket mått behövs för ett cirkulärt hål?',
-      ['Diameter', 'Bara färg', 'Bara vikt'],
-    ],
-    [
-      'Vy',
-      'Vilken vy visar ett dolt hål genom detaljen?',
-      ['Snittvy', 'Bara en titel', 'Bara en yttre silhuett'],
-    ],
-  ],
-  ida: [
-    [
-      'Monteringslaget',
-      'Vad säger du först?',
-      [
-        'Kontrollera materialet och börja monteringen',
-        'Byt avdelning utan plan',
-        'Vänta utan information',
-      ],
-    ],
-    [
-      'Logistikteamet',
-      'Hur får du lasten till rätt plats?',
-      [
-        'Flytta lasten till zon B och bekräfta när det är klart',
-        'Lägg den någonstans',
-        'Ta rast och lämna lasten',
-      ],
-    ],
-    [
-      'Kvalitetsteamet',
-      'Vad krävs före leverans?',
-      [
-        'Kontrollera måtten och dokumentera resultatet',
-        'Hoppa över kontrollen',
-        'Gissa om allt passar',
-      ],
-    ],
-  ],
-};
 function showChallenge() {
   if (!job) return;
   paused = false;
@@ -212,8 +154,8 @@ function showChallenge() {
     return;
   }
   const j = job,
-    p = characters.find((c) => c.id === j.key);
-  if (j.key === 'rasmus') {
+    p = { job: j.def.namn };
+  if (j.moment === 'matte') {
     if (!j.questions) {
       const n = 3 + Math.floor(Math.random() * 6);
       j.questions = [
@@ -241,8 +183,8 @@ function showChallenge() {
     );
     return;
   }
-  if (tasks[j.key]) {
-    const t = tasks[j.key][j.stage];
+  if (j.moment === 'quiz' && j.def.frågor) {
+    const t = j.def.frågor[j.stage];
     quiz(
       t[0] + ' · ' + (j.stage + 1) + '/3',
       t[1],
@@ -261,12 +203,7 @@ function showChallenge() {
     );
     return;
   }
-  const names =
-    j.key === 'albin'
-      ? ['Rodd · hitta rytmen', 'Cykel · jämn takt', 'Styrka · kontrollerad rörelse']
-      : j.key === 'jennifer'
-        ? ['Montering', 'Kvalitetskontroll', 'Packning']
-        : ['Uppvärmning', 'Styrka', 'Stretch'];
+  const names = j.def.stationer || ['Station 1', 'Station 2', 'Station 3'];
   j.phase = 0;
   j.elapsed = 0;
   j.center = 0.3 + Math.random() * 0.4;
@@ -302,10 +239,6 @@ function timingHit() {
   }
 }
 function gymPrompt() {
-  if (profile().id === 'albin') {
-    startJobPrompt();
-    return;
-  }
   job = {
     type: 'challenge',
     key: profile().id,

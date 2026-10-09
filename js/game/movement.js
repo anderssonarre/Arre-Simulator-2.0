@@ -143,7 +143,7 @@ function walk(dt, f, r, sprintHeld) {
 
 // ---- Körning (buss, lastbil, truck) ----
 function drive(dt, f, r) {
-  const max = job.key === 'vilhelm' ? 2.5 : 5,
+  const max = job.moment === 'truck' ? 2.5 : 5,
     s = job.speed,
     arrows = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
   motion.steer = approach(motion.steer, clamp(r + arrows, -1, 1), 6, dt);

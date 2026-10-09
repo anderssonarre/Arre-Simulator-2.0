@@ -245,7 +245,7 @@ function buildCampus() {
   for (const [x, y] of C.lamps)
     obj(w, x, y, 'lamp', '', null, { height: 0.5, z: 4.9, sprite: hangingLampSprite() });
   // Extrajobbet och platsbilderna.
-  station(w, ...freeSpotNear(w, 72, 176), 'job', 'Starta ditt extrajobb', startJobPrompt);
+  station(w, ...freeSpotNear(w, 72, 176), 'job', 'Jobbtavlan · sök jobb och jobba ett pass', jobBoard);
   station(w, ...freeSpotNear(w, 97, 106), 'photo', 'W33 · se platsbilderna', () => showPhotos(1));
   station(w, ...freeSpotNear(w, 84, 142), 'photo', 'Technobothnia · se platsbilderna', () =>
     showPhotos(6),
