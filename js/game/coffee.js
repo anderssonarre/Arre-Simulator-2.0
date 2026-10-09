@@ -53,8 +53,22 @@ function coffeeLabel(atHome) {
     (e > 0 ? ' · +' + e + ' energi' : ' · ger inget mer idag')
   );
 }
+// En plats nära (x, y) som inte är där man kommer in eller i vägen för en dörr.
+function coffeeSpot(w, x, y) {
+  for (let r = 0; r < 6; r += 0.5)
+    for (let a = 0; a < 6.28; a += 0.4) {
+      const px = Math.floor(x + Math.cos(a) * r) + 0.5,
+        py = Math.floor(y + Math.sin(a) * r) + 0.5;
+      if (!walkable(w, px, py, 0.4)) continue;
+      if (Math.hypot(px - w.spawn.x, py - w.spawn.y) < 2.5) continue;
+      if (w.objects.some((o) => o.action && Math.hypot(o.x - px, o.y - py) < 2)) continue;
+      return [px, py];
+    }
+  return [x, y];
+}
 // Ställer en automat i ett hus. Etiketten uppdateras när man närmar sig.
 function coffeeMachine(w, x, y) {
+  [x, y] = coffeeSpot(w, x, y);
   const o = obj(w, x, y, 'coffee', 'Kaffeautomat', () => drinkCoffee(false), {
     height: 1.05,
     sprite: coffeeSprite(),

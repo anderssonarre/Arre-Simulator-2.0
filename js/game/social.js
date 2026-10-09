@@ -49,6 +49,8 @@ function remember(p, who, text) {
   state.histories[p.id] = state.histories[p.id].slice(-16);
 }
 function chat(p) {
+  // Att börja prata räcker för introduktionens steg, man behöver inte välja en replik.
+  tutorialDone('prata');
   const r = relation(p),
     hist = state.histories[p.id] || [];
   const greet = say(

@@ -199,6 +199,8 @@ function crowdTick(dt) {
 // Prata med någon okänd. Med AI på servern svarar personen fritt, annars med färdiga repliker.
 // Okända sparas inte i historiken, men den första pratstunden per dag ger lite socialt.
 function strangerChat(o, lines = null) {
+  // Okända räknas också som att prata med någon första dagen.
+  tutorialDone('prata');
   const p = o.profile;
   lines ??= [{ who: 'npc', text: rand(CROWD.hälsningar) }];
   o.chatLines = lines;

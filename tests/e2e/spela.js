@@ -174,6 +174,24 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(hist.includes('TEST-TANKE axel'), 'tanken kommer i samtalet');
     step('samtal med en person');
 
+    // Introduktionen: att börja prata med någon (känd eller okänd) räcker för steget.
+    const tut = await arvid.evaluate(() => {
+      const before = ['world:outdoor', 'world:w33', 'föreläsning', 'lunch'];
+      state.tutorial = [...before];
+      chat(characters.find((c) => c.id === 'axel'));
+      close();
+      const afterKnown = tutorialStep()?.id;
+      state.tutorial = [...before];
+      strangerChat({ profile: { name: 'Okänd', personality: 'friendly', topic: 'campus' } });
+      close();
+      const afterStranger = tutorialStep()?.id;
+      state.tutorial = null;
+      return { afterKnown, afterStranger };
+    });
+    assert.equal(tut.afterKnown, 'jobb', 'prata med en person klarar steget');
+    assert.equal(tut.afterStranger, 'jobb', 'prata med en okänd klarar steget');
+    step('introduktionens pratsteg');
+
     // Kaffeautomater i alla hus: varje kopp ger mindre, sent kaffe ger sämre sömn.
     const coffee = await arvid.evaluate(() => {
       const machines = ['w33', 'tech', 'gym'].map((id) =>
@@ -193,14 +211,18 @@ async function waitFor(page, fn, what, ms = 20000) {
       const before = restBonus();
       drinkCoffee(true);
       return {
-        found: machines.map((m, i) => !!m && walkable(worlds[['w33', 'tech', 'gym'][i]], m.x, m.y, 0.1)),
+        found: machines.map((m, i) => {
+          const w = worlds[['w33', 'tech', 'gym'][i]];
+          // På golvet, och inte där man kommer in genom dörren.
+          return !!m && walkable(w, m.x, m.y, 0.1) && Math.hypot(m.x - w.spawn.x, m.y - w.spawn.y) >= 2.5;
+        }),
         gains,
         money: state.money,
         label,
         sleepAfter: restBonus() / before,
       };
     });
-    assert.deepEqual(coffee.found, [true, true, true], 'en automat i varje hus, på golvet');
+    assert.deepEqual(coffee.found, [true, true, true], 'en automat i varje hus, på golvet och inte vid dörren');
     assert.deepEqual(coffee.gains, [18, 12, 7, 3], 'varje kopp ger mindre');
     assert.equal(coffee.money, 2, 'fyra koppar à 2 €, hemma gratis');
     assert.ok(coffee.label.includes('ger inget mer'), 'etiketten visar vad nästa kopp ger');
