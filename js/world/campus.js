@@ -248,6 +248,8 @@ function buildCampus() {
     wsc: cutDoor(w, 62.5, 195.5, 1.2),
     home: cutDoor(w, 10.25, 68, 1),
   };
+  // Karaktärer med en riktig hemadress (js/data/hem.js) får en egen ytterdörr.
+  for (const [id, h] of Object.entries(HEMADRESSER)) doors['hem:' + id] = cutDoor(w, h.dörr.x, h.dörr.y, 1.1);
   osmGrid(w);
   // Portaler framför dörrarna.
   const at = (d, k = 0.6) => [d.x + d.nx * k, d.y + d.ny * k];
@@ -256,7 +258,19 @@ function buildCampus() {
   portal(w, ...at(doors.w33Side), 'W33 · sidoingången', 'w33');
   portal(w, ...at(doors.techno), 'Technobothnia · gå in', 'tech');
   portal(w, ...at(doors.wsc), 'Wasa Sports Club · träning', 'gym');
-  portal(w, ...at(doors.home), 'Gå hem', 'home');
+  portal(w, ...at(doors.home), 'Gå hem', 'home').hemFör = null;
+  for (const [id, h] of Object.entries(HEMADRESSER))
+    if (doors['hem:' + id]) portal(w, ...at(doors['hem:' + id]), h.adress, 'home').hemFör = id;
+  // Bara din egen ytterdörr går att gå in genom.
+  for (const o of w.objects)
+    if (o.type === 'portal' && o.target === 'home') {
+      const label = o.label;
+      Object.defineProperty(o, 'label', {
+        get: () => (isMyHomeDoor(o) ? 'Gå hem' + (o.hemFör ? ' · ' + label : '') : label === 'Gå hem' ? 'Grannarnas hus' : label + ' · någon annans hem'),
+        enumerable: true,
+      });
+      o.action = () => (isMyHomeDoor(o) ? changeWorld('home') : toast('Här bor någon annan.'));
+    }
   const out = at(doors.home, 1.2);
   w.spawn = { x: out[0], y: out[1], a: Math.atan2(doors.home.ny, doors.home.nx) };
   // Skärmtak och trappa vid W33:s två ingångar (som på bilderna).
@@ -293,8 +307,23 @@ function buildCampus() {
   osmExits(w, [doors.w33Corner.x + doors.w33Corner.nx, doors.w33Corner.y + doors.w33Corner.ny]);
   return w;
 }
+// Hemadressen: din egen ytterdörr (Zeb bor på Fabriksgatan 3 C, se js/data/hem.js).
+const isMyHomeDoor = (o) => (o.hemFör ?? null) === (HEMADRESSER[state?.character] ? state.character : null);
+function myHomeDoorSpot() {
+  const w = worlds.outdoor,
+    o = w.objects.find((p) => p.type === 'portal' && p.target === 'home' && isMyHomeDoor(p));
+  if (!o) return w.spawn;
+  const d = Object.values(w.doors).find((d) => d && Math.hypot(d.x - o.x, d.y - o.y) < 1.5),
+    a = d ? Math.atan2(d.ny, d.nx) : 0;
+  return { x: o.x + Math.cos(a) * 0.6, y: o.y + Math.sin(a) * 0.6, a };
+}
+function homeName() {
+  const h = HEMADRESSER[state?.character];
+  return h ? 'Hemma · ' + h.adress + ', ' + h.våning : 'Hemmet';
+}
 // Var man hamnar ute när man går ut ur ett hus: framför den första dörren som leder dit.
 function outdoorSpawnFor(fromWorld) {
+  if (fromWorld === 'home') return myHomeDoorSpot();
   const o = worlds.outdoor.objects.find((p) => p.type === 'portal' && p.target === fromWorld);
   if (!o) return worlds.outdoor.spawn;
   const d = Object.values(worlds.outdoor.doors).find((d) => Math.hypot(d.x - o.x, d.y - o.y) < 1.5);

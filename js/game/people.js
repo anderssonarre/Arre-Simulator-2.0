@@ -309,7 +309,9 @@ function clearLine(w, x0, y0, x1, y1) {
 
 // ---- Flytta personer mellan världar ----
 function doorTo(fromWorld, toWorld) {
-  return worlds[fromWorld].objects.find((o) => o.type === 'portal' && o.target === toWorld);
+  const list = worlds[fromWorld].objects.filter((o) => o.type === 'portal' && o.target === toWorld);
+  // Till ditt hem går gästerna genom din egen ytterdörr.
+  return (toWorld === 'home' && list.find(isMyHomeDoor)) || list[0];
 }
 // Ställen där personer kommer in på och lämnar kartan (där gatorna går ut).
 const campusExits = () => worlds.outdoor.exits;

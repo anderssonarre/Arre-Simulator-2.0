@@ -133,6 +133,7 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   och billånet (handpenning, ränta, antal veckor).
 - `js/data/telefon.js`: telefonerna i telefonbutiken, Uber och taxi (priser, väntetid, bilar,
   förare) och resmålen.
+- `js/data/hem.js`: var karaktärerna bor (Zeb bor på Fabriksgatan 3 C).
 - `js/game/traffic.js`: bilarna på gatorna (antal, fart och färger överst i filen). Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,

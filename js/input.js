@@ -3,6 +3,16 @@
 // Unified input path: typing never moves the player and held E never repeats actions.
 document.addEventListener('keydown', (e) => {
   if (e.target.matches('input,textarea')) return;
+  // Stora kartan (js/ui/storkarta.js): M öppnar och stänger, Esc stänger.
+  if (BIGMAP.open && (e.code === 'Escape' || e.code === 'KeyM')) {
+    e.preventDefault();
+    if (!e.repeat) closeBigMap();
+    return;
+  }
+  if (e.code === 'KeyM' && !e.repeat && active && !modal) {
+    openBigMap();
+    return;
+  }
   if (e.code === 'Escape') {
     e.preventDefault();
     if (!active) {

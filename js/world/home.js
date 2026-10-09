@@ -393,6 +393,8 @@ function computeShadow(wx, wy) {
 // ---- Bygg hemmet ----
 function buildHome() {
   const w = makeWorld('home', 'Hemmet', 9);
+  // Namnet visar adressen för den som har en riktig (js/data/hem.js).
+  Object.defineProperty(w, 'name', { get: homeName, configurable: true });
   w.grid.forEach((row, y) =>
     row.forEach((_, x) => (row[x] = x === 0 || y === 0 || x === 8 || y >= 7 ? 11 : 0)),
   );

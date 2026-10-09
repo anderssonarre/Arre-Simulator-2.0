@@ -665,6 +665,24 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(ring.near < 6, 'framme vid W33');
     step('telefon och Uber');
 
+    // Zeb bor på Fabriksgatan 3 C, och den stora kartan (M).
+    const hem = await zeb.evaluate(() => {
+      const spot = outdoorSpawnFor('home'),
+        mine = worlds.outdoor.objects.find((o) => o.type === 'portal' && o.target === 'home' && isMyHomeDoor(o));
+      changeWorld('home');
+      const name = world.name;
+      changeWorld('outdoor');
+      openBigMap();
+      const open = BIGMAP.open && !$('bigMap').hidden;
+      closeBigMap();
+      return { x: spot.x, y: spot.y, label: mine?.label, name, open, closed: !modal };
+    });
+    assert.ok(Math.hypot(hem.x - 171, hem.y - 82) < 6, 'ytterdörren på Fabriksgatan 3 (' + hem.x.toFixed(1) + ', ' + hem.y.toFixed(1) + ')');
+    assert.match(hem.label, /Fabriksgatan 3 C/);
+    assert.match(hem.name, /Fabriksgatan 3 C, första våningen/);
+    assert.ok(hem.open && hem.closed, 'stora kartan öppnas och stängs');
+    step('Zebs hem och stora kartan');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {
