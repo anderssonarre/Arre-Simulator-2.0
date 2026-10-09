@@ -101,6 +101,8 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 - `js/data/career.js`: praktikplatser, examensarbete och vad man kan bli.
 - `js/data/quests.js`: sidouppdrag som personerna ger dig (inte skolan), med platser på campus,
   steg och belöningar. Instruktionerna står överst.
+- `js/data/items.js`: varor i väskan, kiosken och baren, och tillstånden (berusning, illamående,
+  koncentration) med gränser och hur fort de avtar.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

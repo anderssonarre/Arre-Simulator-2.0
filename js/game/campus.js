@@ -4,6 +4,7 @@ function lunchPrice() {
   return state.cheapLunchDay === state.day ? 4 : 8;
 }
 function lunch() {
+  if (isNauseous()) return toast('Du mår för illa för att äta. Vatten hjälper.');
   const price = lunchPrice();
   if (state.money < price)
     return toast('Lunchen kostar ' + price + ' €. Ett extrajobb ger dig råd.');
@@ -13,6 +14,7 @@ function lunch() {
   questEvent('lunch');
   gain('hunger', 55);
   gain('happy', 5);
+  changeCond({ koncentration: 6, illamående: -8 });
   advance(15);
   save();
   toast('Lunch på W33 för ' + price + ' €. +55 mättnad och +5 glädje.');

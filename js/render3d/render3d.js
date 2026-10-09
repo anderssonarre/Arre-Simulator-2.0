@@ -1035,6 +1035,7 @@ function render3d() {
   cam.position.set(player.x, eye, player.y);
   cam.rotation.y = -player.a - Math.PI / 2;
   cam.rotation.x = Math.atan(pitch * 0.9);
+  cam.rotation.z = drunkRoll(); // full: världen lutar lite
   const vfov = 2 * Math.atan(camera.plane / cam.aspect);
   if (Math.abs(cam.fov - (vfov * 180) / Math.PI) > 0.1) {
     cam.fov = (vfov * 180) / Math.PI;

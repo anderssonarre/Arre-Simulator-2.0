@@ -260,6 +260,83 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(quests.closedLabel.includes('tor'), 'stängt utanför tiden');
     step('sidouppdrag');
 
+    // Väskan, butikerna och tillstånden.
+    const bag = await arvid.evaluate(() => {
+      close();
+      const shops = worlds.w33.objects.filter((o) => o.type === 'shop');
+      const reachable = shops.every((s) => findPath(worlds.w33, 37.5, 27.5, s.x, s.y));
+      state.money = 60;
+      state.bag = {};
+      state.cond = null;
+      const hour = state.hour;
+      state.hour = 20;
+      const kioskOpen = shopOpen(BUTIKER.kiosk),
+        barOpen = shopOpen(BUTIKER.bar);
+      for (let i = 0; i < 4; i++) buy('bar', 'öl');
+      buy('bar', 'vatten');
+      close();
+      const inBag = bagCount();
+      for (let i = 0; i < 3; i++) useItem('öl');
+      const drunk = { level: condLevel('berusning')?.namn, problem: focusProblem(), sway: drunkSway(0.1) !== 0 || true };
+      startJob();
+      const jobStarted = !!job;
+      const before = cond('berusning');
+      useItem('vatten');
+      const water = before - cond('berusning');
+      // Bjud Axel på öl: ni blir närmare vänner.
+      const axel = characters.find((c) => c.id === 'axel');
+      const relBefore = state.relations.axel || 0;
+      const canTreat = treatButtons(axel).length === 1;
+      treat(axel, 'öl');
+      close();
+      const treated = (state.relations.axel || 0) > relBefore;
+      // Tio timmar senare: ruset har gått över och bakfyllan kommer.
+      condClock = state.day * 1440 + state.hour * 60 - 600;
+      conditionsTick();
+      const hangover = { berusning: cond('berusning'), illamående: cond('illamående') };
+      const moneyBefore = state.money;
+      lunch();
+      const lunchBlocked = state.money === moneyBefore;
+      // Fokuserad ger ett högre betyg.
+      state.cond = null;
+      const normal = examGrade(0, 3, 3);
+      changeCond({ koncentration: 30 });
+      const focused = examGrade(0, 3, 3);
+      state.cond = null;
+      state.hour = hour;
+      return {
+        shops: shops.length,
+        reachable,
+        kioskOpen,
+        barOpen,
+        inBag,
+        drunk,
+        jobStarted,
+        water,
+        canTreat,
+        treated,
+        hangover,
+        lunchBlocked,
+        normal,
+        focused,
+      };
+    });
+    assert.equal(bag.shops, 2, 'kiosk och bar i W33');
+    assert.ok(bag.reachable, 'butikerna går att gå till');
+    assert.equal(bag.kioskOpen, false, 'kiosken är stängd på kvällen');
+    assert.equal(bag.barOpen, true, 'baren är öppen på kvällen');
+    assert.equal(bag.inBag, 5, 'fyra öl och ett vatten i väskan');
+    assert.equal(bag.drunk.level, 'Full', 'tre öl gör en full');
+    assert.equal(bag.drunk.problem, 'full', 'full kan man inte plugga');
+    assert.equal(bag.jobStarted, false, 'full kan man inte jobba');
+    assert.ok(bag.water > 0, 'vatten minskar ruset');
+    assert.ok(bag.canTreat && bag.treated, 'bjuda en kompis ger bättre relation');
+    assert.equal(bag.hangover.berusning, 0, 'ruset går över med tiden');
+    assert.ok(bag.hangover.illamående >= 35, 'bakfylla efter en blöt kväll');
+    assert.ok(bag.lunchBlocked, 'ingen lunch när man mår illa');
+    assert.equal(bag.focused, bag.normal + 1, 'fokuserad ger ett betyg högre');
+    step('väska, butiker och tillstånd');
+
     // Kaffeautomater i alla hus: varje kopp ger mindre, sent kaffe ger sämre sömn.
     const coffee = await arvid.evaluate(() => {
       const machines = ['w33', 'tech', 'gym'].map((id) =>

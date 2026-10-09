@@ -77,6 +77,7 @@ function examGrade(i, right, total) {
   if (c.lectures > 0) g++;
   if (skillHelps(i)) g++;
   if (c.failed) g--;
+  if (focusedForExam()) g++;
   return clamp(g, 1, 5);
 }
 function gradeReasons(i, right, total) {
@@ -85,6 +86,7 @@ function gradeReasons(i, right, total) {
   if (c.lectures > 0) r.push('Var på föreläsning: +1');
   if (skillHelps(i)) r.push(SKILLS[courseSkill(i)].namn + ' nivå ' + skillNeeded() + ': +1');
   if (c.failed) r.push('Omtenta: −1');
+  if (focusedForExam()) r.push('Fokuserad: +1');
   return r.join(' · ');
 }
 function recordPass(i, grade) {

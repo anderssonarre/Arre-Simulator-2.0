@@ -98,6 +98,9 @@ function buildPrompt(b) {
       : '',
     c.courses ? 'Terminens kurser: ' + str(c.courses, 120) + '.' : '',
     c.thought ? 'Det här går du och tänker på idag (ta gärna upp det): ' + str(c.thought, 200) : '',
+    c.playerState
+      ? 'Spelaren är ' + str(c.playerState, 60) + ', det märks. Reagera på det på ett vänligt sätt.'
+      : '',
     c.mood ? 'Ditt humör idag: ' + str(c.mood, 30) + '. Låt det märkas lite.' : '',
     c.friends ? 'Dina vänner och ovänner på campus: ' + str(c.friends, 160) + '.' : '',
     c.rumor ? 'Skvaller du har hört om spelaren (nämn det gärna): ' + str(c.rumor, 160) : '',

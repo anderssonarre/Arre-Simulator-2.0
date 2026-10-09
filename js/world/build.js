@@ -205,6 +205,7 @@ function build() {
   coffeeMachine(w, 13.5, 14.5);
   doorAt(w, 8, 17);
   portal(w, 8.5, 16.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41.85, a: -Math.PI / 2 });
+  placeShops(); // kiosken och baren, se js/data/items.js
   linkCampusExits();
   // Personerna placeras av schemat (js/game/people.js) när spelet startar.
 }

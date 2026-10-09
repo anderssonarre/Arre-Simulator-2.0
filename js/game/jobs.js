@@ -30,6 +30,7 @@ function startJobPrompt() {
 }
 function startJob() {
   if (state.stats.energy < 15) return toast('Vila först. Minst 15 energi krävs.');
+  if (isDrunk()) return toast('Du kan inte jobba full. Kom tillbaka när ruset gått över.');
   close();
   const p = profile();
   job = {

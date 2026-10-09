@@ -38,6 +38,7 @@ function start(s) {
   if (tutorialStep()) setTimeout(() => tutorialStep() && toast(tutorialStep().tip), 4200);
   setupPeople();
   questSync();
+  updateConditionsHUD();
   onlineConnect();
 }
 function choose(id) {

@@ -37,6 +37,11 @@ const SOCIETY = {
       relation: 0,
     },
     kaffe: { text: 'Jag såg dig och {med} ta kaffe. Trevligt!', relation: 1 },
+    full: { text: 'Du var visst rätt full igår. Allt okej idag?', relation: 0 },
+    däckade: {
+      text: 'Hörde att någon fick hjälpa dig hem. Drick vatten mellan ölen nästa gång.',
+      relation: 0,
+    },
     kaffekopp: {
       text: 'Fjärde koppen kaffe idag? Du skakade ju när du gick förbi automaten.',
       relation: 0,

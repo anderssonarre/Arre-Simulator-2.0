@@ -752,6 +752,7 @@ function kitchen() {
   );
 }
 function cookAtHome() {
+  if (isNauseous()) return toast('Du mår för illa för att äta. Vatten hjälper.');
   // I studentkorridoren delar man kök och handlar billigare tillsammans.
   const price = state.home?.typ === 'korridor' ? 2 : 3;
   if (state.money < price)

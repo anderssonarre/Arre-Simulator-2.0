@@ -36,6 +36,7 @@ function menu() {
       { label: 'Framtid: praktik och examensarbete', run: careerOverview },
       { label: 'Campus och vänner', run: showMap },
       { label: 'Sidouppdrag', run: showQuests },
+      { label: 'Väskan', run: showBag },
       { label: 'Kontroller', run: showControls },
       { label: 'Spelarnamn: ' + playerName() + ' · byt', run: renameDialog },
       ...(accountsAvailable()
@@ -176,6 +177,9 @@ $('importFile').addEventListener('change', async (e) => {
   }
 });
 $('menuButton').onclick = () => (modal && paused ? close() : menu());
+$('bagButton').onclick = () => {
+  if (active && !modal) showBag();
+};
 $('fullButton').onclick = async () => {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();

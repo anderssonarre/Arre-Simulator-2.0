@@ -902,6 +902,25 @@ body.gfx3d #overlay3d {
   display: block;
 }
 
+/* Tillstånd under behoven: berusning, illamående, koncentration (js/game/conditions.js) */
+#conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+#conditions[hidden] {
+  display: none;
+}
+.cond {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ffffff14;
+  border: 1px solid #ffffff22;
+  white-space: nowrap;
+}
+
 /* ---- Pekskärm: kompakt läge så att bilden syns (se js/input.js) ---- */
 body.touch .brand {
   display: none;

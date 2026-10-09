@@ -102,6 +102,7 @@ function chat(p) {
     [
       // Sidouppdrag: personen ber om hjälp, eller väntar på ditt svar (js/game/quests.js).
       ...questChatButtons(p),
+      ...treatButtons(p), // bjud på något ur väskan (js/game/inventory.js)
       ...(aiOffer[p.id] === 'kaffe'
         ? [
             {

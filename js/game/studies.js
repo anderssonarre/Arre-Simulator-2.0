@@ -6,6 +6,9 @@ function course(i) {
 }
 // Vad som hindrar koncentrationen just nu, eller null om allt är okej.
 function focusProblem() {
+  // Full, illamående eller ofokuserad (js/game/conditions.js).
+  const c = conditionProblem();
+  if (c) return c;
   const s = state.stats;
   if (s.hunger < 20) return 'hungrig';
   if (s.energy < 20) return 'trött';
@@ -28,17 +31,24 @@ function study(i, buddy = null) {
     return toast('För trött för ett studiepass. Vila hemma eller gör yoga.');
   // En riktig spelare bredvid dig räknas som studiekamrat.
   const mate = buddy ? null : studyMate();
-  const problem = buddy || mate ? null : focusProblem();
+  // En studiekamrat hjälper mot det mesta, men inte mot fyllan.
+  const problem = buddy || mate ? (isDrunk() ? 'full' : null) : focusProblem();
   if (problem) {
     gain('energy', -5);
     advance(40);
     save();
     dialog(
       'Svårt att fokusera',
-      '<p>Du är för ' +
-        problem +
+      '<p>' +
+        (problem === 'illamående' ? 'Du mår för illa' : 'Du är för ' + problem) +
         ' för att få ut något av passet. Det räknades inte.</p><div class="info">' +
-        (problem === 'hungrig'
+        (problem === 'full'
+          ? 'Ingen plugg i fyllan. Vatten och sömn, sedan går det bättre.'
+          : problem === 'illamående'
+            ? 'Vänta tills magen lugnat sig. Vatten hjälper.'
+            : problem === 'ofokuserad'
+              ? 'Ta en kaffe, drick vatten eller sov ordentligt.'
+              : problem === 'hungrig'
           ? 'Ät lunch i W33 först.'
           : problem === 'trött'
             ? 'Vila hemma eller gör yoga på gymmet.'
@@ -140,8 +150,8 @@ function exam(i) {
       need +
       ' rätt</strong> för att bli godkänd.</p>' +
       (problem
-        ? '<div class="info">Du är ' +
-          problem +
+        ? '<div class="info">' +
+          (problem === 'illamående' ? 'Du mår illa' : 'Du är ' + problem) +
           ' och har svårt att tänka klart. Därför krävs alla rätt. Ta hand om dig först om du vill ha bättre chans.</div>'
         : '') +
       (skillHelps(i)
@@ -281,6 +291,7 @@ function sleep() {
           if (online) return startSleep(Math.max(40, 100 - state.stats.energy), 30, 15, 'Sömn');
           gain('energy', Math.round(75 * restBonus()));
           gain('hunger', -20);
+          restedConcentration();
           state.day++;
           state.hour = 8;
           save();
@@ -356,6 +367,7 @@ function wakeUp() {
   if (!sleeping) return;
   const full = sleeping.given >= 1,
     nap = sleeping.title === 'Tupplur';
+  if (full && !nap) restedConcentration();
   sleeping = null;
   $('sleepOverlay').hidden = true;
   save();

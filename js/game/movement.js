@@ -105,7 +105,7 @@ function move(dx, dy, r = PLAYER_RADIUS) {
 function walk(dt, f, r, sprintHeld) {
   const turnKeys = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
   camera.turnVel = approach(camera.turnVel, turnKeys * 2.4 * controls.sens, 10, dt);
-  player.a += camera.turnVel * dt;
+  player.a += camera.turnVel * dt + drunkSway(dt); // full: man går inte rakt
 
   const len = Math.hypot(f, r),
     nf = len > 1 ? f / len : f,

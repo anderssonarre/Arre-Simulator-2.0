@@ -47,6 +47,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
   keys.add(e.code);
   if (e.code === 'KeyE' && !e.repeat) interact();
+  if (e.code === 'KeyI' && !e.repeat && active && !modal) showBag();
 });
 document.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => {

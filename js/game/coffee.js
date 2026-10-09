@@ -32,6 +32,7 @@ function drinkCoffee(atHome = false) {
   gain('energy', energy);
   const jittery = c.cups >= KAFFE.darrigFrån;
   if (jittery) gain('happy', -KAFFE.darrig);
+  changeCond({ koncentration: energy > 0 ? 10 : 0, illamående: jittery ? 12 : 0 });
   if (state.hour >= KAFFE.sentEfter) c.wiredUntil = nowHours() + KAFFE.verkarTimmar;
   questEvent('kaffe');
   save();
