@@ -17,7 +17,7 @@ const MAX_PLAYERS = Number(process.env.MAX_PLAYERS) || 40;
 const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
 // Gemensam spelklocka och fredagsfest. Samma uträkning som i spelet (js/shared/clock.js),
 // räknad från en fast tidpunkt så att alla får samma tid och den överlever omstarter.
-const { partyStatus } = require('../js/shared/clock.js');
+const { partyStatus, gameMinutesAt } = require('../js/shared/clock.js');
 const PARTY_FORCE = process.env.PARTY_FORCE === '1'; // för test: festen pågår alltid
 const clockMessage = () => ({
   t: 'clock',
@@ -177,6 +177,31 @@ function eventFlood(ip) {
   return list.length > 300;
 }
 const noAi = (res) => res.writeHead(204, { 'cache-control': 'no-store' }).end();
+// Vem som räknas mot AI-taket: kontot om man är inloggad, annars spelarens eget id.
+async function aiWho(req) {
+  if (store) {
+    const key = await sessionKey(req).catch(() => null);
+    if (key) return 'u:' + key;
+  }
+  const id = String(req.headers['x-arre-player'] || '');
+  return /^[a-z0-9-]{8,40}$/i.test(id) ? 'p:' + id : null;
+}
+// Dagens liv delas av alla: ett svar per speldag på servern (gemensamma klockan).
+const sharedDays = new Map(); // serverdag -> Promise med svaret
+const serverDayNow = () => Math.floor(gameMinutesAt(Date.now()) / 1440) + 1;
+const onlineNames = () => [...new Set([...players.values()].map((p) => p.name))].slice(0, 12);
+function sharedDay(day, body) {
+  if (sharedDays.has(day)) return sharedDays.get(day);
+  if (!ai.spendDaily()) return null;
+  const job = ai.dayLife({ ...body, players: onlineNames() }).catch((e) => {
+    console.error('AI dag:', e.message);
+    sharedDays.delete(day); // nästa spelare får försöka igen
+    return null;
+  });
+  sharedDays.set(day, job);
+  for (const d of sharedDays.keys()) if (d < day - 2) sharedDays.delete(d);
+  return job;
+}
 const clientIp = (req) =>
   (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 async function handleApi(req, res, url) {
@@ -191,7 +216,7 @@ async function handleApi(req, res, url) {
       return json(res, 413, {});
     }
     if (!body || typeof body.text !== 'string' || !body.text.trim()) return json(res, 400, {});
-    if (!ai.allowed(clientIp(req))) return noAi(res);
+    if (!ai.allowed(await aiWho(req), clientIp(req))) return noAi(res);
     try {
       return json(res, 200, await ai.talk(body));
     } catch (e) {
@@ -199,6 +224,7 @@ async function handleApi(req, res, url) {
       return noAi(res);
     }
   }
+  // Dagens liv: tankar och samtal. Online gäller samma svar för alla under hela speldagen.
   if (url === '/api/day' && req.method === 'POST') {
     if (!ai.enabled()) return noAi(res);
     let body;
@@ -208,11 +234,36 @@ async function handleApi(req, res, url) {
       return json(res, 413, {});
     }
     if (!body || !Array.isArray(body.people) || !body.people.length) return json(res, 400, {});
-    if (!ai.allowed(clientIp(req))) return noAi(res);
+    const day = Number(body.serverDay),
+      today = serverDayNow();
+    if (Number.isInteger(day) && Math.abs(day - today) <= 1) {
+      const out = await sharedDay(day, body);
+      return out ? json(res, 200, { ...out, shared: true }) : noAi(res);
+    }
+    // Inte online: ett eget svar, som räknas mot spelarens tak.
+    if (!ai.allowed(await aiWho(req), clientIp(req))) return noAi(res);
     try {
-      return json(res, 200, await ai.dayLife(body));
+      return json(res, 200, await ai.dayLife({ ...body, players: [String(body.playerName || '')] }));
     } catch (e) {
       console.error('AI dag:', e.message);
+      return noAi(res);
+    }
+  }
+  // Hur de du känner hälsar på just dig idag.
+  if (url === '/api/greet' && req.method === 'POST') {
+    if (!ai.enabled()) return noAi(res);
+    let body;
+    try {
+      body = await readBody(req, 16384);
+    } catch {
+      return json(res, 413, {});
+    }
+    if (!body || !Array.isArray(body.people) || !body.people.length) return json(res, 400, {});
+    if (!ai.allowed(await aiWho(req), clientIp(req))) return noAi(res);
+    try {
+      return json(res, 200, await ai.greetings(body));
+    } catch (e) {
+      console.error('AI hälsningar:', e.message);
       return noAi(res);
     }
   }

@@ -60,16 +60,14 @@ test('AI-instruktionen kortar allt spelet skickar', () => {
   assert.ok(p.includes('katt'));
 });
 
-test('dagens liv tar bara med kända personer och korta texter', () => {
-  const b = { people: [{ id: 'axel' }, { id: 'otto' }] };
+test('dagens liv tar bara med kända personer, kända spelare och korta texter', () => {
+  const b = { people: [{ id: 'axel' }, { id: 'otto' }], players: ['Zeb', 'Arvid'] };
   const d = ai.cleanDay(
     {
-      personer: {
-        axel: { tanke: 'x'.repeat(500), hälsningar: ['Tja!', '', 'Hej', 'Yo', 'För många'] },
-        okänd: { tanke: 'Hej' },
-      },
+      personer: { axel: { tanke: 'x'.repeat(500) }, okänd: { tanke: 'Hej' } },
       samtal: [
-        { a: 'axel', b: 'otto', repliker: ['Fest?', 'Klart.'], omSpelaren: 'ja' },
+        { a: 'axel', b: 'otto', repliker: ['Fest?', 'Klart.'], om: 'zeb' },
+        { a: 'otto', b: 'axel', repliker: ['Hej', 'Tja'], om: 'Någon annan' },
         { a: 'axel', b: 'axel', repliker: ['a', 'b'] },
         { a: 'axel', b: 'okänd', repliker: ['a', 'b'] },
         { a: 'otto', b: 'axel', repliker: ['bara en'] },
@@ -79,19 +77,36 @@ test('dagens liv tar bara med kända personer och korta texter', () => {
   );
   assert.deepEqual(Object.keys(d.personer), ['axel']);
   assert.equal(d.personer.axel.tanke.length, 200);
-  assert.deepEqual(d.personer.axel.hälsningar, ['Tja!', 'Hej', 'Yo']);
-  assert.equal(d.samtal.length, 1);
-  assert.equal(d.samtal[0].omSpelaren, false);
+  assert.equal(d.samtal.length, 2);
+  assert.equal(d.samtal[0].om, 'Zeb');
+  assert.equal(d.samtal[1].om, null);
 });
 
-test('dagens instruktion innehåller personerna och vilka som ses', () => {
+test('hälsningarna gäller bara personer som skickades med', () => {
+  const g = ai.cleanGreet(
+    { axel: ['Tja!', '', 'Hej', 'Yo', 'För många'], okänd: ['Hej'], otto: 'inte en lista' },
+    { people: [{ id: 'axel' }, { id: 'otto' }] },
+  );
+  assert.deepEqual(g, { axel: ['Tja!', 'Hej', 'Yo'] });
+});
+
+test('dagens instruktion innehåller personerna, spelarna och vilka som ses', () => {
   const p = ai.buildDayPrompt({
-    playerName: 'Zeb',
     people: [{ id: 'axel', name: 'Axel', plan: '9 föreläsning', mood: 'glad' }],
     pairs: [{ a: 'axel', b: 'otto', why: 'vänner' }],
     news: ['Otto och Ida är osams.'],
+    players: ['Zeb', 'Arvid'],
   });
   assert.ok(p.includes('axel: Axel'));
   assert.ok(p.includes('axel och otto (vänner)'));
+  assert.ok(p.includes('Zeb, Arvid'));
   assert.ok(p.includes('osams'));
+});
+
+test('AI-taket räknas per spelare, inte per skolnät', () => {
+  // Standardtaket är 60 i timmen per spelare och åtta gånger så mycket per IP.
+  for (let i = 0; i < 60; i++) assert.ok(ai.allowed('p:anna', '10.0.0.1'));
+  assert.equal(ai.allowed('p:anna', '10.0.0.1'), false);
+  // En annan spelare på samma nät kan fortfarande prata.
+  assert.ok(ai.allowed('p:bertil', '10.0.0.1'));
 });

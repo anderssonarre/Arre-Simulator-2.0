@@ -2,6 +2,29 @@
 // Servern håller nyckeln och kostnadstaket (server/ai.js). Går något fel används de färdiga replikerna.
 'use strict';
 const aiOffer = {}; // id -> 'kaffe' när personen har föreslagit kaffe
+// Ett eget id per webbläsare, så att AI-taket räknas per spelare och inte per skolnät.
+const AI_PLAYER_KEY = 'arre_simulator_2_player';
+let aiPlayerId = null;
+function aiHeaders() {
+  if (!aiPlayerId) {
+    try {
+      aiPlayerId = localStorage.getItem(AI_PLAYER_KEY);
+    } catch {}
+    if (!/^[a-z0-9-]{8,40}$/i.test(aiPlayerId || '')) {
+      aiPlayerId = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
+      try {
+        localStorage.setItem(AI_PLAYER_KEY, aiPlayerId);
+      } catch {}
+    }
+  }
+  return {
+    'content-type': 'application/json',
+    'x-arre-player': aiPlayerId,
+    ...(account?.token ? { authorization: 'Bearer ' + account.token } : {}),
+  };
+}
 function aiAvailable() {
   return !!serverInfo?.ai;
 }
@@ -30,7 +53,7 @@ async function aiReply(p, text, entry, fallback) {
     const hist = (state.histories[p.id] || []).filter((h) => h !== entry).slice(-10, -1),
       r = await fetch('/api/talk', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: aiHeaders(),
         body: JSON.stringify({
           person: {
             id: p.id,

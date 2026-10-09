@@ -38,14 +38,18 @@ Filicia Castle för alla som är online.
 Sätt miljövariabeln `ANTHROPIC_API_KEY` på servern (Render: Environment) så svarar personerna
 med Claude Haiku och minns vad ni pratat om. Nyckeln finns bara på servern. Taket styrs med
 `AI_DAILY_LIMIT` (samtal per dygn, standard 1500) och `AI_HOURLY_LIMIT` (per spelare och timme,
-standard 60). Utan nyckel, eller när taket är nått, används de färdiga replikerna.
+standard 60). Taket räknas per konto, eller per webbläsare för den som inte är inloggad, så att
+alla på samma skolnät inte delar på det. Per IP-adress gäller ett lösare tak (`AI_IP_FACTOR`
+gånger större, standard 8). Utan nyckel, eller när taket är nått, används de färdiga replikerna.
 
 ### Levande vardag
 
 En gång per speldag får personerna något att tänka på, egna sätt att hälsa på dig, och vänner
-som ses får något att prata om (`js/game/life.js`). Med `ANTHROPIC_API_KEY` skriver Haiku allt i
-ett enda anrop per spelare och speldag (`/api/day`), utifrån humör, schema, vänner, skvaller och
-vad de minns om dig. Utan nyckel används raderna `tanke`, `samtal` och `ropar` i
+som ses får något att prata om (`js/game/life.js`). Med `ANTHROPIC_API_KEY` skriver Haiku
+tankarna och samtalen i ett enda anrop per speldag för hela servern (`/api/day`), så alla som
+spelar online hör samma samtal, och samtalen kan handla om er som spelar. Hur personerna hälsar
+på just dig skrivs i ett eget, mindre anrop per spelare (`/api/greet`), utifrån vad de tycker om
+dig och minns. Utan nyckel används raderna `tanke`, `samtal` och `ropar` i
 `js/data/dialogue.js`. Personerna vinkar, gestikulerar när de pratar och hänger med huvudet när
 de är nere.
 

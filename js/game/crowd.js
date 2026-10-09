@@ -244,7 +244,7 @@ async function strangerSay(o, text) {
     try {
       const r = await fetch('/api/talk', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: aiHeaders(),
         body: JSON.stringify({
           person: {
             name: p.name,

@@ -10,31 +10,56 @@ const DAILY = Number(process.env.AI_DAILY_LIMIT) || 1500;
 const HOURLY = Number(process.env.AI_HOURLY_LIMIT) || 60;
 const ACTIONS = ['ingen', 'gladare', 'surare', 'kaffe', 'tips', 'minns'];
 
+// Taket räknas per spelare (konto, annars spelarens id), inte per IP-adress, eftersom alla på
+// samma skolnät syns som samma adress utåt. Ett lösare tak per IP (IP_FACTOR gånger större)
+// hindrar att någon kringgår taket genom att hitta på nya spelar-id.
+const IP_FACTOR = Number(process.env.AI_IP_FACTOR) || 8;
 let day = '',
   usedToday = 0;
-const perClient = new Map(); // ip -> [tidpunkter]
+const perPlayer = new Map(), // spelare -> [tidpunkter]
+  perIp = new Map(); // ip -> [tidpunkter]
 
 function enabled() {
   return !!KEY;
 }
-function allowed(ip) {
+function newDay() {
   const today = new Date().toISOString().slice(0, 10);
   if (today !== day) {
     day = today;
     usedToday = 0;
   }
+}
+// Räknar ett anrop mot hela serverns dygnstak. Ger false när taket är nått.
+function spendDaily() {
+  newDay();
   if (usedToday >= DAILY) return false;
-  const now = Date.now(),
-    list = (perClient.get(ip) || []).filter((t) => now - t < 36e5);
-  if (list.length >= HOURLY) {
-    perClient.set(ip, list);
-    return false;
-  }
-  list.push(now);
-  perClient.set(ip, list);
   usedToday++;
   return true;
 }
+function underLimit(map, key, max, now) {
+  const list = (map.get(key) || []).filter((t) => now - t < 36e5);
+  map.set(key, list);
+  return list.length < max;
+}
+// who: "u:<konto>" eller "p:<spelar-id>". Utan who räknas IP-adressen som spelare.
+function allowed(who, ip) {
+  newDay();
+  if (usedToday >= DAILY) return false;
+  const now = Date.now(),
+    player = who || 'ip:' + ip;
+  if (!underLimit(perPlayer, player, HOURLY, now)) return false;
+  if (ip && !underLimit(perIp, ip, HOURLY * IP_FACTOR, now)) return false;
+  perPlayer.get(player).push(now);
+  if (ip) perIp.get(ip).push(now);
+  usedToday++;
+  return true;
+}
+// Rensar gamla spelare så att listorna inte växer för evigt.
+setInterval(() => {
+  const now = Date.now();
+  for (const m of [perPlayer, perIp])
+    for (const [k, list] of m) if (!list.some((t) => now - t < 36e5)) m.delete(k);
+}, 6e5).unref?.();
 const str = (v, n) => String(v ?? '').slice(0, n);
 
 // Bygger instruktionen till modellen av det spelet skickar. Allt kortas, så att ingen kan skicka romaner.
@@ -129,8 +154,39 @@ async function talk(b) {
   };
 }
 
-// ---- Dagens liv: ett anrop per speldag skriver vad alla tänker på och pratar om ----
+// ---- Dagens liv: ett anrop per speldag för hela servern ----
+// Tankar och samtal mellan personerna är samma för alla som spelar (server.js sparar svaret per
+// speldag). Hälsningarna till dig är personliga och skrivs i ett eget, mindre anrop.
 const DAY_PEOPLE = 24;
+async function ask(system, user, maxTokens, timeout) {
+  const r = await fetch(BASE + '/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content: user }],
+    }),
+    signal: AbortSignal.timeout(timeout),
+  });
+  if (!r.ok) throw Error('AI svarade ' + r.status);
+  const data = await r.json(),
+    text = (data.content || [])
+      .map((c) => c.text || '')
+      .join('')
+      .trim();
+  return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+}
+const playerList = (b) =>
+  (Array.isArray(b.players) ? b.players : [])
+    .map((n) => str(n, 24).trim())
+    .filter(Boolean)
+    .slice(0, 12);
 function buildDayPrompt(b) {
   const people = (Array.isArray(b.people) ? b.people : []).slice(0, DAY_PEOPLE).map((p) =>
     [
@@ -139,9 +195,6 @@ function buildDayPrompt(b) {
       'humör ' + str(p.mood, 30),
       'dagen: ' + str(p.plan, 160),
       p.friends ? 'vänner/ovänner: ' + str(p.friends, 120) : '',
-      'relation till spelaren: ' + str(p.relation, 30),
-      p.memory ? 'minns om spelaren: ' + str(p.memory, 160) : '',
-      p.rumor ? 'har hört: ' + str(p.rumor, 140) : '',
     ]
       .filter(Boolean)
       .join('; '),
@@ -150,37 +203,38 @@ function buildDayPrompt(b) {
   const pairs = (Array.isArray(b.pairs) ? b.pairs : [])
     .slice(0, 6)
     .map((p) => '- ' + str(p.a, 20) + ' och ' + str(p.b, 20) + ' (' + str(p.why, 60) + ')');
+  const players = playerList(b);
   return [
     'Du skriver vardagen för personerna i Arre Simulator, ett spel om studielivet på campus i Vasa (Novia och VAMK, W33, Technobothnia, Filicia).',
     'Idag: ' + str(b.date, 40) + ', ' + str(b.weekday, 10) + ', ' + str(b.weather, 40) + '.',
     b.events ? 'På campus: ' + str(b.events, 160) + '.' : '',
-    'Spelaren heter ' + str(b.playerName, 30) + '.',
+    players.length
+      ? 'Riktiga studerande som spelar och går runt på campus: ' + players.join(', ') + '.'
+      : '',
     'Personerna:',
     ...people,
     news.length ? 'Nyheter på campus:\n' + news.join('\n') : '',
     pairs.length ? 'De här kommer att ses idag:\n' + pairs.join('\n') : '',
-    'Skriv för VARJE person:',
-    '"tanke": vad personen går och tänker på idag, en mening i jagform, konkret och kopplad till dagen, humöret, vänner eller nyheter. Inte allmänt.',
-    '"hälsningar": två korta saker personen säger i förbifarten till spelaren, högst 8 ord var, som passar relationen (främling, bekant eller vän).',
-    'Skriv också "samtal": ett kort samtal för varje par som ses idag, 3 eller 4 repliker som växlar mellan dem (a börjar), högst 14 ord per replik. De pratar om något som händer i deras liv, gärna skvaller, kurser, planer eller varandra. Sätt "omSpelaren": true om de pratar om spelaren.',
+    'Skriv för VARJE person "tanke": vad personen går och tänker på idag, en mening i jagform, konkret och kopplad till dagen, humöret, vänner eller nyheter. Inte allmänt.',
+    'Skriv också "samtal": ett kort samtal för varje par som ses idag, 3 eller 4 repliker som växlar mellan dem (a börjar), högst 14 ord per replik. De pratar om något som händer i deras liv, gärna skvaller, kurser, planer eller varandra.' +
+      (players.length
+        ? ' Låt ett eller två av samtalen handla om en av de riktiga studerande, och skriv då hens namn i "om".'
+        : ''),
     'Svenska som finlandssvenska studerande pratar, vardagligt, gärna lite humor. Passande för alla åldrar. Hitta inte på nya personer.',
-    'Svara ENDAST med JSON: {"personer": {"<id>": {"tanke": "...", "hälsningar": ["...", "..."]}}, "samtal": [{"a": "<id>", "b": "<id>", "repliker": ["...", "...", "..."], "omSpelaren": false}]}',
+    'Svara ENDAST med JSON: {"personer": {"<id>": {"tanke": "..."}}, "samtal": [{"a": "<id>", "b": "<id>", "repliker": ["...", "...", "..."], "om": null}]}',
   ]
     .filter(Boolean)
     .join('\n');
 }
-// Tar bara med det som går att använda: kända personer och korta texter.
+// Tar bara med det som går att använda: kända personer, kända spelare och korta texter.
 function cleanDay(out, b) {
   const ids = new Set((Array.isArray(b.people) ? b.people : []).map((p) => String(p.id)));
+  const players = playerList(b);
   const personer = {};
   for (const [id, v] of Object.entries(out?.personer || {})) {
     if (!ids.has(id) || !v || typeof v !== 'object') continue;
-    const tanke = str(v.tanke, 200).trim(),
-      hälsningar = (Array.isArray(v.hälsningar) ? v.hälsningar : [])
-        .map((h) => str(h, 80).trim())
-        .filter(Boolean)
-        .slice(0, 3);
-    if (tanke || hälsningar.length) personer[id] = { tanke, hälsningar };
+    const tanke = str(v.tanke, 200).trim();
+    if (tanke) personer[id] = { tanke };
   }
   const samtal = (Array.isArray(out?.samtal) ? out.samtal : [])
     .filter((s) => s && ids.has(s.a) && ids.has(s.b) && s.a !== s.b && Array.isArray(s.repliker))
@@ -192,33 +246,64 @@ function cleanDay(out, b) {
         .map((r) => str(r, 120).trim())
         .filter(Boolean)
         .slice(0, 5),
-      omSpelaren: s.omSpelaren === true,
+      om: players.find((n) => n.toLowerCase() === String(s.om || '').toLowerCase()) || null,
     }))
     .filter((s) => s.repliker.length >= 2);
   return { personer, samtal };
 }
 async function dayLife(b) {
-  const r = await fetch(BASE + '/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 2500,
-      system: buildDayPrompt(b),
-      messages: [{ role: 'user', content: 'Skriv dagens vardag nu.' }],
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!r.ok) throw Error('AI svarade ' + r.status);
-  const data = await r.json(),
-    text = (data.content || [])
-      .map((c) => c.text || '')
-      .join('')
-      .trim();
-  return cleanDay(JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1)), b);
+  return cleanDay(await ask(buildDayPrompt(b), 'Skriv dagens vardag nu.', 2000, 30000), b);
 }
-module.exports = { enabled, allowed, talk, buildPrompt, buildDayPrompt, cleanDay, dayLife };
+
+// Personliga hälsningar: hur de du känner hälsar på just dig idag.
+function buildGreetPrompt(b) {
+  const people = (Array.isArray(b.people) ? b.people : []).slice(0, DAY_PEOPLE).map((p) =>
+    [
+      '- ' + str(p.id, 20) + ': ' + str(p.name, 40) + ', personlighet ' + str(p.personality, 20),
+      'humör ' + str(p.mood, 30),
+      'relation: ' + str(p.relation, 30),
+      p.thought ? 'tänker på: ' + str(p.thought, 160) : '',
+      p.memory ? 'minns om dig: ' + str(p.memory, 160) : '',
+      p.rumor ? 'har hört: ' + str(p.rumor, 140) : '',
+    ]
+      .filter(Boolean)
+      .join('; '),
+  );
+  return [
+    'Personer i Arre Simulator, ett spel om studielivet på campus i Vasa, ska hälsa på ' +
+      str(b.playerName, 30) +
+      ' när de går förbi idag.',
+    ...people,
+    'Skriv två korta hälsningar per person, högst 8 ord var, som passar relationen, humöret och det de minns eller har hört. Finlandssvensk vardagssvenska, passande för alla åldrar.',
+    'Svara ENDAST med JSON: {"<id>": ["...", "..."]}',
+  ].join('\n');
+}
+function cleanGreet(out, b) {
+  const ids = new Set((Array.isArray(b.people) ? b.people : []).map((p) => String(p.id)));
+  const res = {};
+  for (const [id, list] of Object.entries(out || {})) {
+    if (!ids.has(id) || !Array.isArray(list)) continue;
+    const l = list
+      .map((h) => str(h, 80).trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    if (l.length) res[id] = l;
+  }
+  return res;
+}
+async function greetings(b) {
+  return cleanGreet(await ask(buildGreetPrompt(b), 'Skriv hälsningarna nu.', 900, 20000), b);
+}
+module.exports = {
+  enabled,
+  allowed,
+  spendDaily,
+  talk,
+  buildPrompt,
+  buildDayPrompt,
+  cleanDay,
+  dayLife,
+  buildGreetPrompt,
+  cleanGreet,
+  greetings,
+};

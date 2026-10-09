@@ -2,6 +2,8 @@
 // att hälsa på dig, och vänner som ses får något att prata om. Med AI på servern skriver
 // Claude Haiku allt utifrån humör, schema, vänner och skvaller (server/ai.js, /api/day).
 // Utan AI används raderna i js/data/dialogue.js (tanke, samtal, ropar).
+// Online skriver servern tankar och samtal en gång per speldag, samma för alla som spelar, och
+// samtalen kan handla om er riktiga spelare. Hälsningarna till dig är personliga (/api/greet).
 // Allt sparas i state.life och gäller resten av speldagen.
 'use strict';
 let lifeFetching = 0;
@@ -104,7 +106,7 @@ function localLife() {
     return {
       a,
       b,
-      me: aboutYou,
+      om: aboutYou ? playerName() : null,
       lines: lines.map((l) =>
         fill(l, {
           a: firstName(a),
@@ -133,9 +135,11 @@ function lifeRequest() {
     weekday: WEEKDAY_NAMES[weekdayIndex(state.day)],
     weather: typeof weatherText === 'function' ? weatherText() : '',
     events: events.join(', '),
+    // Online delar alla samma speldag på servern, så svaret blir samma för alla.
+    serverDay: typeof sharedClock === 'function' && sharedClock() ? state.day - net.clock.offset : null,
+    // Bara det som gäller alla: inget om vad personerna tycker om just dig.
     people: lifePeople().map((p) => {
-      const sc = socialContext(p.id),
-        rel = state.relations[p.id] || 0;
+      const sc = socialContext(p.id);
       return {
         id: p.id,
         name: p.name,
@@ -145,41 +149,78 @@ function lifeRequest() {
         mood: sc.mood,
         plan: dayPlanText(p.id),
         friends: sc.friends,
-        relation: relationName(rel).toLowerCase() + ' (' + rel + ')',
-        memory: (state.memories?.[p.id] || []).slice(-3).join('; '),
-        rumor: sc.rumor,
       };
     }),
     news: (state.society?.news || []).slice(-6).map((n) => n.text),
     pairs: meeting,
   };
 }
+// Det personliga: de du känner, med vad de tycker om dig, minns och har hört.
+function greetRequest() {
+  return {
+    playerName: playerName(),
+    people: lifePeople()
+      .filter((p) => (state.relations[p.id] || 0) >= 15)
+      .map((p) => {
+        const sc = socialContext(p.id),
+          rel = state.relations[p.id];
+        return {
+          id: p.id,
+          name: p.name,
+          personality: p.personality,
+          mood: sc.mood,
+          relation: relationName(rel).toLowerCase() + ' (' + rel + ')',
+          thought: lifeThought(p.id),
+          memory: (state.memories?.[p.id] || []).slice(-3).join('; '),
+          rumor: sc.rumor,
+        };
+      }),
+  };
+}
+const aiPost = (path, body) =>
+  fetch(path, { method: 'POST', headers: aiHeaders(), body: JSON.stringify(body) });
 async function fetchAiLife(day) {
   if (lifeFetching === day) return;
   lifeFetching = day;
+  const current = () => state && state.day === day && state.life?.day === day;
   try {
-    const r = await fetch('/api/day', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(lifeRequest()),
-    });
-    if (r.status !== 200) return;
-    const d = await r.json();
-    // Hann dagen ta slut medan vi väntade? Då gäller inte svaret längre.
-    if (!state || state.day !== day || state.life?.day !== day) return;
-    const L = state.life;
-    for (const [id, v] of Object.entries(d.personer || {})) {
-      if (v.tanke) L.thoughts[id] = v.tanke;
-      if (v.hälsningar?.length) L.barks[id] = v.hälsningar;
+    const r = await aiPost('/api/day', lifeRequest());
+    if (r.status === 200) {
+      const d = await r.json();
+      // Hann dagen ta slut medan vi väntade? Då gäller inte svaret längre.
+      if (!current()) return;
+      const L = state.life;
+      for (const [id, v] of Object.entries(d.personer || {})) if (v.tanke) L.thoughts[id] = v.tanke;
+      if (d.samtal?.length)
+        L.talks = d.samtal.map((s) => ({ a: s.a, b: s.b, om: s.om || null, lines: s.repliker }));
+      L.ai = true;
+      L.shared = !!d.shared;
     }
-    if (d.samtal?.length)
-      L.talks = d.samtal.map((s) => ({ a: s.a, b: s.b, me: s.omSpelaren, lines: s.repliker }));
-    L.ai = true;
+  } catch {}
+  // Sedan hälsningarna till dig, när tankarna finns att bygga på.
+  try {
+    const req = greetRequest();
+    if (!current() || !req.people.length) return;
+    const r = await aiPost('/api/greet', req);
+    if (r.status !== 200) return;
+    const g = await r.json();
+    if (!current()) return;
+    for (const [id, list] of Object.entries(g)) state.life.barks[id] = list;
   } catch {}
 }
 // Körs när en ny speldag börjar (och när ett spel laddas).
 function lifeDay() {
   state.life = localLife();
+  lifeWait = { day: state.day, since: performance.now() };
+}
+// AI-svaret hämtas först när anslutningen till servern är klar. Annars frågar spelet en gång
+// innan anslutningen och en gång till när dagen ställs om efter serverns klocka.
+let lifeWait = null;
+function lifeAiTick() {
+  if (!lifeWait || lifeWait.day !== state.day) return;
+  const waiting = serverFound === null || net.status === 'connecting';
+  if (waiting && performance.now() - lifeWait.since < 10000) return;
+  lifeWait = null;
   if (aiAvailable()) fetchAiLife(state.day);
 }
 function lifeThought(id) {
@@ -205,7 +246,7 @@ function startTalk(a, b) {
   L.played.push(k);
   const first = t.a === a.profile.id ? a : b,
     second = first === a ? b : a;
-  talksNow.push({ a: first, b: second, lines: t.lines, i: 0, next: 0, me: t.me });
+  talksNow.push({ a: first, b: second, lines: t.lines, i: 0, next: 0, om: t.om });
   return true;
 }
 function talkTick() {
@@ -227,15 +268,18 @@ function talkTick() {
       line = t.lines[t.i];
     speak(who, line, 4.2);
     who.gestureUntil = now + 3500;
-    // Pratar de om dig och du står nära? Då hör du det.
-    if (t.i === 0 && t.me && Math.hypot(t.a.x - player.x, t.a.y - player.y) < 6)
+    // Pratar de om dig, eller om en kompis som också spelar? Står du nära hör du det.
+    if (t.i === 0 && t.om && Math.hypot(t.a.x - player.x, t.a.y - player.y) < 6) {
+      const me = t.om.toLowerCase() === playerName().toLowerCase();
       toast(
         'Du hör ' +
           firstName(t.a.profile.id) +
           ' och ' +
           firstName(t.b.profile.id) +
-          ' prata om dig.',
+          ' prata om ' +
+          (me ? 'dig.' : t.om + '.'),
       );
+    }
     t.i++;
     t.next = now + 2600 + line.length * 45;
   }
