@@ -50,6 +50,7 @@ document.addEventListener('keydown', (e) => {
   if (e.code === 'KeyE' && !e.repeat) interact();
   if (e.code === 'KeyI' && !e.repeat && active && !modal) showBag();
   if (e.code === 'KeyG' && !e.repeat && active && !modal) openGestures();
+  if (e.code === 'KeyP' && !e.repeat && active && !modal) openPhone();
   if (e.code === 'KeyF' && !e.repeat && active && !modal) throwSnowball();
 });
 document.addEventListener('keyup', (e) => keys.delete(e.code));

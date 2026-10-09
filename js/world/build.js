@@ -61,6 +61,7 @@ function build() {
   openMapEdges();
   placeVenues(); // bio, teater, fik ... i centrum (js/game/centrumliv.js)
   placeCarDealer(); // bilhandlaren (js/game/bilar.js)
+  placePhoneShop(); // telefonbutiken (js/game/telefon.js)
   w = makeWorld('w33', 'W33 · entréplanet', 48);
   w.grid.forEach((row) => row.fill(1));
   rect(w, 3, 16, 40, 14, 0);

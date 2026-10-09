@@ -1092,6 +1092,10 @@ function carsTick3d(w) {
     extra.push((myCarObj.car3 ??= { color: carColor() }));
     Object.assign(myCarObj.car3, { x: state.car.x, y: state.car.y, a: state.car.a, color: carColor() });
   }
+  if (uberCar3d()) {
+    if (uber.obj) uber.obj.r3 = true;
+    extra.push(uberCar3d());
+  }
   for (const r of remotesHere())
     if (r.car) extra.push(Object.assign((r.car3 ??= {}), { x: r.x, y: r.y, a: r.a, color: r.car }));
   for (const c of extra) {

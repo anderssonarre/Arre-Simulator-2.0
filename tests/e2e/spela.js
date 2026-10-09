@@ -634,6 +634,37 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(bil.loanLeft, 34480 - 2155, 'en avbetalning på billånet');
     step('köpa bil och köra');
 
+    // Telefon och Uber.
+    const ring = await zeb.evaluate(() => {
+      const before = state.money;
+      state.money = 500;
+      changeWorld('centrum');
+      const shop = worlds.centrum.objects.find((o) => o.label?.startsWith('Telefonbutiken'));
+      shop.action();
+      const btn = [...document.querySelectorAll('#dialogActions button')].find((b) => b.textContent.startsWith('Samsung'));
+      btn.click();
+      close();
+      const km = rideKm(RESMÅL.w33),
+        { price } = ridePrice(km, false);
+      orderRide('w33', price, km, false);
+      uber.kommer = 0;
+      uberTick();
+      const waiting = !!uber.obj && world.objects.includes(uber.obj);
+      const money = state.money;
+      boardRide();
+      close();
+      const r = { phone: state.phone, km, price, waiting, paid: money - state.money, world: world.id, near: Math.hypot(player.x - 103, player.y - 106) };
+      state.money = before;
+      return r;
+    });
+    assert.equal(ring.phone, 'android');
+    assert.ok(ring.km > 1 && ring.km < 2.5, 'centrum till W33 är runt 1,5 km (' + ring.km.toFixed(2) + ')');
+    assert.ok(ring.waiting, 'Uber-bilen står bredvid dig');
+    assert.equal(ring.paid, ring.price);
+    assert.equal(ring.world, 'outdoor');
+    assert.ok(ring.near < 6, 'framme vid W33');
+    step('telefon och Uber');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {

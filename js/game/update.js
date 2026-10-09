@@ -61,7 +61,11 @@ function update(dt) {
   buildTick(); // ny version efter en deploy (online.js)
   if (active && !modal) ballsTick(dt); // snöbollar (play.js)
   if (active && !modal) mapLinkTick();
-  if (active) carsSync(); // din parkerade bil (bilar.js) // gå mellan campus, bron och centrum (kartor.js)
+  if (active) carsSync(); // din parkerade bil (bilar.js)
+  if (active) {
+    uberTick(); // Uber och taxi (telefon.js)
+    updatePhoneButton();
+  } // gå mellan campus, bron och centrum (kartor.js)
   if (!active || modal || document.hidden) return;
   if (sleeping) {
     // Under sömnen står allt still för dig, men världen och klockan går vidare.

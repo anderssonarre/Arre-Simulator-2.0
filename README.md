@@ -131,6 +131,8 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   kyrkan) och platserna för sidouppdrag.
 - `js/data/bilar.js`: bilarna hos bilhandlaren i centrum (pris, toppfart, acceleration, färg)
   och billånet (handpenning, ränta, antal veckor).
+- `js/data/telefon.js`: telefonerna i telefonbutiken, Uber och taxi (priser, väntetid, bilar,
+  förare) och resmålen.
 - `js/game/traffic.js`: bilarna på gatorna (antal, fart och färger överst i filen). Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,
