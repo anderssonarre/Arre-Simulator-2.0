@@ -455,9 +455,6 @@ function speak(o, text, seconds = 5) {
 let chatterTimer = 3;
 function chatterTick(dt) {
   if (!world || modal) return;
-  // Ny dag: personerna får nya tankar och saker att prata om (js/game/life.js).
-  if (state.life?.day !== state.day) lifeDay();
-  lifeAiTick();
   const here = world.objects.filter(
     (o) => o.person && !onlineChars.has(o.profile.id) && o.profile.id !== state.character,
   );

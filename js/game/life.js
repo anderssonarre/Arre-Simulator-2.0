@@ -9,9 +9,11 @@
 let lifeFetching = 0;
 const talksNow = []; // samtal som pågår: { a, b, lines, i, next, aId, bId }
 
-// Personerna som lever i världen idag (inte du själv och inte andra riktiga spelare).
+// Alla personer. Även din egen karaktär och dina kompisars är med, eftersom dagen online är
+// gemensam för alla: för någon annan är din karaktär en vanlig person på campus. Den som styrs
+// av en riktig spelare hälsar och pratar inte (se chatterTick i people.js).
 function lifePeople() {
-  return [...characters, ...extra].filter((p) => p.id !== state.character);
+  return [...characters, ...extra];
 }
 // Vad personen gör idag, i ord: "9 föreläsning i X, 12 lunch, 17 tränar på gymmet".
 function dayPlanText(id, day = state.day) {
@@ -160,7 +162,7 @@ function greetRequest() {
   return {
     playerName: playerName(),
     people: lifePeople()
-      .filter((p) => (state.relations[p.id] || 0) >= 15)
+      .filter((p) => p.id !== state.character && (state.relations[p.id] || 0) >= 15)
       .map((p) => {
         const sc = socialContext(p.id),
           rel = state.relations[p.id];
@@ -212,6 +214,12 @@ async function fetchAiLife(day) {
 function lifeDay() {
   state.life = localLife();
   lifeWait = { day: state.day, since: performance.now() };
+}
+// Körs varje bildruta: ny dag ger nya tankar och samtal, och AI-svaret hämtas när det går.
+function lifeTick() {
+  if (!state) return;
+  if (state.life?.day !== state.day) lifeDay();
+  lifeAiTick();
 }
 // AI-svaret hämtas först när anslutningen till servern är klar. Annars frågar spelet en gång
 // innan anslutningen och en gång till när dagen ställs om efter serverns klocka.

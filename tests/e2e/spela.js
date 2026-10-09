@@ -1,0 +1,204 @@
+// Webbläsartest: startar servern med låtsas-Claude, öppnar spelet i två webbläsare samtidigt och
+// kollar att det viktigaste fungerar. Körs av GitHub vid varje push, och lokalt med:
+//   cd tests/e2e && npm install && npx playwright install chromium && node spela.js
+'use strict';
+const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const assert = require('assert');
+const { chromium } = require('playwright');
+const mock = require('./mock-ai.js');
+
+const PORT = 8090,
+  AI_PORT = 9190,
+  URL = 'http://localhost:' + PORT + '/?gfx=classic';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const steps = [];
+function step(name) {
+  steps.push(name);
+  console.log('·', name);
+}
+
+async function waitFor(page, fn, what, ms = 20000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await page.evaluate(fn).catch(() => false)) return;
+    await sleep(250);
+  }
+  throw Error('Väntade förgäves på: ' + what);
+}
+
+(async () => {
+  const aiServer = await mock.start(AI_PORT);
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arre-e2e-'));
+  const game = spawn(process.execPath, ['server.js'], {
+    cwd: path.join(__dirname, '..', '..', 'server'),
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      ANTHROPIC_API_KEY: 'test',
+      ANTHROPIC_BASE_URL: 'http://localhost:' + AI_PORT,
+      DATA_DIR: dataDir,
+      DATABASE_URL: '',
+    },
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+  const browser = await chromium.launch();
+  const errors = [];
+  let failed = false;
+  try {
+    for (let i = 0; i < 40; i++) {
+      try {
+        if ((await fetch('http://localhost:' + PORT + '/health')).ok) break;
+      } catch {}
+      await sleep(250);
+    }
+    step('servern är igång');
+
+    const open = async (nick, options = {}) => {
+      const ctx = await browser.newContext(options);
+      const page = await ctx.newPage();
+      page.on('pageerror', (e) => errors.push(nick + ': ' + e.message));
+      page.on('console', (m) => m.type() === 'error' && errors.push(nick + ': ' + m.text()));
+      await page.goto(URL);
+      await waitFor(page, () => typeof start === 'function' && serverFound !== null, 'sidan');
+      return page;
+    };
+
+    // Zeb har en sparning från version 1, med en person som inte finns längre.
+    const zeb = await open('Zeb');
+    await zeb.evaluate(() => {
+      const s = fresh('zeb');
+      Object.assign(s, {
+        version: 1,
+        world: 'outdoor',
+        x: 40,
+        y: 40,
+        relations: { axel: 55, otto: 60, borta: 30 },
+        histories: { borta: [] },
+      });
+      localStorage.setItem(SAVE, JSON.stringify(s));
+    });
+    await zeb.reload();
+    await waitFor(zeb, () => typeof start === 'function' && serverFound !== null, 'sidan igen');
+    const arvid = await open('Arvid');
+
+    // Båda börjar nästan samtidigt.
+    await Promise.all([
+      zeb.evaluate(() => {
+        $('nickInput').value = 'Zeb';
+        $('continueButton').click();
+      }),
+      arvid.evaluate(() => {
+        $('nickInput').value = 'Arvid';
+        const s = fresh('arvid');
+        s.relations = { axel: 50, ida: 20 };
+        start(s);
+      }),
+    ]);
+    await waitFor(zeb, () => active, 'att Zebs spel startar');
+    step('gamla sparningen gick att fortsätta');
+    const saved = await zeb.evaluate(() => ({
+      version: state.version,
+      world: state.world,
+      relations: state.relations,
+      backup: !!localStorage.getItem(SAVE + '_backup_v1'),
+    }));
+    assert.equal(saved.version, 2);
+    assert.equal(saved.world, 'home', 'den som stod ute på gamla kartan börjar hemma');
+    assert.deepEqual(saved.relations, { axel: 55, otto: 60 });
+    assert.ok(saved.backup, 'en kopia av den gamla sparningen finns');
+    step('sparningen uppgraderades och lagades');
+
+    // Dagens liv: samma tankar och samtal för båda, egna hälsningar.
+    for (const p of [zeb, arvid])
+      await waitFor(
+        p,
+        () => net.status === 'online' && state.life?.shared && Object.keys(state.life.barks).length,
+        'dagens liv från servern',
+      );
+    const life = (p) =>
+      p.evaluate(() => ({
+        thoughts: state.life.thoughts,
+        talks: state.life.talks,
+        bark: state.life.barks.axel,
+      }));
+    const [lz, la] = [await life(zeb), await life(arvid)];
+    assert.deepEqual(lz.thoughts, la.thoughts, 'samma tankar');
+    assert.deepEqual(lz.talks, la.talks, 'samma samtal');
+    assert.ok(lz.talks.some((t) => t.om === 'Zeb' || t.om === 'Arvid'), 'samtal om spelarna');
+    assert.deepEqual(lz.bark, ['TEST-HEJ Zeb']);
+    assert.deepEqual(la.bark, ['TEST-HEJ Arvid']);
+    const calls = await (await fetch('http://localhost:' + AI_PORT + '/calls')).json();
+    assert.equal(calls.vardag, 1, 'ett gemensamt dagsanrop');
+    assert.equal(calls.halsa, 2, 'ett hälsningsanrop per spelare');
+    step('dagens liv delas av alla, hälsningarna är personliga');
+
+    // Ett samtal mellan två personer spelas upp med pratbubblor.
+    const talk = await zeb.evaluate(async () => {
+      const t = state.life.talks[0],
+        a = people.get(t.a).obj,
+        b = people.get(t.b).obj;
+      for (const o of [a, b]) if (!world.objects.includes(o)) world.objects.push(o);
+      Object.assign(player, { x: a.x + 2, y: a.y });
+      b.x = a.x + 0.8;
+      b.y = a.y;
+      state.life.played = [];
+      const ok = startTalk(a, b),
+        said = [];
+      for (let i = 0; i < 60 && said.length < 3; i++) {
+        talkTick();
+        for (const o of [a, b])
+          if (
+            o.bubbleUntil > performance.now() &&
+            !said.includes(o.bubble) &&
+            !o.bubble.startsWith('TEST-HEJ') // en hälsning till dig kan komma emellan
+          )
+            said.push(o.bubble);
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      return { ok, said };
+    });
+    assert.ok(talk.ok);
+    assert.deepEqual(talk.said, ['TEST-SAMTAL 0', 'svar', 'slut']);
+    step('personerna pratar med varandra');
+
+    // Prata med Axel: han berättar vad han tänker på idag.
+    const hist = await zeb.evaluate(() => {
+      chat(characters.find((c) => c.id === 'axel'));
+      const h = state.histories.axel.map((x) => x.text);
+      close();
+      return h;
+    });
+    assert.ok(hist.includes('TEST-TANKE axel'), 'tanken kommer i samtalet');
+    step('samtal med en person');
+
+    // Mobil: pekskärm och liten skärm.
+    const phone = await open('Mobil', {
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    await phone.evaluate(() => start(fresh('ida')));
+    await waitFor(phone, () => active, 'mobilspelet');
+    const touchUi = await phone.evaluate(() => document.body.classList.contains('touch'));
+    assert.ok(touchUi, 'pekstyrningen visas på mobil');
+    step('spelet startar på mobil');
+
+    await sleep(1000);
+    assert.deepEqual(errors, [], 'inga fel i webbläsaren');
+    step('inga fel i webbläsaren');
+    console.log('\nAllt gick bra (' + steps.length + ' steg).');
+  } catch (e) {
+    failed = true;
+    console.error('\nMISSLYCKADES efter "' + (steps[steps.length - 1] || 'start') + '":', e.message);
+    if (errors.length) console.error('Fel i webbläsaren:\n' + errors.join('\n'));
+  } finally {
+    await browser.close();
+    game.kill();
+    aiServer.close();
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+  process.exit(failed ? 1 : 0);
+})();

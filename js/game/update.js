@@ -51,6 +51,8 @@ function update(dt) {
     ambientTick(dt);
   } catch {}
   storyTick();
+  // Dagens liv (js/game/life.js) hämtas även när en dialogruta är öppen.
+  if (active) lifeTick();
   if (!active || modal || document.hidden) return;
   if (sleeping) {
     // Under sömnen står allt still för dig, men världen och klockan går vidare.
