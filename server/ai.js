@@ -103,9 +103,7 @@ function buildPrompt(b) {
     c.rumor ? 'Skvaller du har hört om spelaren (nämn det gärna): ' + str(c.rumor, 160) : '',
     mem.length ? 'Det här minns du om ' + str(c.playerName, 30) + ':\n' + mem.join('\n') : '',
     'Svara på svenska som en finlandssvensk student, kort: en eller två meningar, högst 35 ord. Håll dig i rollen, var vänlig och passande för alla åldrar.',
-    'Svara ENDAST med JSON: {"svar": "<din replik>", "handling": "<en av: ' +
-      ACTIONS.join(', ') +
-      '>", "minne": "<valfritt: en kort sak värd att minnas om spelaren>"}.',
+    'Svara med verktyget svara.',
     'handling: gladare om spelaren var trevlig, surare om spelaren var otrevlig, kaffe om du föreslår kaffe, tips om du ger ett studietips, minns om spelaren berättade något personligt, annars ingen.',
   ]
     .filter(Boolean)
@@ -132,20 +130,29 @@ async function talk(b) {
       'x-api-key': KEY,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({ model: MODEL, max_tokens: 200, system: buildPrompt(b), messages: msgs }),
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 300,
+      system: buildPrompt(b),
+      messages: msgs,
+      tools: [TOOLS.svara],
+      tool_choice: { type: 'tool', name: 'svara' },
+    }),
     signal: AbortSignal.timeout(12000),
   });
   if (!r.ok) throw Error('AI svarade ' + r.status);
-  const data = await r.json(),
-    text = (data.content || [])
+  const data = await r.json();
+  let out = (data.content || []).find((c) => c.type === 'tool_use')?.input;
+  if (!out || typeof out !== 'object') {
+    const text = (data.content || [])
       .map((c) => c.text || '')
       .join('')
       .trim();
-  let out;
-  try {
-    out = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
-  } catch {
-    out = { svar: text };
+    try {
+      out = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    } catch {
+      out = { svar: text };
+    }
   }
   return {
     svar: str(out.svar, 300).trim(),
@@ -158,7 +165,9 @@ async function talk(b) {
 // Tankar och samtal mellan personerna är samma för alla som spelar (server.js sparar svaret per
 // speldag). Hälsningarna till dig är personliga och skrivs i ett eget, mindre anrop.
 const DAY_PEOPLE = 24;
-async function ask(system, user, maxTokens, timeout) {
+// Frågar modellen och tvingar svaret genom ett verktyg med schema, så att det alltid är giltig
+// JSON i rätt form. Ger verktygets indata. Kapas svaret (för långt) märks det i loggen.
+async function ask(system, user, maxTokens, timeout, tool) {
   const r = await fetch(BASE + '/v1/messages', {
     method: 'POST',
     headers: {
@@ -171,17 +180,97 @@ async function ask(system, user, maxTokens, timeout) {
       max_tokens: maxTokens,
       system,
       messages: [{ role: 'user', content: user }],
+      tools: [tool],
+      tool_choice: { type: 'tool', name: tool.name },
     }),
     signal: AbortSignal.timeout(timeout),
   });
   if (!r.ok) throw Error('AI svarade ' + r.status);
-  const data = await r.json(),
-    text = (data.content || [])
-      .map((c) => c.text || '')
-      .join('')
-      .trim();
+  const data = await r.json();
+  if (data.stop_reason === 'max_tokens')
+    console.warn('AI: svaret från ' + tool.name + ' kapades, höj max_tokens');
+  const used = (data.content || []).find((c) => c.type === 'tool_use' && c.name === tool.name);
+  if (used?.input && typeof used.input === 'object') return used.input;
+  // Reserv: JSON i vanlig text.
+  const text = (data.content || [])
+    .map((c) => c.text || '')
+    .join('')
+    .trim();
   return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
 }
+const S = (description, extra = {}) => ({ type: 'string', description, ...extra });
+const TOOLS = {
+  svara: {
+    name: 'svara',
+    description: 'Personens replik till spelaren och vad som händer.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        svar: S('Din replik, en eller två meningar, högst 35 ord.'),
+        handling: { type: 'string', enum: ACTIONS },
+        minne: S('Valfritt: en kort sak värd att minnas om spelaren.'),
+      },
+      required: ['svar', 'handling'],
+    },
+  },
+  vardag: {
+    name: 'vardag',
+    description: 'Dagens tankar och samtal för personerna på campus.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        personer: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { id: S('Personens id.'), tanke: S('En mening i jagform.') },
+            required: ['id', 'tanke'],
+          },
+        },
+        samtal: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              a: S('Id för den som börjar.'),
+              b: S('Id för den andra.'),
+              repliker: { type: 'array', items: { type: 'string' } },
+              om: S('Namnet på en riktig studerande som samtalet handlar om, annars tomt.'),
+            },
+            required: ['a', 'b', 'repliker'],
+          },
+        },
+      },
+      required: ['personer', 'samtal'],
+    },
+  },
+  halsa: {
+    name: 'halsa',
+    description: 'Hur var och en hälsar på spelaren idag.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        personer: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: S('Personens id.'),
+              hälsningar: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['id', 'hälsningar'],
+          },
+        },
+      },
+      required: ['personer'],
+    },
+  },
+};
+// Modellen svarar med listor; resten av koden använder objekt med id som nyckel.
+const byId = (v, key) =>
+  Array.isArray(v)
+    ? Object.fromEntries(v.filter((x) => x && x.id).map((x) => [String(x.id), x[key] ?? x]))
+    : v;
 const playerList = (b) =>
   (Array.isArray(b.players) ? b.players : [])
     .map((n) => str(n, 24).trim())
@@ -221,7 +310,7 @@ function buildDayPrompt(b) {
         ? ' Låt ett eller två av samtalen handla om en av de riktiga studerande, och skriv då hens namn i "om".'
         : ''),
     'Svenska som finlandssvenska studerande pratar, vardagligt, gärna lite humor. Passande för alla åldrar. Hitta inte på nya personer.',
-    'Svara ENDAST med JSON: {"personer": {"<id>": {"tanke": "..."}}, "samtal": [{"a": "<id>", "b": "<id>", "repliker": ["...", "...", "..."], "om": null}]}',
+    'Svara med verktyget vardag: en tanke för varje person och ett samtal för varje par.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -252,7 +341,8 @@ function cleanDay(out, b) {
   return { personer, samtal };
 }
 async function dayLife(b) {
-  return cleanDay(await ask(buildDayPrompt(b), 'Skriv dagens vardag nu.', 2000, 30000), b);
+  const out = await ask(buildDayPrompt(b), 'Skriv dagens vardag nu.', 3000, 40000, TOOLS.vardag);
+  return cleanDay({ ...out, personer: byId(out.personer, null) }, b);
 }
 
 // Personliga hälsningar: hur de du känner hälsar på just dig idag.
@@ -275,7 +365,7 @@ function buildGreetPrompt(b) {
       ' när de går förbi idag.',
     ...people,
     'Skriv två korta hälsningar per person, högst 8 ord var, som passar relationen, humöret och det de minns eller har hört. Finlandssvensk vardagssvenska, passande för alla åldrar.',
-    'Svara ENDAST med JSON: {"<id>": ["...", "..."]}',
+    'Svara med verktyget halsa.',
   ].join('\n');
 }
 function cleanGreet(out, b) {
@@ -292,7 +382,8 @@ function cleanGreet(out, b) {
   return res;
 }
 async function greetings(b) {
-  return cleanGreet(await ask(buildGreetPrompt(b), 'Skriv hälsningarna nu.', 900, 20000), b);
+  const out = await ask(buildGreetPrompt(b), 'Skriv hälsningarna nu.', 1200, 20000, TOOLS.halsa);
+  return cleanGreet(out.personer ? byId(out.personer, 'hälsningar') : out, b);
 }
 module.exports = {
   enabled,

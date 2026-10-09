@@ -110,3 +110,35 @@ test('AI-taket räknas per spelare, inte per skolnät', () => {
   // En annan spelare på samma nät kan fortfarande prata.
   assert.ok(ai.allowed('p:bertil', '10.0.0.1'));
 });
+
+test('svaren läses från verktygsanropet, även när personerna kommer som lista', async () => {
+  const real = global.fetch;
+  let sent;
+  global.fetch = async (url, opts) => {
+    sent = JSON.parse(opts.body);
+    return {
+      ok: true,
+      json: async () => ({
+        stop_reason: 'tool_use',
+        content: [
+          {
+            type: 'tool_use',
+            name: 'vardag',
+            input: {
+              personer: [{ id: 'axel', tanke: 'Fest ikväll.' }, { id: 'okänd', tanke: 'x' }],
+              samtal: [{ a: 'axel', b: 'otto', repliker: ['Kommer du?', 'Klart.'], om: 'Zeb' }],
+            },
+          },
+        ],
+      }),
+    };
+  };
+  try {
+    const d = await ai.dayLife({ people: [{ id: 'axel' }, { id: 'otto' }], players: ['Zeb'] });
+    assert.equal(sent.tool_choice.name, 'vardag');
+    assert.deepEqual(d.personer, { axel: { tanke: 'Fest ikväll.' } });
+    assert.equal(d.samtal[0].om, 'Zeb');
+  } finally {
+    global.fetch = real;
+  }
+});
