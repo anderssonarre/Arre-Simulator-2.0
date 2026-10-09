@@ -41,6 +41,7 @@ const PLATSER = {
   techEntre: { värld: 'outdoor', x: 74, y: 136, namn: 'utanför Technobothnia' },
   maskinlabbet: { värld: 'tech', x: 24.5, y: 35.5, namn: 'i maskinlabbet på Technobothnia' },
   w33Förråd: { värld: 'w33', x: 30, y: 27.5, namn: 'i förrådet i W33' },
+  w33Filicia: { värld: 'w33', x: 36.5, y: 12.5, namn: 'på Filicia Castle' },
 };
 
 const QUESTS = [

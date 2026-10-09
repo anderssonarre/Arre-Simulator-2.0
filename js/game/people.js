@@ -11,6 +11,7 @@ const ACTIVITY_TEXT = {
   promenerar: 'promenerar',
   umgås: 'umgås med vänner',
   kaffe: 'dricker kaffe',
+  evenemang: 'firar',
 };
 const PLACE_TEXT = {
   w33: 'i W33',
@@ -47,12 +48,9 @@ function basePlan(id, day, hour) {
     if (['fre', 'lör'].includes(weekday(partyDay)) && h >= S.fest.från && h < S.fest.till)
       return { where: 'w33', activity: 'fest' };
   }
-  // Ollis tisdag: festfolket är ute på campus natten mellan tisdag och onsdag.
-  if (partyPerson) {
-    const night = hour < 3 ? day - 1 : day;
-    if (weekday(night) === 'tis' && (hour >= 22 || hour < 3))
-      return { where: 'outdoor', activity: 'fest' };
-  }
+  // Ollis tisdag: festfolket är på Oliver's Inn i centrum (ollis.js), andra ibland på helgen.
+  const ollis = ollisPlan(id, day, hour, partyPerson);
+  if (ollis) return ollis;
   // Föreläsningar: kurskamrater och lärare.
   for (let i = 0; i < 3; i++) {
     const l = lectureNow(i, day, hour);
@@ -62,6 +60,9 @@ function basePlan(id, day, hour) {
     if (S.kurs[i].includes(id))
       return { where: LECTURE_ROOM[i].world, activity: 'föreläsning', lecture: i };
   }
+  // Årets evenemang: lucia, lillajul, midsommar ... (evenemang.js)
+  const ev = eventPlan(id, day, hour);
+  if (ev) return ev;
   for (const [spec, from, to, where, activity] of S.egna[id] || [])
     if (dayMatches(spec, day) && hour >= from && hour < to) return { where, activity };
   // Personlighetsdragens rutiner: nattugglor sover länge, plugghästar stannar kvar, och så vidare.
@@ -140,6 +141,10 @@ function spotsFor(where, activity, lecture) {
   } else if (activity === 'lunch' && where === 'w33') list = near(23.5, 21.5, 14);
   else if (activity === 'fest' && where === 'w33') list = near(36.5, 12.5, 14);
   else if (activity === 'tränar') list = near(6.5, 8.5, 8);
+  else if (activity === 'evenemang') {
+    const s = questSpot(lecture);
+    list = s ? near(s.x, s.y, 16) : [];
+  }
   else if (activity === 'kaffe') {
     const m = w.objects.find((o) => o.type === 'coffee');
     list = m ? near(m.x, m.y, 4) : near(w.spawn.x, w.spawn.y, 8);

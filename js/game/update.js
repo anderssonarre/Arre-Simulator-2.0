@@ -55,6 +55,7 @@ function update(dt) {
   if (active) lifeTick();
   if (active) conditionsTick();
   if (active) weatherTick(dt);
+  if (active) eventsTick(); // årets evenemang (evenemang.js)
   if (active) jobsTick(); // svar på jobbansökningar (jobboard.js)
   buildTick(); // ny version efter en deploy (online.js)
   if (active && !modal) ballsTick(dt); // snöbollar (play.js)

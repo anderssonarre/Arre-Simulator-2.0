@@ -143,7 +143,8 @@ function ambientTick(dt) {
     partying =
       (party && world.id === 'w33' && player.x > 28 && player.y < 18) ||
       (homeParty && world.id === 'home') ||
-      (partyNow() && world.id === 'w33');
+      (partyNow() && world.id === 'w33') ||
+      ollisMusic();
   const storm = wx.åska ? 0.05 : 0,
     rain = wx.kind === 'regn' ? wx.ned : 0;
   setLevel(AMB.wind, out ? (season === 'vinter' ? 0.05 : 0.025) + wx.clouds * 0.02 + storm : 0.004);

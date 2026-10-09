@@ -76,6 +76,8 @@ function statueSprite() {
 function buildCentrum() {
   const C = CENTRUM,
     w = osmWorld('centrum', 'Vasa centrum', C);
+  // Dörrar (innan segmenten indexeras): Oliver's Inn, se js/world/ollis.js.
+  w.doors = { ollis: ollisDoor(w) };
   osmGrid(w);
   // Trefaldighetskyrkans torn över den smala norra delen av kyrkan (ungefärlig höjd).
   const church = centrumHouse('Trefaldighetskyrkan');
@@ -130,6 +132,13 @@ function buildCentrum() {
       addBox(w, p.x - 0.55, p.y - 0.55, p.x + 0.55, p.y + 0.55, 0.3, 0.31, { color: [86, 128, 150], solid: false });
     }
   }
+  // Julgranen på torget, bara i december (evenemang.js visar och gömmer den).
+  obj(w, torg[0], torg[1] - 3, 'xmastree', 'Julgranen på torget', null, {
+    height: 11,
+    sprite: spruceSprite(0),
+    månad: 3,
+    hidden: true,
+  });
   // Torgstånd: står på torget varje dag, med markiser i olika färger.
   const colors = [
     [176, 52, 46],

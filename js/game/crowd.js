@@ -3,7 +3,7 @@
 'use strict';
 const CROWD = {
   // Hur många som är ute samtidigt per plats, vardag mitt på dagen. Kvällar och helger färre.
-  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4, centrum: 28 },
+  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4, centrum: 28, ollis: 14 },
   namn: [
     'Emma',
     'Oliver',
@@ -62,6 +62,8 @@ const crowd = { world: null, list: [], seed: 1 };
 function crowdWanted(id) {
   const h = state.hour,
     base = CROWD.antal[id] || 0;
+  // Ollis är öppet på kvällen och natten, och fullt på tisdagar.
+  if (id === 'ollis') return ollisOpen() ? Math.round(base * (ollisTuesday() ? 1.3 : 0.7)) : 0;
   if (!base || h < 7 || h >= 22) return 0;
   const weekend = isWeekend(state.day),
     peak = h >= 9 && h < 16 ? 1 : h >= 7.5 && h < 18 ? 0.6 : 0.25;

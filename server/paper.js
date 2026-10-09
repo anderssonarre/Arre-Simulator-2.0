@@ -28,6 +28,7 @@ const KINDS = {
   examen: (h) => h.namn + ' tog examen och blev ' + h.yrke + '.',
   flytt: (h) => h.namn + ' flyttade till en ' + h.till + '.',
   jobb: (h) => h.namn + ' fick jobb som ' + h.yrke + '.',
+  evenemang: (h) => h.namn + ' var med på ' + h.titel + '.',
   snoboll: (h) => h.namn + ' vann ett snöbollskrig på campus.',
   kubb: (h) => h.namn + ' slog ' + (h.person || 'en kompis') + ' i kubb.',
   quiz: (h) => h.namn + ' fick ' + h.poäng + ' rätt på pubquizen på Filicia.',
@@ -114,6 +115,7 @@ function templatePaper(week, happenings) {
     'Nya vänner': ['van'],
     'Kvällarna på Filicia': ['sitz', 'dackade', 'quiz'],
     'Lekar och spel': ['snoboll', 'kubb'],
+    'Årets evenemang': ['evenemang'],
     'Framtiden': ['praktik', 'examen', 'flytt', 'jobb'],
   };
   const artiklar = Object.entries(groups)

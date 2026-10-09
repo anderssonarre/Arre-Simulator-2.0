@@ -102,6 +102,7 @@ function seasonHud() {
   return (
     dateText() +
     (isExamWeek() ? ' · tentavecka' : isVappen() ? ' · vappen!' : '') +
+    (typeof eventsOn === 'function' && eventsOn().length ? ' · ' + eventsOn()[0].namn.toLowerCase() : '') +
     ' · ' +
     weatherHud()
   );

@@ -32,6 +32,15 @@ Object.assign(VAROR, {
     text: 'Snabbmat. Precis vad som behövdes.',
     bjuda: 'Burgare? Ja tack!',
   },
+  cider: {
+    namn: 'Cider',
+    ikon: '🍏',
+    pris: 6,
+    effekt: { glädje: 5 },
+    tillstånd: { berusning: 18, koncentration: -10 },
+    text: 'Söt och kall.',
+    bjuda: 'Cider! Skål!',
+  },
   lakrits: {
     namn: 'Lakritsstång',
     ikon: '🍬',
@@ -65,6 +74,16 @@ Object.assign(BUTIKER, {
     varor: ['smörgås', 'pirog', 'choklad'],
     öppet: { från: 9, till: 17 },
   },
+  ollis: {
+    namn: "Baren på Oliver's Inn",
+    värld: 'ollis',
+    x: 5.5,
+    y: 10.5,
+    varor: ['öl', 'cider', 'vatten'],
+    öppet: { från: 20, till: 28 },
+    // Ollis tisdag: billig öl från kran.
+    rabatt: { dag: 'tis', priser: { öl: 3 } },
+  },
   kapten: {
     namn: 'Pub Kapten',
     värld: 'centrum',
@@ -73,6 +92,15 @@ Object.assign(BUTIKER, {
     öppet: { från: 15, till: 27 },
   },
 });
+
+// Oliver's Inn ("Ollis"), baren vid Handelsesplanaden. Öppettider som på Google Maps:
+// tisdag–lördag från 20 (efter midnatt räknas som 24, 25 ...). Måndag och söndag stängt.
+const OLLIS = {
+  tider: { tis: [20, 28], ons: [20, 26], tor: [20, 26], fre: [20, 28], lör: [20, 28] },
+  dans: { glädje: 12, energi: -8 },
+  // Påhittade band som spelar på scenen.
+  band: ['Kvarkens Kvintett', 'Esplanadbandet', 'Fem Tentor och en Gitarr', 'Kebab Kollektivet', 'The Wolffskas'],
+};
 
 // Platser i centrum för sidouppdrag (se PLATSER i js/data/quests.js). hus eller poi ger läget.
 const CENTRUMPLATSER = {

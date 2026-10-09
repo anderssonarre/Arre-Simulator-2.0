@@ -37,7 +37,7 @@ function openShop(id) {
       ...shop.varor.map((k) => {
         const v = VAROR[k];
         return {
-          label: v.ikon + ' ' + v.namn + ' · ' + v.pris + ' €',
+          label: v.ikon + ' ' + v.namn + ' · ' + priceOf(id, k) + ' €',
           run: () => buy(id, k),
         };
       }),
@@ -46,11 +46,19 @@ function openShop(id) {
     'Butik',
   );
 }
+// Priset i en viss butik just nu (t.ex. billig öl på Ollis tisdag).
+function priceOf(shopId, k) {
+  const r = BUTIKER[shopId]?.rabatt,
+    d = state.hour < 6 ? state.day - 1 : state.day;
+  if (r && WEEKDAYS[weekdayIndex(d)] === r.dag && r.priser[k] != null) return r.priser[k];
+  return VAROR[k].pris;
+}
 function buy(shopId, k) {
   const v = VAROR[k];
   if (bagCount() >= VÄSKA.platser) return toast('Väskan är full.');
-  if (state.money < v.pris) return toast(v.namn + ' kostar ' + v.pris + ' €. Du har inte råd.');
-  state.money -= v.pris;
+  const pris = priceOf(shopId, k);
+  if (state.money < pris) return toast(v.namn + ' kostar ' + pris + ' €. Du har inte råd.');
+  state.money -= pris;
   const b = ensureBag();
   b[k] = (b[k] || 0) + 1;
   sound('tap');

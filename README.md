@@ -126,8 +126,11 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 - `js/data/play.js`: spela tillsammans. Gesterna (G), snöbollar (F på vintern), kubb på
   sommaren och pubquizen på Filicia på fredagar.
 - `js/data/centrum-platser.js`: Vasa centrum. Bussen dit, butikerna (torgkiosken,
-  Hesburger, Saluhallen, puben) och platserna för sidouppdrag. Själva kartan byggs från
+  Hesburger, Saluhallen, puben), Oliver's Inn ("Ollis") med öppettider och billig öl på
+  tisdagar, och platserna för sidouppdrag. Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
+- `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,
+  Runebergsdagen, midsommar) med datum, tider, platser och val. Bastun på WSC och pulkabacken.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

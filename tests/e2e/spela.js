@@ -634,6 +634,42 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.deepEqual(pub.top, { name: 'Zeb', score: 6 });
     step('pubquiz på Filicia');
 
+    // Ollis, årets evenemang och bastun.
+    const fest = await zeb.evaluate(() => {
+      const dayWith = (wd) => {
+        let d = state.day;
+        while (WEEKDAYS[weekdayIndex(d)] !== wd) d++;
+        return d;
+      };
+      const tis = dayWith('tis'),
+        mån = dayWith('mån');
+      let lucia = null;
+      for (let d = 1; d <= YEAR.dagar && !lucia; d++) if (eventsOn(d).some((e) => e.id === 'lucia')) lucia = d;
+      const all = EVENEMANG.map((e) => {
+        for (let d = 1; d <= YEAR.dagar; d++) if (eventsOn(d).includes(e)) return true;
+        return e.id;
+      }).filter((x) => x !== true);
+      return {
+        tisKväll: ollisOpenAt(tis, 21),
+        tisNatt: ollisOpenAt(tis + 1, 3),
+        mån: ollisOpenAt(mån, 21),
+        tisPris: (() => {
+          const s = { day: state.day, hour: state.hour };
+          Object.assign(state, { day: tis, hour: 21 });
+          const p = priceOf('ollis', 'öl');
+          Object.assign(state, s);
+          return p;
+        })(),
+        luciaText: lucia && dateText(lucia),
+        missing: all,
+      };
+    });
+    assert.ok(fest.tisKväll && fest.tisNatt && !fest.mån, 'Ollis har öppet tisdag kväll och natt, inte måndag');
+    assert.equal(fest.tisPris, 3, 'billig öl på Ollis tisdag');
+    assert.match(fest.luciaText, /december/);
+    assert.deepEqual(fest.missing, [], 'alla evenemang infaller någon dag under året');
+    step('Ollis, evenemang och bastu');
+
     // Mobil: pekskärm och liten skärm.
     const phone = await open('Mobil', {
       viewport: { width: 390, height: 844 },

@@ -157,6 +157,13 @@ function showWeek() {
       '. Föreläsningar räknas som studiepass och ger alla anteckningar. Kurskamraterna sitter också där.</p><div class="info">Väder idag: ' +
       forecastText() +
       '</div>' +
+      (upcomingEvents().length
+        ? '<p class="sub">På gång: ' +
+          upcomingEvents()
+            .map(({ e, d }) => esc(e.namn) + ' (' + dateText(d) + ')')
+            .join(', ') +
+          '</p>'
+        : '') +
       rows.join(''),
     [{ label: 'Tillbaka', primary: true, run: menu }],
     'Kalender',
