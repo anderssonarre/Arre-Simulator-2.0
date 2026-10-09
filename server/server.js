@@ -199,6 +199,23 @@ async function handleApi(req, res, url) {
       return noAi(res);
     }
   }
+  if (url === '/api/day' && req.method === 'POST') {
+    if (!ai.enabled()) return noAi(res);
+    let body;
+    try {
+      body = await readBody(req, 24576);
+    } catch {
+      return json(res, 413, {});
+    }
+    if (!body || !Array.isArray(body.people) || !body.people.length) return json(res, 400, {});
+    if (!ai.allowed(clientIp(req))) return noAi(res);
+    try {
+      return json(res, 200, await ai.dayLife(body));
+    } catch (e) {
+      console.error('AI dag:', e.message);
+      return noAi(res);
+    }
+  }
   if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
   // Topplistor: spelet skickar sina siffror, alla kan läsa de bästa.
   if (url === '/api/records' && req.method === 'GET')

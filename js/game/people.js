@@ -455,6 +455,8 @@ function speak(o, text, seconds = 5) {
 let chatterTimer = 3;
 function chatterTick(dt) {
   if (!world || modal) return;
+  // Ny dag: personerna får nya tankar och saker att prata om (js/game/life.js).
+  if (state.life?.day !== state.day) lifeDay();
   const here = world.objects.filter(
     (o) => o.person && !onlineChars.has(o.profile.id) && o.profile.id !== state.character,
   );
@@ -464,12 +466,18 @@ function chatterTick(dt) {
       d = Math.hypot(o.x - player.x, o.y - player.y);
     if (r >= 15 && d < 2.6 && (o.greetedAt || 0) < state.day * 24 + state.hour - 3) {
       o.greetedAt = state.day * 24 + state.hour;
-      speak(o, say(r >= 40 ? DIALOGUE.förbi.vän : DIALOGUE.förbi.bekant, o.profile));
+      speak(
+        o,
+        lifeBark(o) || say(r >= 40 ? DIALOGUE.förbi.vän : DIALOGUE.förbi.bekant, o.profile),
+      );
+      if (r >= 40) o.waveUntil = performance.now() + 1800;
     }
   }
+  talkTick();
   // Småprat mellan personer som står nära varandra.
   chatterTimer -= dt;
   if (chatterTimer > 0) return;
+  callOutTick(here);
   chatterTimer = 6 + Math.random() * 8;
   const idle = here.filter(
     (o) =>
@@ -478,7 +486,9 @@ function chatterTick(dt) {
   for (const a of shuffled(idle)) {
     const b = idle.find((o) => o !== a && Math.hypot(o.x - a.x, o.y - a.y) < 2.2);
     if (!b) continue;
-    speak(a, rand(DIALOGUE.småprat), 4);
+    // Dagens samtal om de har ett, annars lite småprat.
+    if (!startTalk(a, b) && !talksNow.some((t) => t.a === a || t.b === a))
+      speak(a, rand(DIALOGUE.småprat), 4);
     break;
   }
 }

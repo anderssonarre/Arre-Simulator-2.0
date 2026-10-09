@@ -59,3 +59,39 @@ test('AI-instruktionen kortar allt spelet skickar', () => {
   assert.ok(p.includes('berusad'));
   assert.ok(p.includes('katt'));
 });
+
+test('dagens liv tar bara med kända personer och korta texter', () => {
+  const b = { people: [{ id: 'axel' }, { id: 'otto' }] };
+  const d = ai.cleanDay(
+    {
+      personer: {
+        axel: { tanke: 'x'.repeat(500), hälsningar: ['Tja!', '', 'Hej', 'Yo', 'För många'] },
+        okänd: { tanke: 'Hej' },
+      },
+      samtal: [
+        { a: 'axel', b: 'otto', repliker: ['Fest?', 'Klart.'], omSpelaren: 'ja' },
+        { a: 'axel', b: 'axel', repliker: ['a', 'b'] },
+        { a: 'axel', b: 'okänd', repliker: ['a', 'b'] },
+        { a: 'otto', b: 'axel', repliker: ['bara en'] },
+      ],
+    },
+    b,
+  );
+  assert.deepEqual(Object.keys(d.personer), ['axel']);
+  assert.equal(d.personer.axel.tanke.length, 200);
+  assert.deepEqual(d.personer.axel.hälsningar, ['Tja!', 'Hej', 'Yo']);
+  assert.equal(d.samtal.length, 1);
+  assert.equal(d.samtal[0].omSpelaren, false);
+});
+
+test('dagens instruktion innehåller personerna och vilka som ses', () => {
+  const p = ai.buildDayPrompt({
+    playerName: 'Zeb',
+    people: [{ id: 'axel', name: 'Axel', plan: '9 föreläsning', mood: 'glad' }],
+    pairs: [{ a: 'axel', b: 'otto', why: 'vänner' }],
+    news: ['Otto och Ida är osams.'],
+  });
+  assert.ok(p.includes('axel: Axel'));
+  assert.ok(p.includes('axel och otto (vänner)'));
+  assert.ok(p.includes('osams'));
+});

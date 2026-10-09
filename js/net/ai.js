@@ -20,6 +20,7 @@ function aiContext(p) {
     drunk: act === 'fest',
     courses: state.graduated ? '' : [0, 1, 2].map((i) => course(i).name).join(', '),
     ...(state.society && p.id ? socialContext(p.id) : {}),
+    thought: lifeThought(p.id),
   };
 }
 // Hämtar ett AI-svar till en replik som redan står som "…" i historiken.

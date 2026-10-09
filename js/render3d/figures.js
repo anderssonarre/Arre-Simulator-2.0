@@ -128,6 +128,24 @@ function poseFigure(fig, x, y, opts) {
     u.armR.rotation.z = -0.3;
   }
   if (opts.drunk) tilt = Math.sin(frame * 0.05 + (opts.phase || 0)) * 0.12;
+  // Kroppsspråk (js/game/life.js): humör, prat och vinkningar.
+  const ph = opts.phase || 0;
+  let nod = 0;
+  if (opts.mood != null && opts.mood < 35) nod = 0.28; // hänger med huvudet
+  else if (opts.mood != null && opts.mood >= 78 && !moving && !opts.dancing)
+    lift = Math.max(lift, Math.abs(Math.sin(frame * 0.07 + ph)) * 0.015); // lite studs
+  if (opts.gesture && !moving && !opts.dancing) {
+    const g = Math.sin(frame * 0.09 + ph);
+    u.armR.rotation.x = -0.45 - Math.max(0, g) * 0.5;
+    u.armL.rotation.x = -0.15 - Math.max(0, -g) * 0.25;
+    nod += Math.sin(frame * 0.13 + ph) * 0.07;
+  }
+  if (opts.wave && !opts.dancing) {
+    // Armen upp och ut åt sidan, och handen vinkar fram och tillbaka.
+    u.armR.rotation.x = -2.5;
+    u.armR.rotation.z = 0.45 + Math.sin(frame * 0.35) * 0.3;
+  }
+  u.head.rotation.x = nod;
   // Andas lite när den står still.
   if (!moving && !opts.dancing)
     u.torso.scale.y = 1 + Math.sin(frame * 0.05 + (opts.phase || 0)) * 0.012;

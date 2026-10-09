@@ -132,4 +132,45 @@ const DIALOGUE = {
     'Snyggt väder idag i alla fall.',
     'Vem tog sista kanelbullen?',
   ],
+
+  // ---- Levande vardag (js/game/life.js) ----
+  // Används när servern inte har någon AI. Med AI skriver Haiku nya rader varje speldag.
+  // Vad en person går och tänker på idag, efter humör. {aktivitet} är något hen ska göra idag.
+  tanke: {
+    glad: [
+      'Idag känns bra. Jag ska {aktivitet} och sedan bara ta det lugnt.',
+      'Jag har faktiskt koll på läget för en gångs skull.',
+      'Jag vaknade utvilad. Det händer inte ofta.',
+    ],
+    trött: [
+      'Jag sov för lite. Bara {aktivitet} och sedan hem.',
+      'Kaffe. Jag behöver kaffe innan jag kan tänka.',
+      'Den här veckan är lång.',
+    ],
+    nere: [
+      'Inte min bästa dag. Jag orkar knappt {aktivitet}.',
+      'Allt känns lite tungt idag.',
+    ],
+    tenta: ['Tentan ligger och gnager i bakhuvudet hela tiden.', 'Jag borde plugga mer än jag gör.'],
+    fest: ['Ikväll blir det fest, det har jag väntat på hela veckan.'],
+  },
+  // Korta samtal mellan två personer som ses. Raderna växlar: a, b, a, b.
+  // {a} och {b} är deras förnamn, {jag} ditt namn och {ämne} något a gillar.
+  samtal: {
+    vänner: [
+      ['Har du hunnit med {ämne} något idag?', 'Nej, jag har inte haft tid. Du då?', 'Lite. Vi kan köra ihop sen.'],
+      ['Kommer du till Filicia på fredag?', 'Kanske, om jag hinner bli klar med labben.', 'Du säger alltid så.', 'Och jag kommer alltid. Till slut.'],
+      ['Lunch sen?', 'Absolut. Vad är dagens?', 'Ingen aning, men det är lunch.'],
+    ],
+    osams: [
+      ['Jaha. Hej.', 'Hej.', 'Vi kanske borde prata någon gång.', 'Kanske.'],
+      ['Du vet vad du gjorde.', 'Kan vi inte bara släppa det?'],
+    ],
+    omDig: [
+      ['Har du pratat med {jag} något?', 'Lite. Verkar schysst faktiskt.', 'Ja, tycker jag med.'],
+      ['Var {jag} inte med på festen?', 'Nej, jag såg hen inte där.', 'Synd. Nästa gång.'],
+    ],
+  },
+  // När en vän vill prata med dig och ropar.
+  ropar: ['{jag}! Har du en sekund?', 'Hej {jag}, kom hit!', '{jag}! Vänta lite.'],
 };

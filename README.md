@@ -40,6 +40,15 @@ med Claude Haiku och minns vad ni pratat om. Nyckeln finns bara på servern. Tak
 `AI_DAILY_LIMIT` (samtal per dygn, standard 1500) och `AI_HOURLY_LIMIT` (per spelare och timme,
 standard 60). Utan nyckel, eller när taket är nått, används de färdiga replikerna.
 
+### Levande vardag
+
+En gång per speldag får personerna något att tänka på, egna sätt att hälsa på dig, och vänner
+som ses får något att prata om (`js/game/life.js`). Med `ANTHROPIC_API_KEY` skriver Haiku allt i
+ett enda anrop per spelare och speldag (`/api/day`), utifrån humör, schema, vänner, skvaller och
+vad de minns om dig. Utan nyckel används raderna `tanke`, `samtal` och `ropar` i
+`js/data/dialogue.js`. Personerna vinkar, gestikulerar när de pratar och hänger med huvudet när
+de är nere.
+
 ### Statistik och "Tyck till"
 
 Spelet skickar anonyma siffror till servern (sessionslängd, tentaresultat, skuld per vecka och hur
@@ -61,6 +70,15 @@ servern och kan fortsättas från andra datorer. Utan inloggning sparas allt i w
 - Lokalt och med Docker sparas konton i en fil (`DATA_DIR`, standard `server/data`).
 - På Render försvinner filer vid omstart. Sätt därför miljövariabeln `DATABASE_URL` till en
   Postgres-databas, så skapar servern tabellerna själv.
+
+## Sparfilen
+
+Sparningen har en version (`js/shared/savefile.js`). När något i sparfilen ändras höjer man
+versionen och skriver ett uppgraderingssteg, så att gamla sparningar alltid går att fortsätta.
+Instruktionerna står överst i filen. Det som inte finns längre, t.ex. en borttagen person eller
+ett klädesplagg, lagas i stället för att hela sparningen kastas, och en kopia av den gamla
+sparningen sparas först i webbläsaren. Servern tar inte emot en sparning från en äldre version
+än den den redan har, så en gammal flik kan inte skriva över ett nyare spel.
 
 ## Skriva innehåll utan kod
 
@@ -119,6 +137,8 @@ js/
   render/geometry.js  3D-möbler, ljuskarta, dörrar och spegel
   render/segments.js  Sneda väggar och fasader utomhus
   render/render.js    Ritar 3D-vyn och minikartan
+  game/life.js        Levande vardag: dagens tankar, hälsningar och samtal
+  shared/savefile.js  Sparfilens version och uppgradering
   input.js            Tangentbord, mus och touch
   net/online.js       Anslutning till servern, andra spelare och chatt
   net/account.js      Spelarnamn, inloggning och sparning på servern

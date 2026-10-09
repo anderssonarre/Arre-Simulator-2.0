@@ -964,7 +964,10 @@ function placeSprites(w, day) {
           (party && w.id === 'w33' && o.x > 33 && o.y < 16) ||
           (homeParty && w.id === 'home' && o.dancing),
         moving: o.targetX != null && Math.hypot(o.targetX - o.x, o.targetY - o.y) > 0.04,
-        faceTo: near ? [player.x, player.y] : null,
+        faceTo: near ? [player.x, player.y] : o.lookAt ? [o.lookAt.x, o.lookAt.y] : null,
+        wave: o.waveUntil > performance.now(),
+        gesture: o.gestureUntil > performance.now() || o.bubbleUntil > performance.now(),
+        mood: o.profile.id ? state?.society?.mood[o.profile.id] : null,
       });
       continue;
     }

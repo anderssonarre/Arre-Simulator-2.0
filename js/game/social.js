@@ -63,6 +63,9 @@ function chat(p) {
   // Har personen hört något om dig, eller om någon annan? Sägs en gång.
   const gossip = tellRumor(p) || (Math.random() < 0.6 ? tellNews(p) : null);
   if (gossip) remember(p, 'npc', gossip);
+  // Vad personen går och tänker på idag (js/game/life.js). Sägs en gång per dag.
+  const thought = tellThought(p);
+  if (thought) remember(p, 'npc', thought);
   // Säger vad hen håller på med, en gång per aktivitet och dag.
   const me = people.get(p.id)?.obj,
     act = me?.activity,
