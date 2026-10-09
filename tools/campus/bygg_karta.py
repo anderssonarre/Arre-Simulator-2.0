@@ -325,6 +325,15 @@ for e in els:
                 s += 35
             run += L
 
+# 9c. Gator för bilarna: mittlinjer i rutor, och om gatan är enkelriktad.
+roads = []
+for e in els:
+    t = e['tags']
+    if t.get('highway') in ('primary', 'secondary', 'tertiary', 'residential', 'unclassified') and t.get('area') != 'yes':
+        pts = [[round(a, 2) for a in tile(p)] for p in simplify(rings(e)[0], 0.4)]
+        if len(pts) > 1 and any(0 < x < N and 0 < y < N for x, y in pts):
+            roads.append({'pts': pts, 'w': round(road_width(t) / M, 2), 'oneway': t.get('oneway') == 'yes'})
+
 # 10. Packa marklagret: körlängder, "klass,antal;" i bas 36
 runs = []
 flat = list(ground.getdata())
@@ -340,7 +349,7 @@ packed = '.'.join(runs)
 
 data = {
     'size': N, 'meterPerTile': M, 'groundRes': R, 'origin': [X0, Y0],
-    'ground': packed, 'houses': houses, 'walls': walls, 'trees': trees, 'lamps': lamps,
+    'ground': packed, 'houses': houses, 'walls': walls, 'trees': trees, 'lamps': lamps, 'roads': roads,
 }
 js = ('// CAMPUSKARTA · genererad av tools/campus/bygg_karta.py, ändra inte för hand.\n'
       '// Kartdata © OpenStreetMap-bidragsgivare, ODbL 1.0 (https://www.openstreetmap.org/copyright).\n'

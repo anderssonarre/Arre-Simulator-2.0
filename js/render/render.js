@@ -377,6 +377,10 @@ function render() {
       dance: body === 'dansa',
     });
   }
+  // Bilar på gatorna (traffic.js).
+  if (traffic.world === w)
+    for (const c of traffic.cars)
+      pushSprite({ x: c.x, y: c.y, height: 0.85, sprite: carSprite(c.color, carView(c, player.x, player.y)) });
   // Snöbollar i luften.
   for (const b of balls)
     pushSprite({ x: b.x, y: b.y, z: b.z - 0.07, height: 0.14, sprite: ballSprite() });

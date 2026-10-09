@@ -156,6 +156,7 @@ function update(dt) {
   careerTick();
   vappenCheck();
   crowdTick(dt);
+  trafficTick(dt); // bilar på gatorna (traffic.js)
   saveTimer += dt;
   if (saveTimer > 12) {
     saveTimer = 0;

@@ -560,6 +560,14 @@ async function waitFor(page, fn, what, ms = 20000) {
         shops: world.objects.filter((o) => o.type === 'shop').length,
         statue: world.objects.some((o) => o.label === 'Frihetsstatyn'),
         church: world.boxes.length > 10,
+        venues: world.objects.filter((o) => o.type === 'venue').length,
+        cars: (() => {
+          const h = state.hour;
+          state.hour = 12;
+          for (let i = 0; i < 20; i++) trafficTick(0.1);
+          state.hour = h;
+          return traffic.cars.length;
+        })(),
       };
       takeBus('outdoor');
       return { ...there, back: world.id };
@@ -568,6 +576,8 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(stan.paid, 2, 'bussen kostar 2 €');
     assert.ok(stan.shops >= 4, 'torgkiosk, Hesburger, Saluhallen och puben');
     assert.ok(stan.statue && stan.church, 'Frihetsstatyn och kyrktornet');
+    assert.ok(stan.venues >= 8, 'bio, teater, fik och fler ställen');
+    assert.ok(stan.cars >= 8, 'bilar på gatorna mitt på dagen (' + stan.cars + ')');
     assert.equal(stan.back, 'outdoor');
     step('bussen till Vasa centrum');
 

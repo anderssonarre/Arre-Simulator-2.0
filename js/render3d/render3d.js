@@ -1047,6 +1047,64 @@ function precipitation(wx) {
   }
 }
 
+// ---- Bilar (traffic.js): enkla 3D-bilar av lådor ----
+function carMesh(color) {
+  const g = new THREE.Group(),
+    paint = std({ color: new THREE.Color(color), roughness: 0.35, metalness: 0.4 }),
+    glass = std({ color: 0x24313a, roughness: 0.1, metalness: 0.6 }),
+    tyre = std({ color: 0x141618, roughness: 0.9 }),
+    box = (w, h, d, m, x, y, z) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+      b.position.set(x, y, z);
+      b.castShadow = true;
+      g.add(b);
+    };
+  box(2.6, 0.42, 1.05, paint, 0, 0.36, 0);
+  box(1.45, 0.34, 0.95, glass, -0.1, 0.74, 0);
+  box(1.35, 0.06, 0.97, paint, -0.1, 0.92, 0);
+  for (const [x, z] of [
+    [0.85, 0.5],
+    [0.85, -0.5],
+    [-0.85, 0.5],
+    [-0.85, -0.5],
+  ])
+    box(0.42, 0.42, 0.14, tyre, x, 0.21, z);
+  const lamp = (c, x) => {
+    const m = new THREE.MeshBasicMaterial({ color: c });
+    box(0.04, 0.1, 0.22, m, x, 0.45, 0.36);
+    box(0.04, 0.1, 0.22, m, x, 0.45, -0.36);
+  };
+  lamp(0xfff3d0, 1.31);
+  lamp(0xb3261e, -1.31);
+  return g;
+}
+function carsTick3d(w) {
+  if (!R3.cars) {
+    R3.cars = { group: new THREE.Group(), pool: new Map() };
+    R3.scene.add(R3.cars.group);
+  }
+  const { group, pool } = R3.cars,
+    live = new Set();
+  if (traffic.world === w)
+    for (const c of traffic.cars) {
+      let m = pool.get(c);
+      if (!m) {
+        m = carMesh(c.color);
+        pool.set(c, m);
+        group.add(m);
+      }
+      m.position.set(c.x, 0, c.y);
+      m.rotation.y = -c.a;
+      live.add(c);
+    }
+  for (const [c, m] of pool)
+    if (!live.has(c)) {
+      group.remove(m);
+      m.traverse((o) => o.geometry?.dispose());
+      pool.delete(c);
+    }
+}
+
 // ---- Figurer (personer, markörer) som skyltar mot kameran ----
 function spriteFor(key, canvas) {
   let s = R3.sprites.get(key);
@@ -1134,6 +1192,7 @@ function placeSprites(w, day) {
       dancing: body === 'dansa',
     });
   }
+  carsTick3d(w);
   // Snöbollar i luften.
   balls.forEach((b, i) => add('ball' + i, b, ballSprite(), b.x, b.y, 0.14, b.z - 0.07));
   // Du själv: syns bara i spegeln (lager 1).

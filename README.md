@@ -127,7 +127,9 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   sommaren och pubquizen på Filicia på fredagar.
 - `js/data/centrum-platser.js`: Vasa centrum. Bussen dit, butikerna (torgkiosken,
   Hesburger, Saluhallen, puben), Oliver's Inn ("Ollis") med öppettider och billig öl på
-  tisdagar, och platserna för sidouppdrag. Själva kartan byggs från
+  tisdagar, ställena att göra saker på (bio, teater, buffé, fik, bokhandel, spelbutik, loppis,
+  kyrkan) och platserna för sidouppdrag.
+- `js/game/traffic.js`: bilarna på gatorna (antal, fart och färger överst i filen). Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,
   Runebergsdagen, midsommar) med datum, tider, platser och val. Bastun på WSC och pulkabacken.
