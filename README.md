@@ -53,6 +53,19 @@ dig och minns. Utan nyckel används raderna `tanke`, `samtal` och `ropar` i
 `js/data/dialogue.js`. Personerna vinkar, gestikulerar när de pratar och hänger med huvudet när
 de är nere.
 
+### Campustidningen och AI-uppdrag
+
+Spelet berättar för servern vad som händer (femmor, nya vänner, klarade uppdrag, sitz, den som
+däckade ...) som korta strukturerade händelser, aldrig fritext. Varje måndag ges ett nummer
+om förra veckan ut (`server/paper.js`), skrivet av Haiku i ett anrop, annars som rubriker.
+Det läses vid tidningsstället i W33 eller i menyn.
+
+En gång per dygn skriver Haiku några nya sidouppdrag i samma format som
+`js/data/quests.js`, utifrån personernas drag och platserna på campus (`server/quests.js`).
+De är samma för alla, servern och spelet kontrollerar dem mot de personer, platser och
+handlingar som finns, och belöningarna har tak. Ett uppdrag man har tagit sparas i
+sparningen och finns kvar när nästa dags uppdrag kommer.
+
 ### Statistik och "Tyck till"
 
 Spelet skickar anonyma siffror till servern (sessionslängd, tentaresultat, skuld per vecka och hur

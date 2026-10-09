@@ -4,7 +4,7 @@
 const http = require('http');
 
 function start(port) {
-  const calls = { vardag: 0, halsa: 0, svara: 0, tidning: 0 };
+  const calls = { vardag: 0, halsa: 0, svara: 0, tidning: 0, uppdrag: 0 };
   const server = http.createServer((req, res) => {
     if (req.url === '/calls') return res.end(JSON.stringify(calls));
     let raw = '';
@@ -31,6 +31,23 @@ function start(port) {
       } else if (tool === 'halsa') {
         const who = (sys.match(/ska hälsa på (\S+)/) || [])[1] || '';
         input = { personer: ids.map((id) => ({ id, hälsningar: ['TEST-HEJ ' + who] })) };
+      } else if (tool === 'uppdrag') {
+        input = {
+          uppdrag: [
+            {
+              titel: 'TEST-UPPDRAG',
+              person: 'ida',
+              erbjudande: 'Kan du hämta min halsduk vid Tritonia?',
+              steg: [
+                { typ: 'plats', plats: 'tritonia', mål: 'Hämta halsduken', hittar: 'En randig halsduk.' },
+                { typ: 'prata', person: 'ida', mål: 'Ge den till Ida', knapp: 'Här!', svar: 'Tack!' },
+              ],
+              belöning: { pengar: 7, glädje: 4, relation: 6 },
+              avslut: 'Ida knyter halsduken.',
+            },
+            { titel: 'Ogiltigt', person: 'ida', erbjudande: 'x', steg: [{ typ: 'plats', plats: 'månen', mål: 'x' }] },
+          ],
+        };
       } else if (tool === 'tidning') {
         const facts = [...sys.matchAll(/^- (.+)$/gm)].map((m) => m[1]);
         input = { rubrik: 'TEST-RUBRIK', artiklar: [{ rubrik: 'Veckan', text: facts.join(' ') }] };

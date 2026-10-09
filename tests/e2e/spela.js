@@ -260,6 +260,42 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(quests.closedLabel.includes('tor'), 'stängt utanför tiden');
     step('sidouppdrag');
 
+    // AI-skrivna uppdrag: samma för alla, kontrollerade, och de man tagit finns kvar.
+    for (const p of [zeb, arvid]) await waitFor(p, () => QUESTS.some((q) => q.ai), 'dagens AI-uppdrag');
+    const aiq = await arvid.evaluate(() => {
+      const list = QUESTS.filter((q) => q.ai);
+      state.quests = null;
+      const q = list[0];
+      acceptQuest(q);
+      const kept = !!state.quests.custom[q.id];
+      // Uppdraget finns kvar även om dagens lista byts ut.
+      QUESTS.splice(QUESTS.indexOf(q), 1);
+      ensureQuests();
+      const stillActive = !!state.quests.active[q.id];
+      worlds.outdoor.objects.find((o) => o.quest === q.id).action();
+      $('dialogActions').querySelector('button').click();
+      const money = state.money;
+      questChatButtons(characters.find((c) => c.id === 'ida') || extra.find((c) => c.id === 'ida'))[0].run();
+      close();
+      return {
+        n: list.length,
+        titel: q.titel,
+        kept,
+        stillActive,
+        done: state.quests.done.includes(q.id),
+        reward: state.money - money,
+      };
+    });
+    const zebAi = await zeb.evaluate(() => QUESTS.filter((q) => q.ai).map((q) => q.titel));
+    assert.equal(aiq.n, 1, 'det ogiltiga uppdraget togs bort');
+    assert.deepEqual(zebAi, [aiq.titel], 'samma AI-uppdrag för alla');
+    assert.ok(aiq.kept && aiq.stillActive, 'ett taget AI-uppdrag finns kvar');
+    assert.ok(aiq.done, 'AI-uppdraget går att klara');
+    assert.equal(aiq.reward, 7);
+    const aiCalls = await (await fetch('http://localhost:' + AI_PORT + '/calls')).json();
+    assert.equal(aiCalls.uppdrag, 1, 'ett anrop per dag för alla');
+    step('AI-skrivna uppdrag');
+
     // Campustidningen: händelser blir ett nummer som alla kan läsa.
     await zeb.evaluate(() => reportHappening('femma', { kurs: 'Matematik', betyg: '5' }));
     await arvid.evaluate(() => reportHappening('van', { person: 'Axel' }));

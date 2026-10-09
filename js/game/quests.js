@@ -9,12 +9,15 @@ function ensureQuests() {
   const q = (state.quests ??= {});
   q.active = q.active && typeof q.active === 'object' ? q.active : {};
   q.done = Array.isArray(q.done) ? q.done : [];
+  // AI-uppdrag man har tagit sparas här, så att de finns kvar när nästa dags uppdrag kommer.
+  q.custom = q.custom && typeof q.custom === 'object' ? q.custom : {};
+  for (const [id, def] of Object.entries(q.custom)) if (!q.active[id] || !validQuest(def)) delete q.custom[id];
   // Uppdrag som tagits bort ur datafilen glöms bort.
   for (const id of Object.keys(q.active)) if (!questById(id)) delete q.active[id];
   if (q.tracked && !q.active[q.tracked]) q.tracked = Object.keys(q.active)[0] || null;
   return q;
 }
-const questById = (id) => QUESTS.find((x) => x.id === id);
+const questById = (id) => QUESTS.find((x) => x.id === id) || state?.quests?.custom?.[id] || null;
 function questStep(id) {
   const a = state.quests?.active?.[id],
     q = questById(id);
@@ -74,7 +77,9 @@ function questOffer(p, quest) {
     quest.titel,
     '<div class="history"><div class="bubble">' +
       esc(quest.erbjudande) +
-      '</div></div><p class="sub">Sidouppdrag · ' +
+      '</div></div><p class="sub">' +
+      (quest.ai ? 'Nytt idag · ' : '') +
+      'Sidouppdrag · ' +
       quest.steg.length +
       ' steg' +
       (quest.belöning?.märke ? ' · ger ett overallmärke' : '') +
@@ -97,6 +102,7 @@ function questOffer(p, quest) {
 function acceptQuest(quest) {
   const q = ensureQuests();
   q.active[quest.id] = { step: 0, since: state.day };
+  if (quest.ai) q.custom[quest.id] = quest;
   q.tracked = quest.id;
   questSync();
   updateHUD();
@@ -361,6 +367,53 @@ function showQuests() {
     ],
     'Sidouppdrag',
   );
+}
+// ---- AI-skrivna uppdrag (server/quests.js) ----
+// Ett uppdrag går att använda om alla personer, platser och handlingar finns i spelet.
+function validQuest(q) {
+  const ids = new Set([...characters, ...extra].map((c) => c.id));
+  if (!q || typeof q !== 'object' || !ids.has(q.person) || !Array.isArray(q.steg) || !q.steg.length)
+    return false;
+  if (typeof q.titel !== 'string' || typeof q.erbjudande !== 'string') return false;
+  return q.steg.every(
+    (s) =>
+      typeof s?.mål === 'string' &&
+      ((s.typ === 'plats' && PLATSER[s.plats]) ||
+        (s.typ === 'prata' && ids.has(s.person)) ||
+        (s.typ === 'gör' &&
+          ['kaffe', 'lunch'].includes(s.handling) &&
+          (!s.värld || ['w33', 'tech', 'gym'].includes(s.värld)))),
+  );
+}
+let aiQuestDay = null;
+// Hämtar dagens AI-uppdrag en gång per dag och lägger till dem bland de vanliga.
+async function loadAiQuests() {
+  const today = new Date().toDateString();
+  if (!aiAvailable() || aiQuestDay === today) return;
+  aiQuestDay = today;
+  try {
+    const r = await fetch('/api/quests', {
+      method: 'POST',
+      headers: aiHeaders(),
+      body: JSON.stringify({
+        antal: 3,
+        people: [...characters, ...extra].map((c) => ({
+          id: c.id,
+          name: c.name,
+          traits: traitAiText(c.id),
+        })),
+        places: Object.entries(PLATSER).map(([id, p]) => ({ id, name: p.namn })),
+      }),
+    });
+    if (r.status !== 200) return;
+    const list = ((await r.json()).uppdrag || []).filter(validQuest);
+    // Gårdagens AI-uppdrag som ingen har tagit försvinner.
+    for (let i = QUESTS.length - 1; i >= 0; i--) if (QUESTS[i].ai) QUESTS.splice(i, 1);
+    for (const q of list) QUESTS.push({ ...q, ai: true });
+    if (state) updateHUD();
+  } catch {
+    aiQuestDay = null;
+  }
 }
 // Kollar datafilen när spelet startar, så att skrivfel syns i konsolen.
 function checkQuests() {

@@ -168,3 +168,41 @@ test('utan AI blir numret rubriker av händelserna', () => {
   assert.equal(paper.templatePaper('2026-v41', []), null);
   assert.equal(paper.cleanPaper({ artiklar: [] }, 'v'), null);
 });
+
+const aiQuests = require('../server/quests.js');
+test('AI-uppdrag kontrolleras mot spelets personer och platser', () => {
+  const ctx = {
+    people: [{ id: 'ida', name: 'Ida' }, { id: 'axel', name: 'Axel' }],
+    places: [{ id: 'tritonia', name: 'vid Tritonia' }],
+  };
+  const list = aiQuests.cleanQuests(
+    {
+      uppdrag: [
+        {
+          titel: 'Idas bok',
+          person: 'ida',
+          erbjudande: 'Jag glömde en bok.',
+          steg: [
+            { typ: 'plats', plats: 'tritonia', mål: 'Hämta boken', tid: { från: 9, till: 14 } },
+            { typ: 'plats', plats: 'månen', mål: 'Åk till månen' },
+            { typ: 'prata', person: 'ida', mål: 'Ge boken', kostar: 99 },
+            { typ: 'gör', handling: 'spränga', mål: 'Nej' },
+          ],
+          belöning: { pengar: 500, glädje: 5, relation: 40 },
+          avslut: 'Tack!',
+        },
+        { titel: 'Okänd', person: 'någon', erbjudande: 'x', steg: [{ typ: 'prata', person: 'ida', mål: 'x' }] },
+        { titel: 'Igen', person: 'ida', erbjudande: 'x', steg: [{ typ: 'prata', person: 'ida', mål: 'x' }] },
+      ],
+    },
+    ctx,
+    '2026-10-09',
+  );
+  assert.equal(list.length, 1, 'okända personer och en person två gånger tas bort');
+  const q = list[0];
+  assert.equal(q.id, 'ai-2026-10-09-0');
+  assert.deepEqual(q.steg.map((s) => s.typ), ['plats', 'prata'], 'okända platser och handlingar tas bort');
+  assert.equal(q.steg[1].kostar, 5, 'priset har ett tak');
+  assert.deepEqual(q.belöning, { pengar: 15, glädje: 5, relation: { ida: 12 } }, 'belöningen har tak');
+  assert.ok(aiQuests.buildQuestPrompt(ctx).includes('INTE handla om skolan'));
+});

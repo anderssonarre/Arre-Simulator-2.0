@@ -19,6 +19,7 @@ const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
 // räknad från en fast tidpunkt så att alla får samma tid och den överlever omstarter.
 const { partyStatus, gameMinutesAt } = require('../js/shared/clock.js');
 const paper = require('./paper.js');
+const aiQuests = require('./quests.js');
 const PARTY_FORCE = process.env.PARTY_FORCE === '1'; // för test: festen pågår alltid
 const clockMessage = () => ({
   t: 'clock',
@@ -184,6 +185,38 @@ function eventFlood(ip) {
   return list.length > 300;
 }
 let campusSeed = 1 + Math.floor(Math.random() * 1e6);
+// Dagens AI-uppdrag: sparas per dag i databasen (eller i minnet utan databas).
+const questDays = new Map();
+async function todaysQuests(body) {
+  const day = aiQuests.dayKey(),
+    key = 'aiquests:' + day;
+  if (questDays.has(day)) return questDays.get(day);
+  const job = (async () => {
+    const saved = store ? await store.getKv(key) : null;
+    if (saved) return saved;
+    if (!ai.spendDaily()) return null;
+    try {
+      const out = await ai.ask(
+        aiQuests.buildQuestPrompt(body),
+        'Hitta på dagens uppdrag nu.',
+        3000,
+        40000,
+        aiQuests.QUEST_TOOL,
+      );
+      const list = aiQuests.cleanQuests(out, body, day);
+      if (list.length && store) await store.putKv(key, list);
+      return list;
+    } catch (e) {
+      console.error('AI uppdrag:', e.message);
+      return null;
+    }
+  })();
+  questDays.set(day, job);
+  // Misslyckades det får nästa spelare försöka igen, och gamla dagar glöms.
+  job.then((list) => !list?.length && questDays.delete(day));
+  for (const d of questDays.keys()) if (d < day) questDays.delete(d);
+  return job;
+}
 // Ger ut numret för en vecka, en gång. Med AI skriver Haiku, annars blir det rubriker.
 const publishing = new Map();
 async function publishPaper(week) {
@@ -292,6 +325,19 @@ async function handleApi(req, res, url) {
       console.error('AI dag:', e.message);
       return noAi(res);
     }
+  }
+  // Dagens AI-skrivna sidouppdrag, samma för alla (server/quests.js). Ett anrop per dygn.
+  if (url === '/api/quests' && req.method === 'POST') {
+    if (!ai.enabled()) return noAi(res);
+    let body;
+    try {
+      body = await readBody(req, 24576);
+    } catch {
+      return json(res, 413, {});
+    }
+    if (!body || !Array.isArray(body.people) || !Array.isArray(body.places)) return json(res, 400, {});
+    const list = await todaysQuests(body);
+    return list?.length ? json(res, 200, { uppdrag: list }) : noAi(res);
   }
   // Hur de du känner hälsar på just dig idag.
   if (url === '/api/greet' && req.method === 'POST') {

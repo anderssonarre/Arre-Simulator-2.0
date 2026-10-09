@@ -236,7 +236,10 @@ function lifeAiTick() {
   const waiting = serverFound === null || net.status === 'connecting';
   if (waiting && performance.now() - lifeWait.since < 10000) return;
   lifeWait = null;
-  if (aiAvailable()) fetchAiLife(state.day);
+  if (aiAvailable()) {
+    fetchAiLife(state.day);
+    loadAiQuests(); // dagens AI-skrivna sidouppdrag (quests.js)
+  }
 }
 function lifeThought(id) {
   return state?.life?.day === state.day ? state.life.thoughts[id] || '' : '';
