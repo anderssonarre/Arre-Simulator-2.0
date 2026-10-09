@@ -93,7 +93,10 @@ function openMapEdges() {
 function buildBron() {
   const C = BRON,
     w = osmWorld('bron', 'Brändöbron · Wolffskavägen', C);
+  w.doors = {};
+  cutHomeDoors(w, w.doors); // Arvids port på Kyrkoesplanaden 6 (js/data/hem.js)
   osmGrid(w);
+  homePortals(w, w.doors);
   osmTreesAndLamps(w, C, 1852);
   // Mitt på bron, med utsikt över sundet.
   const [lat, lon] = [63.1024, 21.6016], // Brändöbron (Palosaaren silta), samma ställe på Google Maps och i kartdatan

@@ -58,6 +58,7 @@ function build() {
   buildOllis(); // Oliver's Inn i centrum (js/world/ollis.js)
   linkOllis();
   buildBron(); // Brändöbron mellan campus och centrum, och kartornas kanter (js/world/kartor.js)
+  buildStairwell(); // trapphus med hiss (js/world/trapphus.js)
   openMapEdges();
   placeVenues(); // bio, teater, fik ... i centrum (js/game/centrumliv.js)
   placeCarDealer(); // bilhandlaren (js/game/bilar.js)

@@ -38,6 +38,8 @@ HOUSES = {
     'w24559319': ('stadshus', 9.0, 'Vasa järnvägsstation'),
     'w24559282': ('city:#9fa19c:shop', 27.0, 'Sampotalo'),
     'w28512601': ('city:#b8b4ad:shop', 7.0, 'Hesburger'),
+    # Arvids hus på bron-kartan: hörnhuset Kyrkoesplanaden 6 / Museigatan 8, åtta våningar.
+    'w88206727': ('city:#d6cdb9', 27.4, 'Kyrkoesplanaden 6 / Museigatan 8'),
 }
 COLOURS = {'white': '#e8e6df', 'yellow': '#e3c983', 'beige': '#d9c7a3', 'maroon': '#8c4a3c', 'grey': '#a3a59f',
            'gray': '#a3a59f', 'coral': '#e0907a', 'bisque': '#efd9bd', 'darkgoldenrod': '#c89a45',

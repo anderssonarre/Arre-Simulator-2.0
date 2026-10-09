@@ -1072,3 +1072,12 @@ body.touch #stick.floating #knob {
     display: none;
   }
 }
+
+/* Hissen i trapphuset (js/world/trapphus.js) */
+.liftFloor {
+  font-size: 2.4rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin: 18px 0;
+}

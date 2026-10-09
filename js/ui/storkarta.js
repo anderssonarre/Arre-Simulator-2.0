@@ -55,9 +55,12 @@ function bigMapBase(id) {
 // Var du är i verkligheten (inne i ett hus: vid husets dörr).
 function playerMeters() {
   if (KARTGEO[world.id]) return tileToMeters(world.id, player.x, player.y);
+  if (world.id === 'home' || world.id === 'trapphus') {
+    const d = myHomeDoorSpot();
+    return tileToMeters(d.world, d.x, d.y);
+  }
   const id = world.id === 'ollis' ? 'centrum' : 'outdoor',
-    door = world.id === 'home' ? myHomeDoorSpot() : null,
-    p = door || (id === 'centrum' ? worlds.centrum.objects.find((o) => o.target === 'ollis') : outdoorSpawnFor(world.id));
+    p = id === 'centrum' ? worlds.centrum.objects.find((o) => o.target === 'ollis') : outdoorSpawnFor(world.id);
   return tileToMeters(id, p.x, p.y);
 }
 function openBigMap() {

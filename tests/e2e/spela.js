@@ -683,6 +683,40 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(hem.open && hem.closed, 'stora kartan öppnas och stängs');
     step('Zebs hem och stora kartan');
 
+    // Arvid bor på sjunde våningen på Kyrkoesplanaden 6: in genom porten och upp med hissen.
+    await arvid.evaluate(() => {
+      const door = worlds.bron.objects.find((o) => o.type === 'portal' && o.target === 'home' && isMyHomeDoor(o));
+      window.__hiss = { label: door.label, world: null, floors: [] };
+      door.action();
+      window.__hiss.world = world.id;
+      window.__hiss.floors.push(stair.floor);
+      liftRide(7);
+    });
+    await waitFor(arvid, () => stair.floor === 7 && !stair.riding, 'att hissen kommer upp till sjunde våningen', 20000);
+    const hiss = await arvid.evaluate(() => {
+      const flat = world.objects.find((o) => o.label === 'Hem · din lägenhet');
+      flat.action();
+      const home = world.name;
+      leaveHome();
+      const back = { world: world.id, floor: stair.floor };
+      liftRide(1);
+      return { ...window.__hiss, home, back };
+    });
+    await waitFor(arvid, () => stair.floor === 1 && !stair.riding, 'att hissen kommer ner', 20000);
+    const ute = await arvid.evaluate(() => {
+      world.objects.find((o) => o.label === 'Ut på gatan').action();
+      const r = { world: world.id, x: player.x, y: player.y };
+      changeWorld('outdoor');
+      return r;
+    });
+    assert.match(hiss.label, /Kyrkoesplanaden 6/);
+    assert.equal(hiss.world, 'trapphus');
+    assert.match(hiss.home, /sjunde våningen/);
+    assert.deepEqual(hiss.back, { world: 'trapphus', floor: 7 });
+    assert.equal(ute.world, 'bron');
+    assert.ok(Math.hypot(ute.x - 219, ute.y - 379) < 5, 'ute på Kyrkoesplanaden vid porten');
+    step('Arvid tar hissen till sjunde våningen');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {
