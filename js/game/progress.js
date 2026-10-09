@@ -142,6 +142,7 @@ function weeklyEconomy() {
     ledger('Hyran räckte inte, skuld', missing);
     notes.push(missing + ' € blev skuld');
   }
+  carLoanWeek(notes); // billånet (bilar.js)
   if (state.debt > 0 && missing === 0) payDebt();
   if (state.debt > 0) {
     gain('happy', -8);

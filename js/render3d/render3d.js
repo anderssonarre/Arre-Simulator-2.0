@@ -1084,7 +1084,33 @@ function carsTick3d(w) {
     R3.scene.add(R3.cars.group);
   }
   const { group, pool } = R3.cars,
-    live = new Set();
+    live = new Set(),
+    // Bilhandlarens bilar, din parkerade bil och kompisar som kör.
+    extra = [...(w.showroom || [])];
+  if (myCarObj && w.objects.includes(myCarObj)) {
+    myCarObj.r3 = true;
+    extra.push((myCarObj.car3 ??= { color: carColor() }));
+    Object.assign(myCarObj.car3, { x: state.car.x, y: state.car.y, a: state.car.a, color: carColor() });
+  }
+  for (const r of remotesHere())
+    if (r.car) extra.push(Object.assign((r.car3 ??= {}), { x: r.x, y: r.y, a: r.a, color: r.car }));
+  for (const c of extra) {
+    let m = pool.get(c);
+    if (m && m.userData.color !== c.color) {
+      group.remove(m);
+      pool.delete(c);
+      m = null;
+    }
+    if (!m) {
+      m = carMesh(c.color);
+      m.userData.color = c.color;
+      pool.set(c, m);
+      group.add(m);
+    }
+    m.position.set(c.x, 0, c.y);
+    m.rotation.y = -c.a;
+    live.add(c);
+  }
   if (traffic.world === w)
     for (const c of traffic.cars) {
       let m = pool.get(c);
@@ -1181,6 +1207,7 @@ function placeSprites(w, day) {
     add(o, o, o.sprite, o.x, o.y, o.height || 1, o.z || 0);
   }
   for (const r of remotesHere()) {
+    if (r.car) continue; // kör egen bil: ritas som bil (carsTick3d)
     const prof = remoteProfile(r);
     const body = remoteBody(r);
     placeFig('r' + r.id, prof, r.x, r.y, {
@@ -1256,6 +1283,7 @@ function render3d() {
     cam.updateProjectionMatrix();
   }
   if (job?.type === 'drive') cam.position.y = 1.15;
+  else if (driving) cam.position.y = 0.72;
   R3.renderer.render(R3.scene, cam);
   overlay3d(w);
   drawMap(w);
@@ -1348,7 +1376,7 @@ function overlay3d(w) {
     tag(r.name, p[0], p[1], '#ffcb83');
     if (r.chatUntil > now) bubble(r.chat, p[0], p[1] - size - 14);
   }
-  if (job?.type === 'drive') {
+  if (inVehicle()) {
     c.fillStyle = '#142635';
     c.beginPath();
     c.moveTo(0, ch);

@@ -678,6 +678,7 @@ wss.on('connection', (ws) => {
       me.a = num(m.a, -1e6, 1e6) ?? me.a;
       me.moving = !!m.moving;
       if (/^#[0-9a-f]{6}$/i.test(m.color)) me.color = m.color;
+      me.car = /^#[0-9a-f]{6}$/i.test(m.car) ? m.car : ''; // kör egen bil (färgen)
       me.dirty = true;
     } else if (m.t === 'chat') {
       const now = Date.now(),
@@ -781,6 +782,7 @@ setInterval(() => {
       +p.a.toFixed(3),
       p.moving ? 1 : 0,
       p.color,
+      p.car || '',
     ]),
   });
 }, TICK_MS);

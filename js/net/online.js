@@ -211,7 +211,7 @@ function onlineMessage(m) {
     if (net.visiting === m.id)
       toast('Du är kvar hemma hos ' + r?.name.split(' ')[0] + '. Gå ut genom dörren.');
   } else if (m.t === 'states') {
-    for (const [id, w, x, y, a, moving, color] of m.list) {
+    for (const [id, w, x, y, a, moving, color, car] of m.list) {
       const r = remotes.get(id);
       if (!r) continue;
       if (r.world !== w) {
@@ -225,6 +225,7 @@ function onlineMessage(m) {
       r.a = a;
       r.moving = !!moving;
       if (color) r.color = color;
+      r.car = car || '';
     }
   } else if (m.t === 'chat') {
     const r = remotes.get(m.id);
@@ -312,7 +313,8 @@ function onlineTick(dt) {
   const out = outfits.find((o) => o.id === state.outfit),
     moving =
       Math.hypot(motion.vx, motion.vy) > 0.2 ||
-      (job?.type === 'drive' && Math.abs(job.speed) > 0.2),
+      (job?.type === 'drive' && Math.abs(job.speed) > 0.2) ||
+      (driving && Math.abs(driving.speed) > 0.2),
     msg = {
       t: 'state',
       world: worldKey(),
@@ -321,6 +323,7 @@ function onlineTick(dt) {
       a: +player.a.toFixed(3),
       moving,
       color: out?.color || profile().color,
+      car: driving ? BILAR[driving.model].färg : '',
     },
     key = JSON.stringify(msg);
   if (key === net.last) return;

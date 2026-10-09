@@ -28,6 +28,7 @@ const KINDS = {
   examen: (h) => h.namn + ' tog examen och blev ' + h.yrke + '.',
   flytt: (h) => h.namn + ' flyttade till en ' + h.till + '.',
   jobb: (h) => h.namn + ' fick jobb som ' + h.yrke + '.',
+  bil: (h) => h.namn + ' köpte en ' + h.titel + '.',
   evenemang: (h) => h.namn + ' var med på ' + h.titel + '.',
   snoboll: (h) => h.namn + ' vann ett snöbollskrig på campus.',
   kubb: (h) => h.namn + ' slog ' + (h.person || 'en kompis') + ' i kubb.',
@@ -115,6 +116,7 @@ function templatePaper(week, happenings) {
     'Nya vänner': ['van'],
     'Kvällarna på Filicia': ['sitz', 'dackade', 'quiz'],
     'Lekar och spel': ['snoboll', 'kubb'],
+    'Nya bilar': ['bil'],
     'Årets evenemang': ['evenemang'],
     'Framtiden': ['praktik', 'examen', 'flytt', 'jobb'],
   };

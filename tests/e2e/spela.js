@@ -600,6 +600,40 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(walkTo.water, 'sundet under bron är vatten');
     step('gå över Brändöbron till centrum');
 
+    // Köpa bil och köra den.
+    const bil = await zeb.evaluate(() => {
+      changeWorld('centrum');
+      const before = state.money;
+      state.money = 3000;
+      buyCar('corolla', BILAR.corolla.pris, 0, 0);
+      const parked = !!myCarObj && worlds.centrum.objects.includes(myCarObj);
+      startDriving();
+      const start = { x: player.x, y: player.y };
+      for (let i = 0; i < 20; i++) driveCar(0.1, 1, 0);
+      const speed = Math.round(driving.speed * 6.12);
+      const refused = (stopDriving(), !!driving);
+      driving.speed = 0;
+      stopDriving();
+      const moved = Math.hypot(state.car.x - start.x, state.car.y - start.y);
+      // Billån: handpenning nu, avbetalning på måndag.
+      state.money = 20000;
+      buyCar('tesla', 7980, 34480, 2155);
+      const notes = [];
+      carLoanWeek(notes);
+      const r = { parked, speed, refused, moved, model: state.car.model, loanLeft: state.carLoan.kvar, notes };
+      sellCar();
+      state.money = before;
+      changeWorld('outdoor');
+      return r;
+    });
+    assert.ok(bil.parked, 'bilen står parkerad hos bilhandlaren');
+    assert.ok(bil.speed > 20, 'bilen kommer upp i fart (' + bil.speed + ' km/h)');
+    assert.ok(bil.refused, 'man parkerar inte i farten');
+    assert.ok(bil.moved > 3, 'bilen står där man parkerade den');
+    assert.equal(bil.model, 'tesla', 'inbyte mot en ny bil');
+    assert.equal(bil.loanLeft, 34480 - 2155, 'en avbetalning på billånet');
+    step('köpa bil och köra');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {

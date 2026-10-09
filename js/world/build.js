@@ -60,6 +60,7 @@ function build() {
   buildBron(); // Brändöbron mellan campus och centrum, och kartornas kanter (js/world/kartor.js)
   openMapEdges();
   placeVenues(); // bio, teater, fik ... i centrum (js/game/centrumliv.js)
+  placeCarDealer(); // bilhandlaren (js/game/bilar.js)
   w = makeWorld('w33', 'W33 · entréplanet', 48);
   w.grid.forEach((row) => row.fill(1));
   rect(w, 3, 16, 40, 14, 0);
@@ -236,6 +237,8 @@ function walkable(w, x, y, r = 0.18) {
   );
 }
 function changeWorld(id, spawn) {
+  // Bilen kan bara köras på kartorna ute (inte in i hus): den parkeras först.
+  if (driving && !KARTGEO[id]) stopDriving(true);
   if (homeParty && id !== 'home') endHomeParty(true);
   world = worlds[id];
   const s = spawn || world.spawn;

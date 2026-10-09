@@ -360,6 +360,11 @@ function render() {
   }
   // Andra spelare online i samma värld.
   for (const r of remotesHere()) {
+    // Kör kompisen egen bil syns bilen i stället för figuren.
+    if (r.car) {
+      pushSprite({ x: r.x, y: r.y, height: 0.85, remote: r, label: r.name, sprite: carSprite(r.car, carView(r, player.x, player.y)) });
+      continue;
+    }
     const body = remoteBody(r),
       until = performance.now() + 100;
     pushSprite({
@@ -378,6 +383,8 @@ function render() {
     });
   }
   // Bilar på gatorna (traffic.js).
+  for (const c of w.showroom || [])
+    pushSprite({ x: c.x, y: c.y, height: 0.85, sprite: carSprite(c.color, carView(c, player.x, player.y)) });
   if (traffic.world === w)
     for (const c of traffic.cars)
       pushSprite({ x: c.x, y: c.y, height: 0.85, sprite: carSprite(c.color, carView(c, player.x, player.y)) });
@@ -532,7 +539,7 @@ function render() {
     ctx.fillStyle = 'hsla(' + ((frame * 1.5) % 360) + ',85%,55%,.06)';
     ctx.fillRect(0, 0, W, H);
   }
-  if (job?.type === 'drive') {
+  if (inVehicle()) {
     ctx.fillStyle = '#142635';
     ctx.beginPath();
     ctx.moveTo(0, H);

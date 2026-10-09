@@ -129,6 +129,8 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   Hesburger, Saluhallen, puben), Oliver's Inn ("Ollis") med öppettider och billig öl på
   tisdagar, ställena att göra saker på (bio, teater, buffé, fik, bokhandel, spelbutik, loppis,
   kyrkan) och platserna för sidouppdrag.
+- `js/data/bilar.js`: bilarna hos bilhandlaren i centrum (pris, toppfart, acceleration, färg)
+  och billånet (handpenning, ränta, antal veckor).
 - `js/game/traffic.js`: bilarna på gatorna (antal, fart och färger överst i filen). Själva kartan byggs från
   OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/evenemang.js`: årets evenemang (nollning, halloween, fackeltåg, lucia, lillajul,
