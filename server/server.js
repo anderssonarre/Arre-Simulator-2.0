@@ -39,6 +39,10 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
 };
+// Versionen av spelet som servern kör. Render sätter RENDER_GIT_COMMIT vid varje deploy,
+// annars blir det tiden servern startade. Skrivs in i sidan och skickas när spelet ansluter,
+// så att en flik med äldre kod vet att den ska ladda om (se js/net/online.js).
+const BUILD = (process.env.RENDER_GIT_COMMIT || '').slice(0, 12) || 't' + Date.now().toString(36);
 // Bara spelets egna mappar serveras, aldrig servern själv eller git-filer.
 const PUBLIC = ['index.html', 'css/', 'js/', 'img/'];
 const server = http.createServer((req, res) => {
@@ -58,6 +62,7 @@ const server = http.createServer((req, res) => {
         accounts: !!store,
         ai: ai.enabled(),
         seed: campusSeed, // slumpfrö för personligheterna, samma för alla (js/game/traits.js)
+        build: BUILD,
       }),
     );
     return;
@@ -128,6 +133,8 @@ const server = http.createServer((req, res) => {
       'content-type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream',
       'cache-control': rel.startsWith('img/') ? 'public, max-age=86400' : 'no-cache',
     });
+    if (rel === 'index.html')
+      data = String(data).replace('</head>', '<meta name="arre-build" content="' + BUILD + '">\n</head>');
     res.end(data);
   });
 });
@@ -608,6 +615,7 @@ wss.on('connection', (ws) => {
       players.set(me.id, me);
       send(ws, {
         t: 'welcome',
+        build: BUILD,
         id: me.id,
         clock: clockMessage(),
         players: [...players.values()].filter((p) => p !== me).map(publicInfo),

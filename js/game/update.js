@@ -55,6 +55,7 @@ function update(dt) {
   if (active) lifeTick();
   if (active) conditionsTick();
   if (active) jobsTick(); // svar på jobbansökningar (jobboard.js)
+  buildTick(); // ny version efter en deploy (online.js)
   if (!active || modal || document.hidden) return;
   if (sleeping) {
     // Under sömnen står allt still för dig, men världen och klockan går vidare.

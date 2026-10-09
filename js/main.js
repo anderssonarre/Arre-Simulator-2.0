@@ -23,3 +23,13 @@ window.ArreSimulator = {
   texturePack: TEXTURE_PACK.name,
 };
 requestAnimationFrame(loop);
+// Laddades sidan om automatiskt för en ny version? Fortsätt där du var.
+try {
+  if (sessionStorage.getItem('arre_resume') && safeStorage()) {
+    sessionStorage.removeItem('arre_resume');
+    setTimeout(() => {
+      if (!active) $('continueButton').click();
+      toast('Spelet är uppdaterat till den senaste versionen.');
+    }, 300);
+  }
+} catch {}

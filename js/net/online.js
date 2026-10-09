@@ -36,6 +36,65 @@ function serverUrl() {
     return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
   return null;
 }
+// ---- Ny version efter en deploy ----
+// Servern skriver in sin version i sidan (meta arre-build) och berättar den igen när spelet
+// ansluter. Vid en deploy startar servern om, spelet ansluter igen och märker att den nya
+// versionen skiljer sig. Då sparar det och laddar om, men aldrig mitt i ett pass eller en ruta.
+const PAGE_BUILD = document.querySelector('meta[name="arre-build"]')?.content || null;
+let newBuild = null,
+  reloadAt = 0;
+function checkBuild(build) {
+  if (!PAGE_BUILD || !build || build === PAGE_BUILD || newBuild) return;
+  newBuild = build;
+  reloadAt = performance.now() + 2000;
+}
+// Körs varje bildruta från update(): väntar tills det passar och laddar sedan om.
+function buildTick() {
+  if (!newBuild || performance.now() < reloadAt) return;
+  const busy = modal || job || sleeping || homeParty;
+  if (busy && active) return;
+  reloadAt = Infinity;
+  if (!active) return reloadForUpdate();
+  let left = 8;
+  const show = () =>
+    dialog(
+      'Spelet har uppdaterats',
+      '<p>En ny version av spelet finns. Ditt spel sparas och sidan laddas om om <strong>' +
+        left +
+        '</strong> sekunder.</p>',
+      [
+        { label: 'Ladda om nu', primary: true, run: reloadForUpdate },
+        {
+          label: 'Om fem minuter',
+          run: () => {
+            clearInterval(timer);
+            close();
+            reloadAt = performance.now() + 300000;
+          },
+        },
+      ],
+      'Ny version',
+    );
+  show();
+  const timer = setInterval(() => {
+    if ($('dialogTag').textContent !== 'Ny version') return clearInterval(timer);
+    if (--left <= 0) {
+      clearInterval(timer);
+      reloadForUpdate();
+    } else show();
+  }, 1000);
+}
+async function reloadForUpdate() {
+  try {
+    if (state) {
+      save();
+      if (account.token) await cloudSaveNow();
+      // Efter omladdningen fortsätter spelet direkt där man var (se main.js).
+      sessionStorage.setItem('arre_resume', '1');
+    }
+  } catch {}
+  location.reload();
+}
 async function findServer() {
   if (serverFound !== null || customServer()) return;
   if (location.protocol !== 'http:' && location.protocol !== 'https:') {
@@ -47,6 +106,7 @@ async function findServer() {
       info = r.ok ? await r.json() : null;
     serverFound = info?.ok === true;
     serverInfo = serverFound ? info : null;
+    checkBuild(info?.build);
   } catch {
     serverFound = false;
   }
@@ -122,6 +182,7 @@ function scheduleReconnect() {
 }
 function onlineMessage(m) {
   if (m.t === 'welcome') {
+    checkBuild(m.build);
     net.id = m.id;
     net.status = 'online';
     net.retry = 0;

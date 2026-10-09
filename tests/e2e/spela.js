@@ -32,19 +32,23 @@ async function waitFor(page, fn, what, ms = 20000) {
 (async () => {
   const aiServer = await mock.start(AI_PORT);
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arre-e2e-'));
-  const game = spawn(process.execPath, ['server.js'], {
-    cwd: path.join(__dirname, '..', '..', 'server'),
-    env: {
-      ...process.env,
-      PORT: String(PORT),
-      ANTHROPIC_API_KEY: 'test',
-      ANTHROPIC_BASE_URL: 'http://localhost:' + AI_PORT,
-      DATA_DIR: dataDir,
-      DATABASE_URL: '',
-      ARRE_TEST: '1',
-    },
-    stdio: ['ignore', 'inherit', 'inherit'],
-  });
+  // build: versionen servern ska säga att den kör (som RENDER_GIT_COMMIT på Render).
+  const startGame = (build) =>
+    spawn(process.execPath, ['server.js'], {
+      cwd: path.join(__dirname, '..', '..', 'server'),
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        ANTHROPIC_API_KEY: 'test',
+        ANTHROPIC_BASE_URL: 'http://localhost:' + AI_PORT,
+        DATA_DIR: dataDir,
+        DATABASE_URL: '',
+        ARRE_TEST: '1',
+        RENDER_GIT_COMMIT: build,
+      },
+      stdio: ['ignore', 'inherit', 'inherit'],
+    });
+  let game = startGame('forsta00');
   const browser = await chromium.launch();
   const errors = [];
   let failed = false;
@@ -581,6 +585,29 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(Array.isArray(st.mått) && st.mått.length >= 5, 'stats.json har balansmåtten');
     assert.ok(st.tidning?.rubrik, 'stats.json visar senaste tidningen');
     step('statistik för speltestaren');
+
+    // En deploy mitt i spelet: servern startar om med en ny version. Den öppna fliken ska
+    // spara och ladda om sig själv, och sparningen ska finnas kvar.
+    const before = await zeb.evaluate(() => {
+      close();
+      save();
+      return { build: PAGE_BUILD, day: state.day, money: state.money };
+    });
+    assert.equal(before.build, 'forsta00', 'sidan vet vilken version den kör');
+    game.kill();
+    await sleep(800);
+    game = startGame('andra000');
+    const reloaded = zeb.waitForEvent('load', { timeout: 60000 });
+    await reloaded;
+    await waitFor(zeb, () => typeof PAGE_BUILD !== 'undefined', 'sidan efter omladdning');
+    await waitFor(zeb, () => active, 'att spelet fortsätter av sig självt');
+    const after = await zeb.evaluate(() => ({ build: PAGE_BUILD, money: state.money }));
+    assert.equal(after.build, 'andra000', 'fliken laddade om till den nya versionen');
+    assert.equal(after.money, before.money, 'spelet fortsätter där man var');
+    // Webbläsaren klagar när servern är borta en stund, det är väntat.
+    for (let i = errors.length - 1; i >= 0; i--)
+      if (/ERR_CONNECTION_REFUSED|WebSocket|Failed to load resource/.test(errors[i])) errors.splice(i, 1);
+    step('ny version efter en deploy');
 
     await sleep(1000);
     assert.deepEqual(errors, [], 'inga fel i webbläsaren');
