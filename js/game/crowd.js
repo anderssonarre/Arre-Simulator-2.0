@@ -3,7 +3,7 @@
 'use strict';
 const CROWD = {
   // Hur många som är ute samtidigt per plats, vardag mitt på dagen. Kvällar och helger färre.
-  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4 },
+  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4, centrum: 28 },
   namn: [
     'Emma',
     'Oliver',
@@ -66,7 +66,9 @@ function crowdWanted(id) {
   const weekend = isWeekend(state.day),
     peak = h >= 9 && h < 16 ? 1 : h >= 7.5 && h < 18 ? 0.6 : 0.25;
   if (isVappen() && id === 'outdoor' && h >= 11 && h < 21) return base * 2;
-  return Math.round(base * peak * (weekend ? (id === 'gym' || id === 'outdoor' ? 0.5 : 0.15) : 1));
+  return Math.round(
+    base * peak * (weekend ? (id === 'centrum' ? 1.1 : id === 'gym' || id === 'outdoor' ? 0.5 : 0.15) : 1),
+  );
 }
 function makeStranger(w) {
   const r = seeded((crowd.seed += 7919)),
@@ -99,6 +101,15 @@ function makeStranger(w) {
 }
 function crowdSpot(w, r) {
   if (w.id === 'outdoor') return randomOutdoorSpot(Math.floor(r() * 1e6));
+  // Centrum är stort: folk dyker upp och går omkring i närheten av dig, inte på gräset.
+  if (w.id === 'centrum')
+    for (let i = 0; i < 60; i++) {
+      const a = r() * 6.28,
+        d = 6 + r() * 40,
+        x = player.x + Math.cos(a) * d,
+        y = player.y + Math.sin(a) * d;
+      if (walkable(w, x, y, 0.3) && groundAt(w, x, y) !== GROUND.GRASS) return [x, y];
+    }
   for (let i = 0; i < 60; i++) {
     const x = 1 + r() * (w.size - 2),
       y = 1 + r() * (w.size - 2);

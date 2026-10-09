@@ -17,6 +17,7 @@ const PLACE_TEXT = {
   tech: 'på Technobothnia',
   gym: 'på gymmet',
   outdoor: 'ute på campus',
+  centrum: 'i Vasa centrum',
 };
 const WALK_SPEED_NPC = 1.35;
 // id -> { p, obj, world (null = hemma), path, plan, goal }
@@ -79,6 +80,9 @@ function basePlan(id, day, hour) {
     const best = allIds().find((o) => o !== state.character && npcRel(id, o) >= 70);
     if (best && seeded(day * 31 + hour * 0)() < 0.45) return { where: 'w33', activity: 'umgås' };
   }
+  // Helger: en del åker in till stan en stund på eftermiddagen.
+  if (isWeekend(day) && hour >= 12 && hour < 17 && seeded(hashId(id) + day * 17)() < 0.3)
+    return { where: 'centrum', activity: 'promenerar' };
   if (isWeekend(day) || id === 'ossi') return { where: 'hemma' };
   const p = [...characters, ...extra].find((c) => c.id === id),
     d = S.dag;
@@ -133,7 +137,7 @@ function spotsFor(where, activity, lecture) {
   if (activity === 'föreläsning') {
     const st = w.objects.find((o) => o.lectureIndex === lecture);
     list = near(st.x, st.y, 12);
-  } else if (activity === 'lunch') list = near(23.5, 21.5, 14);
+  } else if (activity === 'lunch' && where === 'w33') list = near(23.5, 21.5, 14);
   else if (activity === 'fest' && where === 'w33') list = near(36.5, 12.5, 14);
   else if (activity === 'tränar') list = near(6.5, 8.5, 8);
   else if (activity === 'kaffe') {
@@ -170,7 +174,8 @@ function spotsFor(where, activity, lecture) {
         [30.5, 90.5],
       ],
       gym: [[6.5, 8.5]],
-    }[where] || [[w.spawn.x, w.spawn.y]];
+    }[where] ||
+      w.npcSpots || [[w.spawn.x, w.spawn.y]];
     list = base.flatMap(([x, y]) => near(x, y, 3));
   }
   if (!list.length) list = [[w.spawn.x, w.spawn.y]];
@@ -244,7 +249,7 @@ function findPath(w, sx, sy, tx, ty) {
   gs[start] = 0;
   push(start, h(start));
   let guard = 0;
-  while (heap.length && guard++ < 60000) {
+  while (heap.length && guard++ < Math.max(60000, n * n)) {
     const cur = pop();
     if (closed[cur]) continue;
     closed[cur] = 1;

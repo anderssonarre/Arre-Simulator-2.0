@@ -53,6 +53,8 @@ function deco(w, x, y, type, height = 1.1) {
 function build() {
   let w = buildHome();
   w = buildCampus();
+  buildCentrum(); // Vasa centrum, dit bussen går (js/world/centrum.js)
+  placeCampusBusStop(worlds.outdoor);
   w = makeWorld('w33', 'W33 · entréplanet', 48);
   w.grid.forEach((row) => row.fill(1));
   rect(w, 3, 16, 40, 14, 0);
@@ -206,6 +208,8 @@ function build() {
   doorAt(w, 8, 17);
   portal(w, 8.5, 16.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41.85, a: -Math.PI / 2 });
   placeShops(); // kiosken och baren, se js/data/items.js
+  placeKubb(); // kubb på sommaren och pubquiz på Filicia, se js/game/play.js
+  placeQuiz();
   placePaperStand(); // campustidningen, se js/net/paper.js
   linkCampusExits();
   // Personerna placeras av schemat (js/game/people.js) när spelet startar.

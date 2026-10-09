@@ -9,7 +9,7 @@ const str = (v, n) =>
     .trim()
     .slice(0, n);
 const ID = /^[a-zA-Zåäö0-9]{2,24}$/;
-const HANDLINGAR = ['kaffe', 'lunch'];
+const HANDLINGAR = ['kaffe', 'lunch', 'buss'];
 const VÄRLDAR = ['outdoor', 'w33', 'tech', 'gym'];
 const DAGAR = ['mån', 'tis', 'ons', 'tor', 'fre', 'lör', 'sön'];
 const num = (v, lo, hi) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, Math.round(+v))) : 0);
@@ -38,7 +38,8 @@ function buildQuestPrompt(b) {
     'Stegtyper:',
     '- plats: gå till en plats och tryck E. Fält: plats (id), mål, hittar (vad man hittar där). Valfritt: tid {från, till} (hela timmar 8 till 24) och dagar (mån tis ons tor fre lör sön).',
     '- prata: prata med en person. Fält: person (id), mål, knapp (vad spelaren säger), svar (vad personen svarar). Valfritt: kostar (1 till 5 euro).',
-    '- gör: handling kaffe (köp en kaffe i en automat) eller lunch (ät lunch i W33). Fält: handling, mål. Valfritt: värld (w33, tech eller gym) för kaffe.',
+    '- gör: handling kaffe (köp en kaffe i en automat), lunch (ät lunch i W33) eller buss (ta bussen mellan campus och Vasa centrum). Fält: handling, mål. Valfritt: värld (w33, tech eller gym) för kaffe.',
+    'Platserna i Vasa centrum (torget, stadshuset, kyrkan, saluhallen, vattentornet, stationen, rewell) når man med bussen från campus.',
     'Regler: 2 till 4 steg. Sista steget är oftast att prata med personen som gav uppdraget. Belöning: pengar 0 till 15, glädje 0 till 12, relation med personen 4 till 12. Texterna på finlandssvenska, korta, gärna lite humor, passande för alla åldrar. Använd bara id:n från listorna.',
     'Svara med verktyget uppdrag. Skriv ' + num(b.antal || 3, 1, 4) + ' uppdrag från olika personer.',
   ].join('\n');

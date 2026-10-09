@@ -1122,8 +1122,18 @@ function placeSprites(w, day) {
   }
   for (const r of remotesHere()) {
     const prof = remoteProfile(r);
-    placeFig('r' + r.id, prof, r.x, r.y, { moving: r.moving, phase: r.id, color: prof.color });
+    const body = remoteBody(r);
+    placeFig('r' + r.id, prof, r.x, r.y, {
+      moving: r.moving,
+      phase: r.id,
+      color: prof.color,
+      wave: body === 'vinka',
+      gesture: body === 'gestikulera',
+      dancing: body === 'dansa',
+    });
   }
+  // Snöbollar i luften.
+  balls.forEach((b, i) => add('ball' + i, b, ballSprite(), b.x, b.y, 0.14, b.z - 0.07));
   // Du själv: syns bara i spegeln (lager 1).
   if (R3.selfLayer && w.mirror) {
     const me = profile(),

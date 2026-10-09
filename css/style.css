@@ -1011,3 +1011,32 @@ body.touch #stick.floating #knob {
     bottom: max(18px, env(safe-area-inset-bottom));
   }
 }
+
+/* Snöboll i ansiktet (js/game/play.js) */
+#splat {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 30;
+  background:
+    radial-gradient(circle at 42% 46%, #ffffffee 0 9%, #ffffff99 14%, transparent 26%),
+    radial-gradient(circle at 55% 40%, #ffffffcc 0 5%, transparent 12%),
+    radial-gradient(circle at 38% 58%, #ffffffbb 0 4%, transparent 10%);
+}
+#splat.show {
+  animation: splat 1.4s ease-out;
+}
+@keyframes splat {
+  0% {
+    opacity: 1;
+    transform: scale(0.9);
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05) translateY(4%);
+  }
+}

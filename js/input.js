@@ -10,7 +10,8 @@ document.addEventListener('keydown', (e) => {
       return;
     }
     if (modal) {
-      if (job?.type === 'challenge') confirmAbort();
+      if (job?.minigame === 'kubb') kubbEnd(true);
+      else if (job?.type === 'challenge') confirmAbort();
       else close();
     } else menu();
     return;
@@ -48,6 +49,8 @@ document.addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (e.code === 'KeyE' && !e.repeat) interact();
   if (e.code === 'KeyI' && !e.repeat && active && !modal) showBag();
+  if (e.code === 'KeyG' && !e.repeat && active && !modal) openGestures();
+  if (e.code === 'KeyF' && !e.repeat && active && !modal) throwSnowball();
 });
 document.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => {

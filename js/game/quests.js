@@ -35,6 +35,7 @@ function questOfferFor(personId) {
         !q.done.includes(x.id) &&
         !q.active[x.id] &&
         state.term >= (x.villkor?.frånTermin || 1) &&
+        (!x.grupp || net.status === 'online') && // gruppuppdrag kräver kompisar online
         conditionsMet(x.villkor || {}),
     ) || null
   );
@@ -144,7 +145,7 @@ function questSpot(name) {
     w = p && worlds[p.värld];
   if (!w) return null;
   const tried = new Set();
-  for (let r = 0; r < 18; r += 0.5)
+  for (let r = 0; r < 40; r += 0.5)
     for (let a = 0; a < 6.28; a += 0.3) {
       const x = Math.floor(p.x + Math.cos(a) * r) + 0.5,
         y = Math.floor(p.y + Math.sin(a) * r) + 0.5,
@@ -196,6 +197,12 @@ function questPlace(id) {
   const s = questStep(id);
   if (s?.typ !== 'plats') return;
   if (!placeOpen(s)) return toast('Det går bara ' + whenText(s) + '. Kom tillbaka då.');
+  if (s.tillsammans) {
+    const här = remotesHere().filter((r) => Math.hypot(r.x - player.x, r.y - player.y) < 6);
+    if (här.length + 1 < s.tillsammans)
+      return toast('Det här klarar man inte ensam. Ni behöver vara ' + s.tillsammans + ' här samtidigt (kompisar online).');
+    s.med = här.map((r) => r.name.split(' ')[0]);
+  }
   advance(5);
   dialog(
     questById(id).titel,
@@ -381,7 +388,7 @@ function validQuest(q) {
       ((s.typ === 'plats' && PLATSER[s.plats]) ||
         (s.typ === 'prata' && ids.has(s.person)) ||
         (s.typ === 'gör' &&
-          ['kaffe', 'lunch'].includes(s.handling) &&
+          ['kaffe', 'lunch', 'buss'].includes(s.handling) &&
           (!s.värld || ['w33', 'tech', 'gym'].includes(s.värld)))),
   );
 }

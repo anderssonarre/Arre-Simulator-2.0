@@ -104,16 +104,17 @@ function boardSprite(text) {
   cache[key] = c;
   return c;
 }
-function buildCampus() {
-  const C = CAMPUS,
-    N = C.size,
-    w = makeWorld('outdoor', 'Wolffskavägen · campus', N, true);
+// ---- Gemensamt för kartor från OpenStreetMap (campus och centrum) ----
+// Ny utomhusvärld med marklager, hus som väggsegment, murar, häckar och en häck runt kanten.
+function osmWorld(id, name, C, extraHouses = []) {
+  const N = C.size,
+    w = makeWorld(id, name, N, true);
   w.groundRes = C.groundRes;
   w.ground = decodeGround(C);
   w.maskRes = MASK_RES;
   w.mask = new Uint8Array(N * MASK_RES * N * MASK_RES);
   w.segments = [];
-  w.houses = [...C.houses, HOME_HOUSE];
+  w.houses = [...C.houses, ...extraHouses];
   w.wallHeight = 2.4;
   // Hus: fast mark och väggsegment.
   for (const h of w.houses) {
@@ -164,16 +165,13 @@ function buildCampus() {
     [e, N - e, e, e],
   ])
     addSegment(w, ax, ay, bx, by, 1.1, 'hedge', { low: true, edge: true });
-  // Dörrar (innan segmenten indexeras, eftersom väggen delas där dörren sitter).
-  const doors = {
-    w33Corner: cutDoor(w, 106, 103.7, 1.2),
-    w33Side: cutDoor(w, 100.7, 86, 1.1),
-    techno: cutDoor(w, 76.7, 140.5, 1.2),
-    wsc: cutDoor(w, 62.5, 195.5, 1.2),
-    home: cutDoor(w, 10.25, 68, 1),
-  };
+  return w;
+}
+// Efter dörrarna: index för segmenten och rutnätet för vägsökning och sikt.
+function osmGrid(w) {
+  const N = w.size;
   indexSegments(w);
-  // Rutnätet används för vägsökning och sikt: en ruta är spärrad om något av den är hus.
+  // En ruta är spärrad om något av den är hus.
   const m = N * MASK_RES;
   for (let y = 0; y < N; y++)
     for (let x = 0; x < N; x++) {
@@ -183,6 +181,67 @@ function buildCampus() {
           solid = w.mask[(y * MASK_RES + j) * m + x * MASK_RES + i];
       w.grid[y][x] = solid ? 1 : 0;
     }
+}
+// Träd och gatlampor från kartan.
+function osmTreesAndLamps(w, C, seed) {
+  const r = seeded(seed);
+  for (const [x, y] of C.trees) {
+    if (maskAt(w, x, y)) continue;
+    const pick = r();
+    if (pick < 0.5)
+      obj(w, x, y, 'tree', '', null, {
+        height: 6 + r() * 1.6,
+        sprite: propSprite('tree'),
+        kind: 'leafy',
+      });
+    else if (pick < 0.8)
+      obj(w, x, y, 'tree', '', null, {
+        height: 7 + r() * 2,
+        sprite: birchSprite(Math.floor(r() * 3)),
+        kind: 'birch',
+      });
+    else
+      obj(w, x, y, 'tree', '', null, {
+        height: 7 + r() * 2.5,
+        sprite: spruceSprite(Math.floor(r() * 3)),
+        kind: 'spruce',
+      });
+  }
+  for (const [x, y] of C.lamps)
+    obj(w, x, y, 'lamp', '', null, { height: 0.5, z: 4.9, sprite: hangingLampSprite() });
+}
+// Utgångar från kartan (där gatorna går ut), för personer som kommer och går.
+function osmExits(w, target) {
+  const N = w.size;
+  w.exits = [];
+  for (let k = 2; k < N - 2; k++)
+    for (const [x, y] of [
+      [k + 0.5, 1.5],
+      [k + 0.5, N - 1.5],
+      [1.5, k + 0.5],
+      [N - 1.5, k + 0.5],
+    ])
+      if (
+        groundAt(w, x, y) === GROUND.ASPHALT &&
+        !w.exits.some(([a, b]) => Math.hypot(a - x, b - y) < 12)
+      )
+        w.exits.push([x, y]);
+  // Bara utgångar som går att gå från till målet (inte instängda gårdar).
+  w.exits = w.exits.filter(([x, y]) => findPath(w, x, y, target[0], target[1]));
+}
+
+function buildCampus() {
+  const C = CAMPUS,
+    w = osmWorld('outdoor', 'Wolffskavägen · campus', C, [HOME_HOUSE]);
+  // Dörrar (innan segmenten indexeras, eftersom väggen delas där dörren sitter).
+  const doors = {
+    w33Corner: cutDoor(w, 106, 103.7, 1.2),
+    w33Side: cutDoor(w, 100.7, 86, 1.1),
+    techno: cutDoor(w, 76.7, 140.5, 1.2),
+    wsc: cutDoor(w, 62.5, 195.5, 1.2),
+    home: cutDoor(w, 10.25, 68, 1),
+  };
+  osmGrid(w);
   // Portaler framför dörrarna.
   const at = (d, k = 0.6) => [d.x + d.nx * k, d.y + d.ny * k];
   w.doors = doors;
@@ -217,58 +276,14 @@ function buildCampus() {
   // Fabrikens två skorstenar bakom Fabriikki.
   sceneProp(w, 9, 141, 'chimney', 17);
   sceneProp(w, 20, 147, 'chimney', 14);
-  // Träd från kartan (inte där hemmet står).
-  const r = seeded(4711);
-  for (const [x, y] of C.trees) {
-    if (maskAt(w, x, y)) continue;
-    const pick = r();
-    if (pick < 0.5)
-      obj(w, x, y, 'tree', '', null, {
-        height: 6 + r() * 1.6,
-        sprite: propSprite('tree'),
-        kind: 'leafy',
-      });
-    else if (pick < 0.8)
-      obj(w, x, y, 'tree', '', null, {
-        height: 7 + r() * 2,
-        sprite: birchSprite(Math.floor(r() * 3)),
-        kind: 'birch',
-      });
-    else
-      obj(w, x, y, 'tree', '', null, {
-        height: 7 + r() * 2.5,
-        sprite: spruceSprite(Math.floor(r() * 3)),
-        kind: 'spruce',
-      });
-  }
-  // Gatlampor i vajer.
-  for (const [x, y] of C.lamps)
-    obj(w, x, y, 'lamp', '', null, { height: 0.5, z: 4.9, sprite: hangingLampSprite() });
+  osmTreesAndLamps(w, C, 4711);
   // Extrajobbet och platsbilderna.
   station(w, ...freeSpotNear(w, 72, 176), 'job', 'Jobbtavlan · sök jobb och jobba ett pass', jobBoard);
   station(w, ...freeSpotNear(w, 97, 106), 'photo', 'W33 · se platsbilderna', () => showPhotos(1));
   station(w, ...freeSpotNear(w, 84, 142), 'photo', 'Technobothnia · se platsbilderna', () =>
     showPhotos(6),
   );
-  // Utgångar från kartan (där gatorna går ut), för personer som kommer och går.
-  w.exits = [];
-  for (let k = 2; k < N - 2; k++)
-    for (const [x, y] of [
-      [k + 0.5, 1.5],
-      [k + 0.5, N - 1.5],
-      [1.5, k + 0.5],
-      [N - 1.5, k + 0.5],
-    ])
-      if (
-        groundAt(w, x, y) === GROUND.ASPHALT &&
-        !w.exits.some(([a, b]) => Math.hypot(a - x, b - y) < 12)
-      )
-        w.exits.push([x, y]);
-  // Bara utgångar som går att gå från till W33 (inte instängda gårdar).
-  const target = doors.w33Corner;
-  w.exits = w.exits.filter(([x, y]) =>
-    findPath(w, x, y, target.x + target.nx, target.y + target.ny),
-  );
+  osmExits(w, [doors.w33Corner.x + doors.w33Corner.nx, doors.w33Corner.y + doors.w33Corner.ny]);
   return w;
 }
 // Var man hamnar ute när man går ut ur ett hus: framför den första dörren som leder dit.

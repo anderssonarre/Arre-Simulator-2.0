@@ -60,7 +60,7 @@ function tutorialDone(id) {
   if (!state || !Array.isArray(state.tutorial) || state.tutorial.includes(id)) return;
   const before = tutorialStep();
   state.tutorial.push(id);
-  track('tutorial', { step: id });
+  if (TUTORIAL.some((t) => t.id === id)) track('tutorial', { step: id });
   const next = tutorialStep();
   if (next === before) return;
   if (!next) {

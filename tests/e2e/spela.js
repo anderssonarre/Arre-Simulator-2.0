@@ -549,6 +549,91 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(wet.sunny, '☀️ 20°');
     step('väder, regn och paraply');
 
+    // Vasa centrum: bussen dit, butikerna och tillbaka.
+    const stan = await zeb.evaluate(() => {
+      state.money = Math.max(state.money, 20);
+      const before = state.money;
+      takeBus('centrum');
+      const there = {
+        world: world.id,
+        paid: before - state.money,
+        shops: world.objects.filter((o) => o.type === 'shop').length,
+        statue: world.objects.some((o) => o.label === 'Frihetsstatyn'),
+        church: world.boxes.length > 10,
+      };
+      takeBus('outdoor');
+      return { ...there, back: world.id };
+    });
+    assert.equal(stan.world, 'centrum');
+    assert.equal(stan.paid, 2, 'bussen kostar 2 €');
+    assert.ok(stan.shops >= 4, 'torgkiosk, Hesburger, Saluhallen och puben');
+    assert.ok(stan.statue && stan.church, 'Frihetsstatyn och kyrktornet');
+    assert.equal(stan.back, 'outdoor');
+    step('bussen till Vasa centrum');
+
+    // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
+    const meet = async () => {
+      const spot = await zeb.evaluate(() => {
+        const s = worlds.outdoor.spawn,
+          x = s.x + Math.cos(s.a) * 1.5,
+          y = s.y + Math.sin(s.a) * 1.5;
+        changeWorld('outdoor', { x, y, a: s.a });
+        return { x: x + Math.cos(s.a) * 2, y: y + Math.sin(s.a) * 2, a: s.a + Math.PI, zx: x, zy: y };
+      });
+      await arvid.evaluate((p) => changeWorld('outdoor', { x: p.x, y: p.y, a: p.a }), spot);
+      await waitFor(zeb, () => remotesHere().length > 0, 'att Arvid står bredvid');
+      await waitFor(arvid, () => remotesHere().length > 0, 'att Zeb står bredvid');
+      await sleep(600);
+    };
+    await meet();
+    await arvid.evaluate(() => gesture('vinka'));
+    await waitFor(zeb, () => remotesHere().some((r) => r.chat.startsWith('👋') && remoteBody(r) === 'vinka'), 'att Zeb ser Arvid vinka');
+    await zeb.evaluate(() => {
+      state.together = {};
+      window.__glad = state.stats.happy;
+      gesture('skåla');
+    });
+    await sleep(1000); // servern släpper igenom en gest per sekund
+    await arvid.evaluate(() => gesture('skåla'));
+    await waitFor(zeb, () => state.together?.skåla != null, 'en gemensam skål');
+    await arvid.evaluate(() => {
+      state.bag = { vatten: 1 };
+      sendGift([...remotes.values()].find((r) => r.name.startsWith('Zeb')), 'vatten');
+    });
+    await waitFor(zeb, () => state.bag?.vatten >= 1, 'att presenten kommer fram');
+    await zeb.evaluate(() => {
+      forcedWeather = { typ: 'regn', temp: -6 };
+      window.__splat = 0;
+      const old = splat;
+      splat = (n) => (window.__splat++, old(n));
+    });
+    await arvid.evaluate(() => {
+      forcedWeather = { typ: 'regn', temp: -6 };
+      throwWait = 0;
+      throwSnowball();
+    });
+    await waitFor(zeb, () => window.__splat > 0, 'att snöbollen träffar Zeb');
+    await zeb.evaluate(() => (forcedWeather = null));
+    await arvid.evaluate(() => (forcedWeather = null));
+    step('gester, skål, presenter och snöbollar');
+
+    // Pubquizen: veckans frågor och topplistan.
+    const pub = await zeb.evaluate(async () => {
+      const q = await (await fetch('/api/quiz')).json(),
+        s = await (
+          await fetch('/api/quiz/score', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ name: 'Zeb', score: 6 }),
+          })
+        ).json();
+      return { n: q.frågor.length, ok: q.frågor.every((f) => f.fråga && f.rätt && f.fel.length === 3), top: s.topp[0] };
+    });
+    assert.equal(pub.n, 8);
+    assert.ok(pub.ok, 'varje fråga har ett rätt och tre fel svar');
+    assert.deepEqual(pub.top, { name: 'Zeb', score: 6 });
+    step('pubquiz på Filicia');
+
     // Mobil: pekskärm och liten skärm.
     const phone = await open('Mobil', {
       viewport: { width: 390, height: 844 },

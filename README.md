@@ -123,6 +123,11 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 - `js/data/weather.js`: vädret. Vädertyper (sol, halvklart, mulet, dimma, duggregn, regn och
   åska, som blir snö när det är kallt), hur vanliga de är varje månad, temperaturen i Vasa och
   hur fort man blir blöt. Dygnet har fyra perioder som skiftar mjukt, och alla online har samma väder.
+- `js/data/play.js`: spela tillsammans. Gesterna (G), snöbollar (F på vintern), kubb på
+  sommaren och pubquizen på Filicia på fredagar.
+- `js/data/centrum-platser.js`: Vasa centrum. Bussen dit, butikerna (torgkiosken,
+  Hesburger, Saluhallen, puben) och platserna för sidouppdrag. Själva kartan byggs från
+  OpenStreetMap med `tools/centrum/bygg_karta.py`.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

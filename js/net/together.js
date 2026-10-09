@@ -48,6 +48,8 @@ function playerActions(r) {
         run: () => sendInvite(r),
       },
       { label: 'Jobba ihop (lagbonus på extrajobbet)', run: () => sendJobInvite(r) },
+      { label: 'Ge något ur väskan', run: () => giftMenu(r) },
+      ...(kubbSeason() ? [{ label: 'Utmana i kubb', run: () => kubbInvite(r) }] : []),
       { label: 'Lämna en lapp', run: () => noteDialog(r.name) },
       { label: 'Tillbaka', run: showPlayers },
     ],
@@ -67,6 +69,7 @@ function sendInvite(r) {
 }
 function receivedInvite(m) {
   if (m.kind === 'job') return receivedJobInvite(m);
+  if (m.kind === 'kubb') return receivedKubbInvite(m);
   const show = () => {
     if (modal || job || sleeping) return setTimeout(show, 1500);
     dialog(
@@ -233,6 +236,7 @@ function receivedNotes(list) {
 }
 function togetherMessage(m) {
   if (m.t === 'invite') receivedInvite(m);
+  else if (m.t === 'answer' && m.kind === 'kubb') kubbAnswer(m);
   else if (m.t === 'answer' && m.kind === 'job') {
     if (m.accept) startTeam(m.from, m.name);
     else toast(m.name.split(' ')[0] + ' kan inte jobba just nu.');

@@ -235,6 +235,8 @@ function onlineMessage(m) {
     addChatLine(m.name, m.text, m.id === net.id);
   } else if (m.t === 'clock') {
     setServerClock(m, false);
+  } else if (['emote', 'throw', 'hit', 'gift', 'duel'].includes(m.t)) {
+    playMessage(m);
   } else if (['invite', 'answer', 'notes', 'noteSent'].includes(m.t)) {
     togetherMessage(m);
   } else if (m.t === 'full') {

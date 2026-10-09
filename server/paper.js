@@ -28,8 +28,11 @@ const KINDS = {
   examen: (h) => h.namn + ' tog examen och blev ' + h.yrke + '.',
   flytt: (h) => h.namn + ' flyttade till en ' + h.till + '.',
   jobb: (h) => h.namn + ' fick jobb som ' + h.yrke + '.',
+  snoboll: (h) => h.namn + ' vann ett snöbollskrig på campus.',
+  kubb: (h) => h.namn + ' slog ' + (h.person || 'en kompis') + ' i kubb.',
+  quiz: (h) => h.namn + ' fick ' + h.poäng + ' rätt på pubquizen på Filicia.',
 };
-const FIELDS = ['kurs', 'betyg', 'titel', 'person', 'märke', 'företag', 'yrke', 'till'];
+const FIELDS = ['kurs', 'betyg', 'titel', 'person', 'märke', 'företag', 'yrke', 'till', 'poäng'];
 
 // Kontrollerar en händelse från spelet. Ger { kind, namn, ... } eller null.
 function cleanHappening(b) {
@@ -37,6 +40,7 @@ function cleanHappening(b) {
   const h = { kind: b.kind, namn: str(b.namn, 24) || 'En studerande' };
   for (const f of FIELDS) if (b[f] != null) h[f] = str(b[f], 40);
   if (h.betyg && !/^[1-5]$/.test(h.betyg)) return null;
+  if (h.poäng && !/^[0-9]$/.test(h.poäng)) return null;
   return h;
 }
 const factText = (h) => KINDS[h.kind](h);
@@ -108,7 +112,8 @@ function templatePaper(week, happenings) {
     'Veckans tentor': ['femma', 'godkand'],
     'Uppdrag och overallmärken': ['uppdrag'],
     'Nya vänner': ['van'],
-    'Kvällarna på Filicia': ['sitz', 'dackade'],
+    'Kvällarna på Filicia': ['sitz', 'dackade', 'quiz'],
+    'Lekar och spel': ['snoboll', 'kubb'],
     'Framtiden': ['praktik', 'examen', 'flytt', 'jobb'],
   };
   const artiklar = Object.entries(groups)

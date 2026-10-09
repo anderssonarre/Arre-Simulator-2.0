@@ -347,6 +347,8 @@ function render() {
   }
   // Andra spelare online i samma värld.
   for (const r of remotesHere()) {
+    const body = remoteBody(r),
+      until = performance.now() + 100;
     pushSprite({
       x: r.x,
       y: r.y,
@@ -357,8 +359,14 @@ function render() {
       phase: r.id,
       targetX: r.moving ? r.x + 1 : r.x,
       targetY: r.y,
+      waveUntil: body === 'vinka' ? until : 0,
+      gestureUntil: body === 'gestikulera' ? until : 0,
+      dance: body === 'dansa',
     });
   }
+  // Snöbollar i luften.
+  for (const b of balls)
+    pushSprite({ x: b.x, y: b.y, z: b.z - 0.07, height: 0.14, sprite: ballSprite() });
   for (const b of w.boxes || []) items.push({ kind: 'b', b, depth: boxDepth(b, cam) });
   for (const b of w.mirrorBoxes || []) items.push({ kind: 'b', b, depth: boxDepth(b, cam) });
   items.sort((a, b) => b.depth - a.depth);
@@ -401,7 +409,7 @@ function render() {
     let bob = o.profile ? Math.sin(frame * 0.055 + (o.phase || 0)) * scale * 0.005 : 0;
     if (party && o.profile && w.id === 'w33' && o.x > 33 && o.y < 16)
       bob = Math.sin(frame * 0.17 + o.phase) * scale * 0.045;
-    if (homeParty && o.profile && w.id === 'home' && o.dancing)
+    if (o.dance || (homeParty && o.profile && w.id === 'home' && o.dancing))
       bob = Math.abs(Math.sin(frame * 0.16 + (o.phase || 0))) * -scale * 0.05;
     const py = horizon + eye * scale - sh + bob - (o.z || 0) * scale;
     if (spr && !o.hidden) {

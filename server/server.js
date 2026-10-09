@@ -20,6 +20,7 @@ const TICK_MS = 100; // positioner skickas ut 10 gånger per sekund
 const { partyStatus, gameMinutesAt } = require('../js/shared/clock.js');
 const paper = require('./paper.js');
 const aiQuests = require('./quests.js');
+const quiz = require('./quiz.js');
 const PARTY_FORCE = process.env.PARTY_FORCE === '1'; // för test: festen pågår alltid
 const clockMessage = () => ({
   t: 'clock',
@@ -250,6 +251,27 @@ async function todaysQuests(body) {
   for (const d of questDays.keys()) if (d < day) questDays.delete(d);
   return job;
 }
+// Veckans quizfrågor: AI skriver dem en gång i veckan (sparas), annars reservfrågorna.
+const quizWeeks = new Map();
+async function weeksQuiz(week) {
+  if (quizWeeks.has(week)) return quizWeeks.get(week);
+  const job = (async () => {
+    const saved = store ? await store.getKv('quiz:' + week) : null;
+    if (saved) return saved;
+    let list = null;
+    if (ai.enabled() && ai.spendDaily())
+      try {
+        list = quiz.cleanQuiz(await ai.ask(quiz.buildQuizPrompt(week), 'Skriv veckans frågor nu.', 2000, 40000, quiz.QUIZ_TOOL));
+      } catch (e) {
+        console.error('AI quiz:', e.message);
+      }
+    list ??= quiz.reservQuiz(week);
+    if (store) await store.putKv('quiz:' + week, list);
+    return list;
+  })();
+  quizWeeks.set(week, job);
+  return job;
+}
 // Ger ut numret för en vecka, en gång. Med AI skriver Haiku, annars blir det rubriker.
 const publishing = new Map();
 async function publishPaper(week) {
@@ -389,6 +411,27 @@ async function handleApi(req, res, url) {
       console.error('AI hälsningar:', e.message);
       return noAi(res);
     }
+  }
+  // ---- Pubquizen på Filicia (server/quiz.js): åtta frågor per vecka, samma för alla ----
+  if (url === '/api/quiz' && req.method === 'GET') {
+    const week = paper.weekKey(),
+      frågor = await weeksQuiz(week),
+      topp = store ? (await store.getKv('quiz-score:' + week)) || [] : [];
+    return json(res, 200, { week, frågor, topp });
+  }
+  if (url === '/api/quiz/score' && req.method === 'POST') {
+    if (!store) return json(res, 200, { topp: [] });
+    if (eventFlood(clientIp(req))) return json(res, 429, {});
+    let b;
+    try {
+      b = await readBody(req, 512);
+    } catch {
+      return json(res, 400, {});
+    }
+    const key = 'quiz-score:' + paper.weekKey(),
+      topp = quiz.addScore((await store.getKv(key)) || [], b?.name, b?.score);
+    await store.putKv(key, topp);
+    return json(res, 200, { topp });
   }
   if (!store) return json(res, 503, { error: 'Konton är inte igång på den här servern.' });
   // ---- Campustidningen (server/paper.js) ----
@@ -545,6 +588,7 @@ async function handleApi(req, res, url) {
 // ---- Spelare ----
 // id -> { ws, id, name, character, color, world, x, y, a, moving, lastChat, alive }
 const players = new Map();
+const EMOTES = new Set(['vinka', 'skåla', 'dansa', 'highfive', 'skratta', 'sjunga']);
 let nextId = 1;
 const clean = (s, max) =>
   String(s ?? '')
@@ -629,8 +673,8 @@ wss.on('connection', (ws) => {
       // Världsnamn är korta ord, t.ex. outdoor, w33, home:3. Koordinater hålls inom kartan.
       const world = clean(m.world, 24);
       if (/^[a-z0-9:]{1,24}$/.test(world)) me.world = world;
-      me.x = num(m.x, 0, 512) ?? me.x;
-      me.y = num(m.y, 0, 512) ?? me.y;
+      me.x = num(m.x, 0, 1024) ?? me.x;
+      me.y = num(m.y, 0, 1024) ?? me.y;
       me.a = num(m.a, -1e6, 1e6) ?? me.a;
       me.moving = !!m.moving;
       if (/^#[0-9a-f]{6}$/i.test(m.color)) me.color = m.color;
@@ -647,7 +691,7 @@ wss.on('connection', (ws) => {
         now = Date.now();
       if (!to || to === me || now - (me.lastInvite || 0) < (m.t === 'invite' ? 3000 : 300)) return;
       me.lastInvite = now;
-      const kind = ['home', 'job'].includes(m.kind) ? m.kind : null;
+      const kind = ['home', 'job', 'kubb'].includes(m.kind) ? m.kind : null;
       if (!kind) return;
       // Inbjudan hem tar med värdens möbler (id och plats) så att gästen ser samma hem.
       let home;
@@ -662,6 +706,40 @@ wss.on('connection', (ws) => {
         };
       }
       send(to.ws, { t: m.t, from: me.id, name: me.name, kind, accept: !!m.accept, home });
+    } else if (m.t === 'emote') {
+      // Vinka, skåla, dansa ... syns för alla i samma värld (spelet filtrerar). Högst en per sekund.
+      const now = Date.now();
+      if (!EMOTES.has(m.e) || now - (me.lastEmote || 0) < 900) return;
+      me.lastEmote = now;
+      broadcast({ t: 'emote', id: me.id, e: m.e, world: me.world });
+    } else if (m.t === 'throw') {
+      // En snöboll: var den kastades och åt vilket håll. Alla i samma värld ser den flyga.
+      const now = Date.now();
+      if (now - (me.lastThrow || 0) < 400) return;
+      me.lastThrow = now;
+      const x = num(m.x, 0, 1024),
+        y = num(m.y, 0, 1024),
+        a = num(m.a, -1e6, 1e6),
+        p = num(m.p, -1, 1);
+      if (x === null || y === null || a === null) return;
+      broadcast({ t: 'throw', id: me.id, world: me.world, x, y, a, p: p ?? 0 }, me);
+    } else if (m.t === 'hit' || m.t === 'gift' || m.t === 'duel') {
+      // Till en spelare: träffad av en snöboll, en present ur väskan eller resultatet i ett spel.
+      const to = players.get(m.to),
+        now = Date.now();
+      if (!to || to === me || now - (me['last' + m.t] || 0) < (m.t === 'hit' ? 300 : 1000)) return;
+      me['last' + m.t] = now;
+      const out = { t: m.t, from: me.id, name: me.name };
+      if (m.t === 'gift') {
+        if (typeof m.item !== 'string' || !/^[a-zåäö]{2,16}$/.test(m.item)) return;
+        out.item = m.item;
+      }
+      if (m.t === 'duel') {
+        if (!['kubb'].includes(m.game)) return;
+        out.game = m.game;
+        out.score = num(m.score, 0, 99) ?? 0;
+      }
+      send(to.ws, out);
     } else if (m.t === 'note') {
       // Lappar till ett spelarnamn. Finns mottagaren online levereras lappen direkt, annars när hen loggar in.
       const text = clean(m.text, 200),

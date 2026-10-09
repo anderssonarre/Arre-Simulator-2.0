@@ -21,8 +21,10 @@
 //       Valfritt: tid: { från: 20, till: 24 } och dagar: ['tor'] om det bara går vissa tider.
 //   { typ: 'prata', person: 'ossi', mål: 'Berätta för Ossi', knapp: 'Jag hittade den!', svar: '...' }
 //       prata med en person. Valfritt: kostar: 3 (€ som betalas när man trycker på knappen).
+//       Valfritt: tillsammans: 2 betyder att så många spelare måste stå där samtidigt
+//       (du och kompisar online). Sätt då grupp: true på uppdraget, så erbjuds det bara online.
 //   { typ: 'gör', handling: 'kaffe', värld: 'tech', mål: 'Köp en kaffe i Technobothnia' }
-//       gör något i spelet. Handlingar: 'kaffe' (köp en kopp) och 'lunch'.
+//       gör något i spelet. Handlingar: 'kaffe' (köp en kopp), 'lunch' och 'buss' (ta bussen).
 //       värld är valfri och betyder att det måste göras i just det huset.
 //
 // Platser: värld är 'outdoor', 'w33', 'tech' eller 'gym'. x och y är ungefärliga, spelet
@@ -261,5 +263,86 @@ const QUESTS = [
     ],
     belöning: { pengar: 12, relation: { ida: 10 }, färdighet: { arbetsvana: 5 }, glädje: 6 },
     avslut: 'Ida delar vinsten med dig. "Samma tid nästa termin?"',
+  },
+  // ---- I Vasa centrum (bussen går från hållplatsen vid Wolffskavägen) ----
+  {
+    id: 'ossis-munkar',
+    titel: 'Torgmunkar åt Ossi',
+    person: 'ossi',
+    erbjudande:
+      'Jag har möte hela eftermiddagen och det enda som får mig att överleva är en torgmunk. Tar du bussen in till torget och köper en åt mig? Jag swishar.',
+    steg: [
+      { typ: 'gör', handling: 'buss', mål: 'Ta bussen till Vasa centrum' },
+      {
+        typ: 'plats',
+        plats: 'torget',
+        tid: { från: 8, till: 18 },
+        mål: 'Köp torgmunkar på torget (8–18)',
+        hittar: 'Det doftar kardemumma. Du köper två, en åt Ossi och en som "provsmakning".',
+      },
+      { typ: 'prata', person: 'ossi', mål: 'Ge munken till Ossi', knapp: 'Här, fortfarande varm!', svar: 'Du har räddat mötet. Och mig.' },
+    ],
+    belöning: { pengar: 6, relation: { ossi: 8 }, glädje: 5 },
+    avslut: 'Ossi har socker i mustaschen resten av dagen.',
+  },
+  {
+    id: 'jennifers-kyrka',
+    titel: 'Kyrkan i kvällsljus',
+    person: 'jennifer',
+    erbjudande:
+      'Trefaldighetskyrkan är så fin när solen går ner. Kan du ta en bild åt mig? Jag har ingen tid att åka in till stan själv.',
+    steg: [
+      {
+        typ: 'plats',
+        plats: 'kyrkan',
+        mål: 'Fota Trefaldighetskyrkan',
+        hittar: 'Det röda teglet glöder och tornet syns över hela parken. Klick.',
+      },
+      { typ: 'prata', person: 'jennifer', mål: 'Visa bilden för Jennifer', knapp: 'Kolla här!', svar: 'Wow. Den blir min nya bakgrundsbild.' },
+    ],
+    belöning: { relation: { jennifer: 8 }, glädje: 6 },
+    avslut: 'Bilden får fler gillningar än något Jennifer lagt upp i år.',
+  },
+  // ---- Gruppuppdrag: kräver att ni är minst två spelare online på samma ställe ----
+  {
+    id: 'ottos-soffa',
+    titel: 'Soffan till Puuvillakuja',
+    person: 'otto',
+    grupp: true,
+    erbjudande:
+      'Jag har köpt en soffa på loppis, men den väger ett ton. Skaffa en kompis till, så bär ni den till Puuvillakuja?',
+    steg: [
+      {
+        typ: 'plats',
+        plats: 'puuvillakuja',
+        tillsammans: 2,
+        mål: 'Bär soffan till Puuvillakuja, minst två (ta med en kompis online)',
+        hittar: '"Lyft med benen!" Ni får upp soffan för trappan med bara ett litet märke i tapeten.',
+      },
+      { typ: 'prata', person: 'otto', mål: 'Säg till Otto att soffan står på plats', knapp: 'Soffan är levererad!', svar: 'Legender. Ni är välkomna att sitta i den när som helst.' },
+    ],
+    belöning: { pengar: 8, relation: { otto: 10 }, glädje: 8, märke: 'Soffbärare' },
+    avslut: 'Soffan är grön, sliten och perfekt.',
+  },
+  {
+    id: 'idas-gruppbild',
+    titel: 'Gruppbild vid vattentornet',
+    person: 'ida',
+    grupp: true,
+    erbjudande:
+      'Jag gör en kalender om studentlivet i Vasa. Jag behöver en gruppbild vid vattentornet i centrum, minst två personer. Fixar du och en kompis det?',
+    steg: [
+      { typ: 'gör', handling: 'buss', mål: 'Ta bussen till Vasa centrum' },
+      {
+        typ: 'plats',
+        plats: 'vattentornet',
+        tillsammans: 2,
+        mål: 'Ta en gruppbild vid vattentornet, minst två (kompisar online)',
+        hittar: 'Ni ställer er under vattentornet och självutlösaren piper. Någon blinkar. Ta två.',
+      },
+      { typ: 'prata', person: 'ida', mål: 'Skicka bilden till Ida', knapp: 'Här är gruppbilden!', svar: 'Perfekt, ni blir oktober i kalendern!' },
+    ],
+    belöning: { relation: { ida: 10 }, glädje: 10, märke: 'Kalenderbild' },
+    avslut: 'Kalendern säljs slut på en vecka.',
   },
 ];

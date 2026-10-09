@@ -159,6 +159,99 @@ function facadeTexture(type, h) {
     }
     g.fillStyle = '#9a9a92';
     g.fillRect(0, 0, W, 6);
+  } else if (type === 'church') {
+    // Trefaldighetskyrkan: rött tegel i engelsk gotik med höga spetsbågiga fönster.
+    bricks(g, W, H, '#9c4632', '#c08f78', 1869);
+    g.fillStyle = '#7f7a72';
+    g.fillRect(0, zy(0.5), W, 0.5 * unit);
+    const top = zy(h * 0.82),
+      bottom = zy(1.4);
+    g.fillStyle = '#d9cdb8';
+    g.beginPath();
+    g.moveTo(18, bottom);
+    g.lineTo(18, top + 22);
+    g.quadraticCurveTo(32, top - 10, 46, top + 22);
+    g.lineTo(46, bottom);
+    g.fill();
+    const glass = g.createLinearGradient(0, top, 0, bottom);
+    glass.addColorStop(0, '#5a6f86');
+    glass.addColorStop(1, '#344656');
+    g.fillStyle = glass;
+    g.beginPath();
+    g.moveTo(21, bottom - 3);
+    g.lineTo(21, top + 22);
+    g.quadraticCurveTo(32, top - 4, 43, top + 22);
+    g.lineTo(43, bottom - 3);
+    g.fill();
+    g.fillStyle = '#d9cdb8';
+    g.fillRect(31, top + 8, 2, bottom - top - 10);
+    for (let y = top + 30; y < bottom; y += 26) g.fillRect(21, y, 22, 2);
+    g.fillStyle = '#7a3526';
+    g.fillRect(0, 0, W, 8);
+  } else if (type === 'stadshus') {
+    // Stadshuset (och stationen): ljusgul fasad med vita listverk och rundbågiga fönster.
+    g.fillStyle = '#e6cf8f';
+    g.fillRect(0, 0, W, H);
+    const r = seeded(1883);
+    for (let i = 0; i < W * H * 0.02; i++) {
+      g.fillStyle = r() > 0.5 ? '#ffffff18' : '#7a5a2010';
+      g.fillRect(r() * W, r() * H, 1 + r() * 2, 1);
+    }
+    g.fillStyle = '#b9a174';
+    g.fillRect(0, zy(0.9), W, 0.9 * unit);
+    const floors = Math.max(1, Math.round((h - 0.9) / 2.3)),
+      fh = (h - 1.2) / floors;
+    for (let f = 0; f < floors; f++) {
+      const y0 = zy(1 + f * fh + fh * 0.82),
+        wh = fh * unit * 0.58;
+      g.fillStyle = '#f6f1e4';
+      g.beginPath();
+      g.moveTo(14, y0 + wh + 4);
+      g.lineTo(14, y0 + 14);
+      g.arc(32, y0 + 14, 18, Math.PI, 0);
+      g.lineTo(50, y0 + wh + 4);
+      g.fill();
+      windowAt(g, 18, y0 + 8, 28, wh - 6, '#efe9da', '#4d6675');
+      g.fillStyle = '#f6f1e4';
+      g.fillRect(0, y0 + wh + 6, W, 4);
+    }
+    g.fillStyle = '#f6f1e4';
+    g.fillRect(0, 0, W, 10);
+    g.fillStyle = '#c9b27a';
+    g.fillRect(0, 10, W, 3);
+  } else if (type.startsWith('city:')) {
+    // Stadshus i centrum: puts i husets egen färg (från kartan) och butiksfönster i gatuplanet.
+    const [, color, kind] = type.split(':'),
+      shop = kind === 'shop',
+      brick = /^#[89a][0-9a-f][3-5]/i.test(color) && parseInt(color.slice(1, 3), 16) > 1.6 * parseInt(color.slice(5, 7), 16);
+    if (brick) bricks(g, W, H, color, shadeHex(color, 1.35), parseInt(color.slice(1), 16) % 997);
+    else {
+      g.fillStyle = color;
+      g.fillRect(0, 0, W, H);
+      const r = seeded(parseInt(color.slice(1), 16) % 997);
+      for (let i = 0; i < W * H * 0.02; i++) {
+        g.fillStyle = r() > 0.5 ? '#ffffff14' : '#3b302010';
+        g.fillRect(r() * W, r() * H, 1 + r() * 2, 1);
+      }
+    }
+    const ground = shop && h > 2.4 ? 2.1 : 0,
+      floors = Math.max(1, Math.round((h - ground) / 1.85)),
+      fh = (h - ground) / floors,
+      light = (parseInt(color.slice(1, 3), 16) + parseInt(color.slice(3, 5), 16)) / 2 > 150;
+    if (ground) {
+      // Skyltfönster och en markis i gatuplanet.
+      g.fillStyle = shadeHex(color, 0.7);
+      g.fillRect(0, zy(ground), W, ground * unit);
+      windowAt(g, 4, zy(ground - 0.25), 56, (ground - 0.55) * unit, '#2f3438', '#5b7584', false);
+      g.fillStyle = shadeHex(color, 0.55);
+      g.fillRect(0, zy(ground) - 4, W, 6);
+    }
+    for (let f = 0; f < floors; f++) {
+      const y0 = zy(ground + f * fh + fh * 0.78);
+      windowAt(g, 13, y0, 38, fh * unit * 0.5, light ? '#f4f2ec' : '#e9e4d8', '#55707f');
+    }
+    g.fillStyle = shadeHex(color, 0.6);
+    g.fillRect(0, 0, W, 6);
   } else if (type === 'hedge') {
     const r = seeded(3);
     g.fillStyle = '#2f5a2e';
