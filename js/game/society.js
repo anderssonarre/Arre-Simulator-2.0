@@ -14,7 +14,7 @@ function ensureSociety() {
   }
   s.mood ??= {};
   for (const id of allIds())
-    if (!Number.isFinite(s.mood[id])) s.mood[id] = 55 + ((id.length * 13) % 25);
+    if (!Number.isFinite(s.mood[id])) s.mood[id] = 55 + ((id.length * 13) % 25) + traitMood(id);
   s.rumors = Array.isArray(s.rumors) ? s.rumors.slice(-30) : [];
   s.news = Array.isArray(s.news) ? s.news.slice(-12) : [];
   s.day ??= state.day;
@@ -88,7 +88,8 @@ function societyDay() {
     if (weekday >= 4) m += 6; // fredag och helg
     if (weekday === 0) m -= 5; // måndag
     m -= examStress * (PEOPLE_SCHEDULE.kurs.some((k) => k.includes(id)) ? 1 : 0);
-    s.mood[id] = clamp(m + (60 - m) * 0.15, 5, 98);
+    // Humöret dras mot personens vanliga läge: skämtare gladare, griniga surare (traits.js).
+    s.mood[id] = clamp(m + (60 + traitMood(id) - m) * 0.15, 5, 98);
   }
   // Kurskamrater ses varje dag och blir lite närmare.
   for (const group of PEOPLE_SCHEDULE.kurs)
@@ -129,7 +130,8 @@ function societyDay() {
   for (const rumor of s.rumors) {
     if (state.day - rumor.day > 10) continue;
     const add = new Set(rumor.knows);
-    for (const id of rumor.knows) for (const f of friendsOf(id)) if (r() < 0.5) add.add(f);
+    for (const id of rumor.knows)
+      for (const f of friendsOf(id)) if (r() < Math.min(0.95, 0.5 * traitGossip(id))) add.add(f);
     // De som är dina vänner hör det också.
     for (const [id, v] of Object.entries(state.relations)) if (v >= 40 && r() < 0.3) add.add(id);
     add.delete(state.character);

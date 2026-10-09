@@ -97,6 +97,7 @@ function buildPrompt(b) {
       ? 'Du har varit på fest (kanske Ollis tisdag) och är glad och lite berusad, det märks på hur du pratar.'
       : '',
     c.courses ? 'Terminens kurser: ' + str(c.courses, 120) + '.' : '',
+    c.traits ? 'Dina personlighetsdrag (låt dem märkas tydligt): ' + str(c.traits, 240) + '.' : '',
     c.thought ? 'Det här går du och tänker på idag (ta gärna upp det): ' + str(c.thought, 200) : '',
     c.playerState
       ? 'Spelaren är ' + str(c.playerState, 60) + ', det märks. Reagera på det på ett vänligt sätt.'
@@ -284,6 +285,7 @@ function buildDayPrompt(b) {
     [
       '- ' + str(p.id, 20) + ': ' + str(p.name, 40) + ', ' + str(p.role, 40),
       'personlighet ' + str(p.personality, 20) + ', gillar ' + str(p.topic, 30),
+      p.traits ? 'drag: ' + str(p.traits, 220) : '',
       'humör ' + str(p.mood, 30),
       'dagen: ' + str(p.plan, 160),
       p.friends ? 'vänner/ovänner: ' + str(p.friends, 120) : '',
@@ -354,6 +356,7 @@ function buildGreetPrompt(b) {
     [
       '- ' + str(p.id, 20) + ': ' + str(p.name, 40) + ', personlighet ' + str(p.personality, 20),
       'humör ' + str(p.mood, 30),
+      p.traits ? 'drag: ' + str(p.traits, 220) : '',
       'relation: ' + str(p.relation, 30),
       p.thought ? 'tänker på: ' + str(p.thought, 160) : '',
       p.memory ? 'minns om dig: ' + str(p.memory, 160) : '',

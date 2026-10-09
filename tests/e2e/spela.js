@@ -260,6 +260,45 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(quests.closedLabel.includes('tor'), 'stängt utanför tiden');
     step('sidouppdrag');
 
+    // Personligheter: samma för alla online, olika mellan personer, och de styr vad folk gör.
+    const traitsOf2 = (p) =>
+      p.evaluate(() => Object.fromEntries([...characters, ...extra].map((c) => [c.id, traitsOf(c.id)])));
+    const [tz, ta] = [await traitsOf2(zeb), await traitsOf2(arvid)];
+    assert.deepEqual(tz, ta, 'samma personligheter för alla online');
+    const traits = await arvid.evaluate(() => {
+      const all = [...characters, ...extra];
+      const pairs = all.map((c) => traitsOf(c.id));
+      const clash = pairs.some(([a, b]) => DRAG[a].motsats === b || DRAG[b].motsats === a);
+      const distinct = new Set(pairs.flat()).size;
+      // Dragens rutiner syns i schemat en vanlig måndag.
+      let followed = 0;
+      for (const c of all)
+        for (let h = 7; h < 23; h += 0.5) {
+          const own = traitPlan(c.id, 1, h);
+          if (!own || [0, 1, 2].some((i) => lectureNow(i, 1, h))) continue;
+          const plan = planFor(c.id, 1, h);
+          if (plan.where === own.where && plan.activity == own.activity) followed++;
+        }
+      // Man upptäcker dragen när man pratar.
+      const p = all.find((c) => c.id === 'rasmus');
+      state.histories.rasmus = [];
+      state.relations.rasmus = 0;
+      const before = revealedTraits(p).length;
+      chat(p);
+      close();
+      const after = revealedTraits(p).length;
+      state.relations.rasmus = 20;
+      const friends = revealedTraits(p).length;
+      return { twoEach: pairs.every((x) => x.length === 2), clash, distinct, followed, before, after, friends, seed: serverInfo.seed };
+    });
+    assert.ok(traits.twoEach, 'två drag per person');
+    assert.equal(traits.clash, false, 'inga motsatta drag hos samma person');
+    assert.ok(traits.distinct >= 6, 'många olika drag på campus');
+    assert.ok(traits.followed > 0, 'dragen styr schemat');
+    assert.deepEqual([traits.before, traits.after, traits.friends], [0, 1, 2], 'dragen upptäcks steg för steg');
+    assert.ok(Number.isFinite(traits.seed), 'servern delar ett slumpfrö');
+    step('personligheter');
+
     // Väskan, butikerna och tillstånden.
     const bag = await arvid.evaluate(() => {
       close();

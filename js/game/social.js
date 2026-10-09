@@ -62,6 +62,13 @@ function chat(p) {
     p,
   );
   if (!hist.length) remember(p, 'npc', greet);
+  // Ibland säger personen något som passar hens personlighet, eller bjuder på något.
+  else if (state.socialDay[p.id] !== state.day) {
+    const t = traitGreeting(p.id, 0.5);
+    if (t && !hist.slice(-3).some((h) => h.text === t)) remember(p, 'npc', t);
+  }
+  const gift = traitGift(p);
+  if (gift) remember(p, 'npc', gift);
   // Har personen hört något om dig, eller om någon annan? Sägs en gång.
   const gossip = tellRumor(p) || (Math.random() < 0.6 ? tellNews(p) : null);
   if (gossip) remember(p, 'npc', gossip);
@@ -92,7 +99,12 @@ function chat(p) {
       r +
       ') · ' +
       moodWord(p.id) +
-      '</span><div class="history">' +
+      '</span>' +
+      // Personlighetsdragen du har upptäckt (traits.js).
+      (revealedTraits(p).length
+        ? ' <span class="badge">' + esc(revealedTraits(p).join(' · ')) + '</span>'
+        : '') +
+      '<div class="history">' +
       history +
       '</div><input id="chatInput" type="text" maxlength="180" placeholder="Skriv en egen replik …" aria-label="Din replik"><p class="sub">' +
       (aiAvailable()
@@ -177,6 +189,8 @@ function reply(p, text, type) {
   // Humöret påverkar: en glad person blir lättare vän, en nere person svårare.
   const mood = state.society?.mood[p.id] ?? 60;
   if (newDay && !bad) delta += mood >= 78 ? 2 : mood < 35 ? -2 : 0;
+  // Pratsamma blir man fort vän med, introverta och griniga tar längre tid (traits.js).
+  if (delta > 0) delta = Math.max(1, Math.round(delta * traitFriendship(p.id)));
   if (type === 'invite' && r < 15) delta = 0;
   if (homeParty?.guests.includes(p.id) && delta > 0) delta *= 2;
   state.relations[p.id] = clamp(r + socialBoost(delta), -100, 100);

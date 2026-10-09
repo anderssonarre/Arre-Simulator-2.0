@@ -50,7 +50,13 @@ const server = http.createServer((req, res) => {
   if (url === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(
-      JSON.stringify({ ok: true, players: players.size, accounts: !!store, ai: ai.enabled() }),
+      JSON.stringify({
+        ok: true,
+        players: players.size,
+        accounts: !!store,
+        ai: ai.enabled(),
+        seed: campusSeed, // slumpfrö för personligheterna, samma för alla (js/game/traits.js)
+      }),
     );
     return;
   }
@@ -176,6 +182,7 @@ function eventFlood(ip) {
   eventLog.set(ip, list);
   return list.length > 300;
 }
+let campusSeed = 1 + Math.floor(Math.random() * 1e6);
 const noAi = (res) => res.writeHead(204, { 'cache-control': 'no-store' }).end();
 // Vem som räknas mot AI-taket: kontot om man är inloggad, annars spelarens eget id.
 async function aiWho(req) {
@@ -572,9 +579,17 @@ setInterval(() => {
 }, 15000);
 
 openStore()
-  .then((s) => {
+  .then(async (s) => {
     store = s;
     console.log('Konton sparas i ' + s.kind);
+    // Personligheternas slumpfrö sparas, så att alla ser samma personligheter även efter omstart.
+    try {
+      const saved = (await s.getStats()).campusSeed;
+      if (saved) campusSeed = saved;
+      else await s.addStats({ campusSeed });
+    } catch (e) {
+      console.error('Kunde inte läsa slumpfröet:', e.message);
+    }
   })
   .catch((e) => console.error('Kunde inte öppna lagringen, konton är avstängda:', e.message))
   .finally(() =>

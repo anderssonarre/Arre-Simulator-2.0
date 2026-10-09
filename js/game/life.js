@@ -91,6 +91,11 @@ function localLife() {
           : m >= 35
             ? DIALOGUE.tanke.trött
             : DIALOGUE.tanke.nere;
+    const own = r() < 0.4 ? traitThought(p.id, r) : null;
+    if (own) {
+      thoughts[p.id] = own;
+      continue;
+    }
     thoughts[p.id] = fill(pick(list), {
       aktivitet: plan.where === 'hemma' ? 'vila' : ACTIVITY_TEXT[plan.activity] || plan.activity,
     });
@@ -148,6 +153,7 @@ function lifeRequest() {
         role: p.role,
         personality: p.personality,
         topic: p.topic,
+        traits: traitAiText(p.id),
         mood: sc.mood,
         plan: dayPlanText(p.id),
         friends: sc.friends,
@@ -172,6 +178,7 @@ function greetRequest() {
           personality: p.personality,
           mood: sc.mood,
           relation: relationName(rel).toLowerCase() + ' (' + rel + ')',
+          traits: traitAiText(p.id),
           thought: lifeThought(p.id),
           memory: (state.memories?.[p.id] || []).slice(-3).join('; '),
           rumor: sc.rumor,

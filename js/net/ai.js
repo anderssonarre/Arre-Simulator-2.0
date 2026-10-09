@@ -44,6 +44,7 @@ function aiContext(p) {
     courses: state.graduated ? '' : [0, 1, 2].map((i) => course(i).name).join(', '),
     ...(state.society && p.id ? socialContext(p.id) : {}),
     thought: lifeThought(p.id),
+    traits: p.id ? traitAiText(p.id) : '',
     playerState: playerStateText(),
   };
 }

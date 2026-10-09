@@ -103,6 +103,8 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   steg och belöningar. Instruktionerna står överst.
 - `js/data/items.js`: varor i väskan, kiosken och baren, och tillstånden (berusning, illamående,
   koncentration) med gränser och hur fort de avtar.
+- `js/data/traits.js`: personlighetsdrag (nattuggla, festprisse, grinig ...) som personerna får
+  slumpat två av, med egna rutiner, humör, repliker och hur fort man blir vän.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

@@ -10,6 +10,7 @@ const ACTIVITY_TEXT = {
   paus: 'tar en paus',
   promenerar: 'promenerar',
   umgås: 'umgås med vänner',
+  kaffe: 'dricker kaffe',
 };
 const PLACE_TEXT = {
   w33: 'i W33',
@@ -34,14 +35,15 @@ function planFor(id, day, hour) {
   // Gäst på din hemmafest: borta från campus så länge.
   if (homeParty?.guests.includes(id)) return { where: 'hemma' };
   // Fest på fredag och lördag kväll, även efter midnatt.
-  if (S.festfolk.includes(id)) {
+  const partyPerson = S.festfolk.includes(id) || traitParty(id); // festprissar (traits.js)
+  if (partyPerson) {
     const partyDay = hour < 6 ? day - 1 : day,
       h = hour < 6 ? hour + 24 : hour;
     if (['fre', 'lör'].includes(weekday(partyDay)) && h >= S.fest.från && h < S.fest.till)
       return { where: 'w33', activity: 'fest' };
   }
   // Ollis tisdag: festfolket är ute på campus natten mellan tisdag och onsdag.
-  if (S.festfolk.includes(id)) {
+  if (partyPerson) {
     const night = hour < 3 ? day - 1 : day;
     if (weekday(night) === 'tis' && (hour >= 22 || hour < 3))
       return { where: 'outdoor', activity: 'fest' };
@@ -57,13 +59,16 @@ function planFor(id, day, hour) {
   }
   for (const [spec, from, to, where, activity] of S.egna[id] || [])
     if (dayMatches(spec, day) && hour >= from && hour < to) return { where, activity };
+  // Personlighetsdragens rutiner: nattugglor sover länge, plugghästar stannar kvar, och så vidare.
+  const own = traitPlan(id, day, hour);
+  if (own) return own;
   // Vappen: hela campus har picknick ute på eftermiddagen.
   if (isVappen(day) && hour >= 12 && hour < 20) return { where: 'outdoor', activity: 'fest' };
   // Tentaveckan: kurskamraterna pluggar på kvällarna.
   if (isExamWeek(day) && hour >= 17 && hour < 20 && S.kurs.some((k) => k.includes(id)))
     return { where: S.kurs[0].includes(id) ? 'w33' : 'tech', activity: 'pluggar' };
   // Sitz: festfolket sitter på Filicia på torsdagskvällen.
-  if (isSitzDay(day) && hour >= 18 && hour < 23 && S.festfolk.includes(id))
+  if (isSitzDay(day) && hour >= 18 && hour < 23 && partyPerson)
     return { where: 'w33', activity: 'fest' };
   // Bästa vänner umgås ibland på kvällen i W33.
   if (state?.society && hour >= 17 && hour < 21) {
@@ -127,6 +132,10 @@ function spotsFor(where, activity, lecture) {
   } else if (activity === 'lunch') list = near(23.5, 21.5, 14);
   else if (activity === 'fest' && where === 'w33') list = near(36.5, 12.5, 14);
   else if (activity === 'tränar') list = near(6.5, 8.5, 8);
+  else if (activity === 'kaffe') {
+    const m = w.objects.find((o) => o.type === 'coffee');
+    list = m ? near(m.x, m.y, 4) : near(w.spawn.x, w.spawn.y, 8);
+  }
   else if (activity === 'jobbar' && where === 'outdoor') {
     const job = w.objects.find((o) => o.type === 'job');
     list = near(job.x + 1, job.y, 2);
@@ -466,7 +475,9 @@ function chatterTick(dt) {
       o.greetedAt = state.day * 24 + state.hour;
       speak(
         o,
-        lifeBark(o) || say(r >= 40 ? DIALOGUE.förbi.vän : DIALOGUE.förbi.bekant, o.profile),
+        lifeBark(o) ||
+          traitGreeting(o.profile.id) ||
+          say(r >= 40 ? DIALOGUE.förbi.vän : DIALOGUE.förbi.bekant, o.profile),
       );
       if (r >= 40) o.waveUntil = performance.now() + 1800;
     }
@@ -484,6 +495,8 @@ function chatterTick(dt) {
   for (const a of shuffled(idle)) {
     const b = idle.find((o) => o !== a && Math.hypot(o.x - a.x, o.y - a.y) < 2.2);
     if (!b) continue;
+    // Pratsamma pratar oftare, introverta mer sällan.
+    if (Math.random() > Math.min(1, 0.6 * traitTalk(a.profile.id))) continue;
     // Dagens samtal om de har ett, annars lite småprat.
     if (!startTalk(a, b) && !talksNow.some((t) => t.a === a || t.b === a))
       speak(a, rand(DIALOGUE.småprat), 4);
