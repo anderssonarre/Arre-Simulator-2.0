@@ -56,6 +56,9 @@ function objective() {
             : 'Kör till leveransen. Stanna i den markerade zonen och tryck E.'
           : 'Slutför uppgifterna i ordning.',
     };
+  // Ett sidouppdrag man följer (js/game/quests.js).
+  const quest = !job && questObjective();
+  if (quest) return quest;
   if (state.graduated)
     return {
       title: 'Ingenjör. Äntligen.',

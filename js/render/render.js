@@ -456,7 +456,9 @@ function render() {
       near && o.x === near.x && o.y === near.y
         ? o.label
         : o.profile
-          ? o.profile.name.split(' ')[0] + (o.activity ? ' · ' + ACTIVITY_TEXT[o.activity] : '')
+          ? questMark(o.profile.id) +
+            o.profile.name.split(' ')[0] +
+            (o.activity ? ' · ' + ACTIVITY_TEXT[o.activity] : '')
           : o.type === 'portal'
             ? o.label.split('·')[0]
             : null;
@@ -592,12 +594,32 @@ function drawMap(w) {
   c.imageSmoothingEnabled = false;
   c.drawImage(base.canvas, ox * bs, oy * bs, view * bs, view * bs, 0, 0, sz, sz);
   const P = (x, y) => [(x - ox) * scale, (y - oy) * scale];
+  // Sidouppdrag utanför utsnittet: en pil i kanten som visar åt vilket håll.
+  for (const o of w.objects) {
+    if (o.type !== 'quest') continue;
+    const [x, y] = P(o.x, o.y);
+    if (x >= 0 && y >= 0 && x <= sz && y <= sz) continue;
+    const a = Math.atan2(y - sz / 2, x - sz / 2),
+      ex = sz / 2 + Math.cos(a) * (sz / 2 - 7),
+      ey = sz / 2 + Math.sin(a) * (sz / 2 - 7);
+    c.save();
+    c.translate(clamp(ex, 6, sz - 6), clamp(ey, 6, sz - 6));
+    c.rotate(a);
+    c.fillStyle = '#ffcb83';
+    c.beginPath();
+    c.moveTo(6, 0);
+    c.lineTo(-5, -5);
+    c.lineTo(-5, 5);
+    c.closePath();
+    c.fill();
+    c.restore();
+  }
   for (const o of w.objects) {
     if (o.profile?.id === state?.character || !o.action || o.stranger || o.reveler) continue;
     if (o.profile && onlineChars.has(o.profile.id) && !o.guest) continue;
     const [x, y] = P(o.x, o.y);
     if (x < -3 || y < -3 || x > sz + 3 || y > sz + 3) continue;
-    c.fillStyle = o.profile ? '#82b5d9' : '#92e2bf';
+    c.fillStyle = o.type === 'quest' ? '#ffcb83' : o.profile ? '#82b5d9' : '#92e2bf';
     c.beginPath();
     c.arc(x, y, big ? 2.2 : w.size > 30 ? 1.8 : 2.3, 0, 7);
     c.fill();

@@ -35,6 +35,7 @@ function menu() {
       { label: 'Färdigheter och ekonomi', run: showProgress },
       { label: 'Framtid: praktik och examensarbete', run: careerOverview },
       { label: 'Campus och vänner', run: showMap },
+      { label: 'Sidouppdrag', run: showQuests },
       { label: 'Kontroller', run: showControls },
       { label: 'Spelarnamn: ' + playerName() + ' · byt', run: renameDialog },
       ...(accountsAvailable()

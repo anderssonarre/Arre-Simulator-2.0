@@ -1118,7 +1118,9 @@ function overlay3d(w) {
       near && o.x === near.x && o.y === near.y
         ? o.label
         : o.profile
-          ? o.profile.name.split(' ')[0] + (o.activity ? ' · ' + ACTIVITY_TEXT[o.activity] : '')
+          ? questMark(o.profile.id) +
+            o.profile.name.split(' ')[0] +
+            (o.activity ? ' · ' + ACTIVITY_TEXT[o.activity] : '')
           : o.type === 'portal'
             ? o.label.split('·')[0]
             : null;

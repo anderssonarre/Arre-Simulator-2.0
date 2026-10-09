@@ -99,6 +99,8 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
 - `js/data/society.js`: vem som är vän med vem från början, och skvallret folk sprider om dig.
 - `js/data/furniture.js`: möbler att köpa och lägenheter att flytta till.
 - `js/data/career.js`: praktikplatser, examensarbete och vad man kan bli.
+- `js/data/quests.js`: sidouppdrag som personerna ger dig (inte skolan), med platser på campus,
+  steg och belöningar. Instruktionerna står överst.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

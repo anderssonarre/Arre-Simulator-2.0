@@ -33,6 +33,7 @@ function drinkCoffee(atHome = false) {
   const jittery = c.cups >= KAFFE.darrigFrån;
   if (jittery) gain('happy', -KAFFE.darrig);
   if (state.hour >= KAFFE.sentEfter) c.wiredUntil = nowHours() + KAFFE.verkarTimmar;
+  questEvent('kaffe');
   save();
   sound(energy > 0 ? 'win' : 'tap');
   const where = atHome ? 'Kaffe hemma' : 'Kaffe för ' + price + ' €';

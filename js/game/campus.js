@@ -10,6 +10,7 @@ function lunch() {
   state.money -= price;
   state.lunches++;
   tutorialDone('lunch');
+  questEvent('lunch');
   gain('hunger', 55);
   gain('happy', 5);
   advance(15);

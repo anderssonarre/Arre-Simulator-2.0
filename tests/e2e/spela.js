@@ -192,6 +192,74 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(tut.afterStranger, 'jobb', 'prata med en okänd klarar steget');
     step('introduktionens pratsteg');
 
+    // Sidouppdrag: alla platser går att nå, och ett helt uppdrag går att spela igenom.
+    const quests = await arvid.evaluate(() => {
+      // Varje plats ska gå att gå till från husets ingång.
+      const unreachable = Object.keys(PLATSER).filter((name) => {
+        const s = questSpot(name),
+          w = s && worlds[s.world];
+        return !s || !findPath(w, w.spawn.x, w.spawn.y, s.x, s.y);
+      });
+      const clickFirst = () => $('dialogActions').querySelector('button').click();
+      state.relations.ossi = 10;
+      state.quests = null;
+      const offer = questOfferFor('ossi')?.id;
+      const mark = questMark('ossi');
+      acceptQuest(questById('ossis-cykel'));
+      const goal = objective().title;
+      const markers = () => worlds.outdoor.objects.filter((o) => o.type === 'quest');
+      const first = markers().length;
+      markers()[0].action();
+      clickFirst(); // Fabriikki: en lapp
+      markers()[0].action();
+      clickFirst(); // Virastotalo: cykeln
+      const waiting = questMark('ossi');
+      const money = state.money;
+      questChatButtons([...characters, ...extra].find((c) => c.id === 'ossi'))[0].run();
+      const reward = state.money - money;
+      const done = state.quests.done.includes('ossis-cykel');
+      close();
+      // Kaffeuppdraget går vidare när man köper kaffe i rätt hus.
+      acceptQuest(questById('lumberjacks-kaffe'));
+      world = worlds.w33;
+      drinkCoffee(false);
+      const wrongHouse = state.quests.active['lumberjacks-kaffe'].step;
+      world = worlds.tech;
+      drinkCoffee(false);
+      const rightHouse = state.quests.active['lumberjacks-kaffe'].step;
+      world = worlds[state.world];
+      // Bullarna går bara att köpa torsdag 10–14.
+      acceptQuest(questById('korvapuusti'));
+      const bun = worlds.outdoor.objects.find((o) => o.quest === 'korvapuusti');
+      state.hour = 20;
+      const closedLabel = bun.label;
+      return {
+        unreachable,
+        offer,
+        mark,
+        goal,
+        first,
+        waiting,
+        reward,
+        done,
+        wrongHouse,
+        rightHouse,
+        closedLabel,
+      };
+    });
+    assert.deepEqual(quests.unreachable, [], 'alla uppdragsplatser går att gå till');
+    assert.equal(quests.offer, 'ossis-cykel');
+    assert.equal(quests.mark, '! ', 'utropstecken vid namnet när någon har ett uppdrag');
+    assert.ok(quests.goal.includes('Ossis borttappade cykel'), 'uppdraget syns i målrutan');
+    assert.equal(quests.first, 1, 'en markering för steget');
+    assert.equal(quests.waiting, '? ', 'frågetecken när personen väntar på dig');
+    assert.equal(quests.reward, 15, 'belöningen betalas ut');
+    assert.ok(quests.done);
+    assert.equal(quests.wrongHouse, 0, 'kaffe i fel hus räknas inte');
+    assert.equal(quests.rightHouse, 1, 'kaffe i rätt hus räknas');
+    assert.ok(quests.closedLabel.includes('tor'), 'stängt utanför tiden');
+    step('sidouppdrag');
+
     // Kaffeautomater i alla hus: varje kopp ger mindre, sent kaffe ger sämre sömn.
     const coffee = await arvid.evaluate(() => {
       const machines = ['w33', 'tech', 'gym'].map((id) =>

@@ -100,6 +100,8 @@ function chat(p) {
         : 'Lokala dialoger som minns tidigare repliker. Inget internet krävs.') +
       '</p>',
     [
+      // Sidouppdrag: personen ber om hjälp, eller väntar på ditt svar (js/game/quests.js).
+      ...questChatButtons(p),
       ...(aiOffer[p.id] === 'kaffe'
         ? [
             {
