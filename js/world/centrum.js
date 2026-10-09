@@ -102,9 +102,7 @@ function buildCentrum() {
   }
   // Busshållplatsen vid torget (Tori 1). Bussen går till campus.
   const [bx, by] = nearestFree(w, ...(centrumPoi('Tori 1') || [w.size / 2, w.size / 2]));
-  const bus = portal(w, bx, by, 'Buss till campus · ' + BUSS.pris + ' €', 'outdoor');
-  bus.action = () => takeBus('outdoor');
-  obj(w, bx + 0.6, by, 'busstop', '', null, { height: 2.2, sprite: busStopSprite() });
+  placeBusStop(w, bx, by, 'Torget');
   w.spawn = { x: bx, y: by - 1.2, a: -Math.PI / 2 };
   // Torget: där folk står och går, och var torgstånden står på sommaren.
   const torg = nearestFree(w, -C.origin[0] / C.meterPerTile, -C.origin[1] / C.meterPerTile);
@@ -170,23 +168,54 @@ function centroid(h) {
   return [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
 }
 
-// ---- Bussen mellan campus och centrum ----
-// På campus står hållplatsen vid Wolffskavägen. Resan tar en kvart och kostar en slant.
+// ---- Bussen mellan campus, centrum och Vasklot ----
+// En hållplats per karta (BUSS.hållplatser). Bussen kostar en slant och tar några minuter.
+const BUSSLINJE = ['outdoor', 'centrum', 'vasklot'];
+const BUSSNAMN = { outdoor: 'Campus (W33)', centrum: 'Torget i centrum', vasklot: 'Wärtsilä i Vasklot' };
+function placeBusStop(w, x, y, namn) {
+  const others = BUSSLINJE.filter((id) => id !== w.id),
+    o = portal(w, x, y, 'Busshållplats ' + namn + ' · ' + BUSS.pris + ' €', others[0]);
+  o.busStop = true;
+  o.action = busMenu;
+  // Osynliga vägar för personerna till de andra hållplatserna (de har ingen egen knapp).
+  for (const id of others.slice(1))
+    w.objects.push({ x, y, type: 'portal', target: id, hidden: true, busStop: true, label: '', action: null });
+  obj(w, x + 0.6, y, 'busstop', '', null, { height: 2.2, sprite: busStopSprite() });
+}
+function busMinutes(to) {
+  const a = worlds[world.id] && KARTGEO[world.id] ? tileToGeo(world.id, player.x, player.y) : tileToGeo('outdoor', 100, 100),
+    s = worlds[to].objects.find((o) => o.busStop && o.action),
+    b = tileToGeo(to, s.x, s.y),
+    km = Math.hypot((a[0] - b[0]) * 110.54, ((a[1] - b[1]) * kx(a[0])) / 1000);
+  return Math.max(BUSS.minuter, Math.round((km / 25) * 60) + 6);
+}
+function busMenu() {
+  dialog(
+    'Bussen',
+    '<p>Vart vill du åka? Biljetten kostar ' + BUSS.pris + ' €.</p>',
+    [
+      ...BUSSLINJE.filter((id) => id !== world.id && worlds[id]).map((id) => ({
+        label: BUSSNAMN[id] + ' · ' + busMinutes(id) + ' min',
+        primary: true,
+        run: () => takeBus(id),
+      })),
+      { label: 'Inte nu', run: close },
+    ],
+    'Buss',
+  );
+}
 function takeBus(to) {
   if (state.money < BUSS.pris) return toast('Bussen kostar ' + BUSS.pris + ' €. Du har inte råd, du får gå.');
   state.money -= BUSS.pris;
-  advance(BUSS.minuter);
-  const target = to === 'centrum' ? worlds.centrum : worlds.outdoor,
-    stop = target.objects.find((o) => o.type === 'portal' && o.target === world.id);
+  advance(busMinutes(to));
+  const stop = worlds[to].objects.find((o) => o.busStop && o.action);
   sound('tap');
   changeWorld(to, stop ? { x: stop.x, y: stop.y - 1.2, a: -Math.PI / 2 } : undefined);
-  toast(to === 'centrum' ? 'Framme vid torget i Vasa centrum.' : 'Tillbaka på campus.');
+  toast('Framme: ' + BUSSNAMN[to] + '.');
   questEvent('buss');
 }
 // Hållplatsen på campus (anropas från buildCampus).
 function placeCampusBusStop(w) {
   const [x, y] = nearestFree(w, BUSS.campus.x, BUSS.campus.y, 10);
-  const o = portal(w, x, y, 'Buss till Vasa centrum · ' + BUSS.pris + ' €', 'centrum');
-  o.action = () => takeBus('centrum');
-  obj(w, x + 0.6, y, 'busstop', '', null, { height: 2.2, sprite: busStopSprite() });
+  placeBusStop(w, x, y, 'W33');
 }

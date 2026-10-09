@@ -3,3 +3,4 @@ server/data/
 tests/e2e/package-lock.json
 tools/centrum/osm-centrum.json
 tools/centrum/osm-bron.json
+tools/centrum/osm-vasklot.json
