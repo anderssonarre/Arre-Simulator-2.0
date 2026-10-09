@@ -1050,8 +1050,8 @@ function precipitation(wx) {
 // ---- Bilar (traffic.js): enkla 3D-bilar av lådor ----
 function carMesh(color) {
   const g = new THREE.Group(),
-    paint = std({ color: new THREE.Color(color), roughness: 0.35, metalness: 0.4 }),
-    glass = std({ color: 0x24313a, roughness: 0.1, metalness: 0.6 }),
+    paint = std({ color: new THREE.Color(color), roughness: 0.45, metalness: 0.05 }),
+    glass = std({ color: 0x3a4c58, roughness: 0.15, metalness: 0.1 }),
     tyre = std({ color: 0x141618, roughness: 0.9 }),
     box = (w, h, d, m, x, y, z) => {
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
