@@ -9,4 +9,4 @@ const $ = (id) => document.getElementById(id),
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
     );
 const SAVE = 'arre_simulator_2_save_v1',
-  VERSION = 1;
+  VERSION = SAVE_VERSION;

@@ -107,7 +107,6 @@ function safeStorage() {
 }
 function save() {
   if (!state) return false;
-  state.mapRevision = 3;
   state.world = job ? 'outdoor' : world.id;
   state.x = job ? jobReturnSpot().x : player.x;
   state.y = job ? jobReturnSpot().y : player.y;
@@ -127,70 +126,27 @@ function save() {
     return false;
   }
 }
+// Läser en sparning och uppgraderar den till den här versionen av spelet (js/shared/savefile.js).
+// Det som inte går att använda längre, t.ex. en person som tagits bort, lagas i stället för
+// att hela sparningen kastas. En sparning från en äldre version sparas först som kopia.
 function validate(s) {
-  if (!s || s.version !== VERSION || !characters.some((c) => c.id === s.character))
-    throw Error('Fel version eller karaktär.');
-  for (const k of ['term', 'day', 'hour', 'money', 'x', 'y', 'a', 'runs', 'lunches'])
-    if (!Number.isFinite(s[k])) throw Error('Sparfilen saknar giltiga värden.');
-  if (
-    s.term < 1 ||
-    s.term > 8 ||
-    !Number.isInteger(s.term) ||
-    s.day < 1 ||
-    !Number.isInteger(s.day) ||
-    s.hour < 0 ||
-    s.hour >= 24 ||
-    s.money < 0 ||
-    s.money > 1e7
-  )
-    throw Error('Ogiltig spelprogression.');
-  if (
-    !s.stats ||
-    !['hunger', 'happy', 'energy'].every(
-      (k) => Number.isFinite(s.stats[k]) && s.stats[k] >= 0 && s.stats[k] <= 100,
-    )
-  )
-    throw Error('Ogiltiga behov.');
-  if (
-    !Array.isArray(s.courses) ||
-    s.courses.length !== 3 ||
-    !s.courses.every(
-      (c) =>
-        Number.isInteger(c.study) && c.study >= 0 && c.study <= 2 && typeof c.pass === 'boolean',
-    )
-  )
-    throw Error('Ogiltiga kurser.');
-  if (
-    !Array.isArray(s.owned) ||
-    !s.owned.every((k) => outfits.some((o) => o.id === k)) ||
-    !s.owned.includes(s.outfit)
-  )
-    throw Error('Ogiltiga kläder.');
-  if (!['home', 'outdoor', 'w33', 'tech', 'gym'].includes(s.world)) throw Error('Ogiltig plats.');
-  for (const k of ['relations', 'histories', 'socialDay']) {
-    if (!s[k] || typeof s[k] !== 'object' || Array.isArray(s[k]))
-      throw Error('Ogiltiga relationer.');
-    if (Object.keys(s[k]).some((v) => ![...characters, ...extra].some((c) => c.id === v)))
-      throw Error('Okänd karaktär i sparfil.');
-  }
-  if (!Object.values(s.relations).every((v) => Number.isFinite(v) && v >= -100 && v <= 100))
-    throw Error('Ogiltig relation.');
-  if (
-    !Object.values(s.histories).every(
-      (a) =>
-        Array.isArray(a) &&
-        a.length <= 16 &&
-        a.every(
-          (h) =>
-            typeof h.text === 'string' && h.text.length <= 500 && ['npc', 'you'].includes(h.who),
-        ),
-    )
-  )
-    throw Error('Ogiltig historik.');
-  if (!Object.values(s.socialDay).every((v) => Number.isFinite(v) && v >= 0))
-    throw Error('Ogiltig dag.');
-  if (typeof s.graduated !== 'boolean') throw Error('Ogiltigt examensvärde.');
-  return JSON.parse(JSON.stringify(s));
+  const { save: up, from, fixed } = upgradeSave(s, {
+    characters: characters.map((c) => c.id),
+    people: [...characters, ...extra].map((c) => c.id),
+    outfits: outfits.map((o) => o.id),
+    worlds: ['home', 'outdoor', 'w33', 'tech', 'gym'],
+    defaults: { money: ECONOMY.startpengar },
+  });
+  if (from < VERSION) backupSave(s, from);
+  if (fixed.length) console.info('Sparningen lagades:', fixed.join(', '));
+  return up;
+}
+// Sparar en kopia av sparningen som den såg ut före en uppgradering, en per gammal version.
+function backupSave(s, from) {
+  try {
+    const key = SAVE + '_backup_v' + from;
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(s));
+  } catch {}
 }
 function dialog(title, body, buttons = [], tag = 'Campusliv') {
   modal = true;

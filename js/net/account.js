@@ -8,7 +8,11 @@ try {
 } catch {}
 function storeAccount() {
   try {
-    if (account.token) localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    if (account.token)
+      localStorage.setItem(
+        ACCOUNT_KEY,
+        JSON.stringify({ token: account.token, name: account.name }),
+      );
     else localStorage.removeItem(ACCOUNT_KEY);
   } catch {}
 }
@@ -57,17 +61,18 @@ let cloudTimer = null,
   cloudBusy = false;
 // Anropas från save(). Laddar upp högst var 15:e sekund.
 function scheduleCloudSave() {
-  if (!account.token || !accountsAvailable() || !state || cloudTimer) return;
+  if (!account.token || account.stale || !accountsAvailable() || !state || cloudTimer) return;
   cloudTimer = setTimeout(cloudSaveNow, 15000);
 }
 async function cloudSaveNow(keepalive = false) {
   clearTimeout(cloudTimer);
   cloudTimer = null;
-  if (!account.token || !state || cloudBusy) return;
+  if (!account.token || account.stale || !state || cloudBusy) return;
   cloudBusy = true;
   try {
     await api('/api/save', { method: 'PUT', body: { save: state }, keepalive });
-  } catch {
+  } catch (e) {
+    if (e.status === 409) staleVersion();
   } finally {
     cloudBusy = false;
   }
@@ -75,6 +80,23 @@ async function cloudSaveNow(keepalive = false) {
 window.addEventListener('pagehide', () => {
   if (account.token && state && JSON.stringify(state).length < 60000) cloudSaveNow(true);
 });
+// Servern har en sparning från en nyare version av spelet än den som körs här.
+// Då slutar den här fliken spara på servern, så att inget skrivs över.
+let staleWarned = false;
+function staleVersion() {
+  account.stale = true;
+  if (staleWarned) return;
+  staleWarned = true;
+  dialog(
+    'Spelet har uppdaterats',
+    '<p>Din sparning på servern är från en nyare version av spelet. Ladda om sidan så fortsätter du där du var. Den här fliken sparar inte längre på servern.</p>',
+    [
+      { label: 'Ladda om', primary: true, run: () => location.reload() },
+      { label: 'Senare', run: close },
+    ],
+    'Ny version',
+  );
+}
 // Hämtar sparningen från servern och använder den om den är nyare än den i webbläsaren.
 async function pullCloudSave() {
   if (!account.token || !accountsAvailable()) return false;
@@ -86,7 +108,12 @@ async function pullCloudSave() {
       local = JSON.parse(safeStorage() || 'null');
     } catch {}
     if (local && (local.savedAt || 0) >= savedAt) return false;
-    validate(cloud);
+    try {
+      validate(cloud);
+    } catch (e) {
+      if (e.code === 'newer') staleVersion();
+      return false;
+    }
     localStorage.setItem(SAVE, JSON.stringify(cloud));
     return true;
   } catch {

@@ -103,6 +103,7 @@ const server = http.createServer((req, res) => {
 // webbläsaren skickar med. Servern sparar bara en hash av nyckeln.
 let store = null;
 const MAX_SAVE = 300 * 1024;
+const saveVersion = (s) => (Number.isInteger(s?.version) ? s.version : 1);
 function json(res, code, body) {
   res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
   res.end(JSON.stringify(body));
@@ -296,6 +297,13 @@ async function handleApi(req, res, url) {
         const body = await readBody(req, MAX_SAVE);
         if (!body.save || typeof body.save !== 'object' || Array.isArray(body.save))
           return json(res, 400, { error: 'Ingen sparning skickades.' });
+        // En flik med äldre kod får inte skriva över en sparning från en nyare version.
+        const prev = await store.getSave(key);
+        if (prev && saveVersion(JSON.parse(prev.data)) > saveVersion(body.save))
+          return json(res, 409, {
+            error: 'Det finns en nyare version av spelet. Ladda om sidan.',
+            code: 'newer',
+          });
         const savedAt = Date.now();
         await store.putSave(key, JSON.stringify(body.save), savedAt);
         return json(res, 200, { savedAt });
