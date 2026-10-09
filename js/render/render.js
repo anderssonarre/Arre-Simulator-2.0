@@ -4,7 +4,11 @@ function resize() {
   const ratio = Math.min(1.7, window.innerWidth / window.innerHeight);
   W =
     Math.round(
-      clamp(window.innerWidth * (highDetail ? 0.85 : 0.65), 360, highDetail ? 1200 : 720) / 2,
+      clamp(
+        window.innerWidth * (highDetail ? 0.85 : 0.65) * QUALITY.scale,
+        300,
+        highDetail ? 1200 : 720,
+      ) / 2,
     ) * 2;
   H = Math.round(((W / window.innerWidth) * window.innerHeight) / 2) * 2;
   view.width = W;
@@ -623,6 +627,7 @@ function loop(time) {
   const dt = Math.min(0.05, (time - last) / 1000 || 0);
   last = time;
   frame++;
+  qualityTick(time);
   update(dt);
   if (use3d()) render3d();
   else render();

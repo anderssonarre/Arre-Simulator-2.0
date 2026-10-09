@@ -61,7 +61,10 @@ från "Tyck till" i menyn visas också där. Sätt `STATS_KEY` för att kräva `
 
 ### Tester
 
-`node --test tests/*.test.js` kör de snabba testerna. GitHub kör dem också vid varje push.
+`node --test tests/*.test.js` kör de snabba testerna. GitHub kör dem också vid varje push,
+tillsammans med ett webbläsartest (`tests/e2e/spela.js`) som startar servern med en låtsas-Claude
+och spelar i två webbläsare och en mobil samtidigt. Lokalt:
+`cd tests/e2e && npm install && npx playwright install chromium && node spela.js`.
 
 Render bygger inte om av sig självt när repot ägs av någon annan. Efter en push:
 Manual Deploy → Deploy latest commit.
@@ -100,6 +103,13 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   hyra och studiestöd.
 
 Instruktionerna står överst i varje fil. Skriver man fel visar webbläsarens konsol en varning.
+
+## Mobil
+
+På pekskärm visas ett kompakt läge. Vänster tumme styr (styrspaken hamnar där tummen landar),
+höger tumme vrider blicken, och ett kort tryck i bilden gör samma sak som E. Bildkvaliteten
+anpassar sig efter enheten (`js/render/quality.js`): går det långsammare än cirka 26 bilder per
+sekund sänks upplösningen, och i 3D stängs skuggorna av.
 
 ## Grafik
 

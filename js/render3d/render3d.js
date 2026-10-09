@@ -81,7 +81,11 @@ function resize3d() {
   if (!R3.ok) return;
   const w = innerWidth,
     h = innerHeight;
-  R3.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, highDetail ? 1.5 : 1));
+  R3.renderer.setPixelRatio(
+    Math.min(devicePixelRatio || 1, highDetail ? 1.5 : 1) * QUALITY.scale,
+  );
+  // Långsam dator eller mobil: inga skuggor (se js/render/quality.js).
+  R3.sun.castShadow = QUALITY.scale > 0.7;
   R3.renderer.setSize(w, h, false);
   R3.camera.aspect = w / h;
   R3.camera.updateProjectionMatrix();

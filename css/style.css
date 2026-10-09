@@ -901,3 +901,94 @@ body.gfx3d #view3d,
 body.gfx3d #overlay3d {
   display: block;
 }
+
+/* ---- Pekskärm: kompakt läge så att bilden syns (se js/input.js) ---- */
+body.touch .brand {
+  display: none;
+}
+body.touch .toolbar {
+  white-space: nowrap;
+}
+body.touch .top {
+  justify-content: flex-end;
+}
+body.touch .left {
+  top: max(10px, env(safe-area-inset-top));
+  width: 200px;
+}
+body.touch .objective {
+  padding: 10px 12px;
+}
+body.touch .objective h3 {
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+body.touch .objective p,
+body.touch .objective .term-line,
+body.touch .objective .track {
+  display: none;
+}
+body.touch #stick.floating {
+  background: #10253855;
+}
+body.touch #stick.floating #knob {
+  background: #a6dfcacc;
+}
+/* Stående: toppfältet över hela bredden, målet under det. */
+@media (max-width: 700px) {
+  body.touch .top {
+    left: 10px;
+    right: 10px;
+  }
+  body.touch .toolbar {
+    width: 100%;
+    justify-content: space-between;
+  }
+  body.touch .left {
+    top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+    width: 180px;
+  }
+}
+/* Liggande: målet och behoven uppe till vänster, kartan under toppfältet. */
+@media (max-height: 520px) {
+  body.touch .left {
+    left: max(10px, env(safe-area-inset-left));
+    width: 190px;
+  }
+  body.touch .stats {
+    top: calc(max(10px, env(safe-area-inset-top)) + 72px);
+    bottom: auto;
+    left: max(10px, env(safe-area-inset-left));
+    width: 128px;
+    padding: 3px 9px;
+  }
+  body.touch .stat {
+    margin: 3px 0;
+  }
+  body.touch #mapBox {
+    top: calc(max(10px, env(safe-area-inset-top)) + 58px);
+    bottom: auto;
+    right: max(10px, env(safe-area-inset-right));
+    width: 92px;
+    padding: 6px;
+  }
+  body.touch #minimap {
+    width: 80px;
+    height: 80px;
+  }
+  body.touch #mapName {
+    display: none;
+  }
+  body.touch #toast {
+    top: auto;
+    bottom: 120px;
+  }
+  body.touch #stick {
+    left: max(24px, env(safe-area-inset-left));
+    bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  body.touch #touchActions {
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(18px, env(safe-area-inset-bottom));
+  }
+}

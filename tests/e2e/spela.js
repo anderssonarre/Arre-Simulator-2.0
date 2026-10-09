@@ -186,6 +186,56 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(touchUi, 'pekstyrningen visas på mobil');
     step('spelet startar på mobil');
 
+    // Tummen på vänstra sidan blir en styrspak där den landar, ett kort tryck till höger är E.
+    const thumbs = await phone.evaluate(async () => {
+      close();
+      const v = $('view'),
+        ev = (type, x, y, id) =>
+          v.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              pointerId: id,
+              pointerType: 'touch',
+              clientX: x,
+              clientY: y,
+            }),
+          );
+      ev('pointerdown', 80, 600, 7);
+      const stick = $('stick').getBoundingClientRect();
+      ev('pointermove', 80, 560, 7);
+      const forward = touch.y;
+      ev('pointerup', 80, 560, 7);
+      const after = touch.y;
+      let used = 0;
+      const real = interact;
+      interact = () => used++;
+      near = { label: 'test' };
+      ev('pointerdown', 300, 400, 8);
+      ev('pointerup', 300, 401, 8);
+      interact = real;
+      return {
+        stickAt: Math.round(stick.left + stick.width / 2),
+        forward,
+        after,
+        used,
+      };
+    });
+    assert.equal(thumbs.stickAt, 80, 'styrspaken flyttar sig till tummen');
+    assert.ok(thumbs.forward < -0.5, 'dra uppåt är att gå framåt');
+    assert.equal(thumbs.after, 0, 'släpper man stannar man');
+    assert.equal(thumbs.used, 1, 'ett kort tryck är som E');
+    step('styrspak och tryck på mobil');
+
+    // Går det långsamt sänks upplösningen.
+    const scale = await phone.evaluate(() => {
+      QUALITY.since = 0;
+      qualityTick(1000);
+      for (let i = 1; i <= 20; i++) qualityTick(1000 + i * 105); // cirka 10 bilder per sekund
+      return QUALITY.scale;
+    });
+    assert.ok(scale < 1, 'lägre upplösning när det går långsamt');
+    step('upplösningen anpassar sig');
+
     await sleep(1000);
     assert.deepEqual(errors, [], 'inga fel i webbläsaren');
     step('inga fel i webbläsaren');

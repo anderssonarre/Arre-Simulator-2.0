@@ -112,30 +112,78 @@ const touchMode = matchMedia('(pointer:coarse)').matches || 'ontouchstart' in wi
 if (touchMode) {
   document.body.classList.add('touch');
   $('controlHelp').textContent =
-    'Vänster styrspak: gå / gas · dra på skärmen: se dig omkring · E: interagera · Spring: håll inne';
+    'Vänster tumme: gå, styrspaken hamnar där du trycker · dra till höger: se dig omkring · tryck i bilden eller E: interagera · Spring: håll inne';
+}
+// Fångar pekaren så att rörelsen följer med även utanför elementet. Kan misslyckas om pekaren
+// redan har släppts, och då gör det inget.
+function capture(el, id) {
+  try {
+    el.setPointerCapture(id);
+  } catch {}
 }
 let look = null;
+// Pekskärm: tummen på vänstra delen av skärmen blir en styrspak där den landar,
+// tummen på högra delen vrider blicken. Ett kort tryck i bilden är som E.
 view.addEventListener('pointerdown', (e) => {
   if (!active || modal || e.pointerType === 'mouse') return;
   document.body.classList.add('touch');
-  look = { id: e.pointerId, x: e.clientX, y: e.clientY };
-  view.setPointerCapture(e.pointerId);
+  capture(view, e.pointerId);
+  if (e.clientX < innerWidth * 0.42 && stickId === null) {
+    floatStick(e);
+    return;
+  }
+  look = {
+    id: e.pointerId,
+    x: e.clientX,
+    y: e.clientY,
+    x0: e.clientX,
+    y0: e.clientY,
+    t: performance.now(),
+  };
 });
 // Touch: att dra över hela skärmens bredd vrider ungefär 180° vid normal känslighet.
 view.addEventListener('pointermove', (e) => {
+  if (stickId === e.pointerId) return stickMove(e);
   if (!look || look.id !== e.pointerId || modal) return;
   const k = (Math.PI / Math.max(320, view.clientWidth)) * controls.sens;
   turnView((e.clientX - look.x) * k, (e.clientY - look.y) * k);
   look.x = e.clientX;
   look.y = e.clientY;
 });
-for (const event of ['pointerup', 'pointercancel', 'lostpointercapture'])
-  view.addEventListener(event, () => (look = null));
+view.addEventListener('pointerup', (e) => {
+  if (stickId === e.pointerId) return resetStick();
+  // Ett kort tryck utan att dra: gör det som E gör, om det finns något nära.
+  if (
+    look?.id === e.pointerId &&
+    performance.now() - look.t < 300 &&
+    Math.hypot(e.clientX - look.x0, e.clientY - look.y0) < 12 &&
+    near &&
+    !modal
+  )
+    interact();
+  look = null;
+});
+for (const event of ['pointercancel', 'lostpointercapture'])
+  view.addEventListener(event, (e) => {
+    if (stickId === e.pointerId) resetStick();
+    if (look?.id === e.pointerId) look = null;
+  });
 let stickId = null;
+// Flyttar styrspaken dit tummen landade.
+function floatStick(e) {
+  const s = $('stick'),
+    r = s.getBoundingClientRect();
+  s.classList.add('floating');
+  s.style.left = e.clientX - r.width / 2 + 'px';
+  s.style.top = e.clientY - r.height / 2 + 'px';
+  s.style.bottom = 'auto';
+  stickId = e.pointerId;
+  stickMove(e);
+}
 $('stick').addEventListener('pointerdown', (e) => {
   if (modal) return;
   stickId = e.pointerId;
-  $('stick').setPointerCapture(stickId);
+  capture($('stick'), stickId);
   stickMove(e);
 });
 function stickMove(e) {
@@ -157,13 +205,17 @@ function resetStick() {
   stickId = null;
   touch.x = touch.y = 0;
   $('knob').style.transform = 'none';
+  // Tillbaka till sin vanliga plats, där den visar var man kan styra.
+  const s = $('stick');
+  s.classList.remove('floating');
+  s.style.left = s.style.top = s.style.bottom = '';
 }
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'])
   $('stick').addEventListener(ev, resetStick);
 $('interactBtn').onclick = interact;
 $('runBtn').addEventListener('pointerdown', (e) => {
   touch.run = true;
-  $('runBtn').setPointerCapture(e.pointerId);
+  capture($('runBtn'), e.pointerId);
 });
 for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture'])
   $('runBtn').addEventListener(ev, () => (touch.run = false));
