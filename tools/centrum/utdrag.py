@@ -12,15 +12,21 @@ Kartdata © OpenStreetMap-bidragsgivare, ODbL 1.0.
 """
 import json, math, os
 
+import sys
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-RAW = json.load(open(os.path.join(HERE, 'osm-centrum.json'), encoding='utf-8'))
-LAT0, LON0 = 63.09572, 21.61578  # Salutorget (Google Maps: 63.0957217, 21.6157844)
-VRID = 21.7  # grader: gatunätet i centrum ligger 68,3° från öst–väst
+# Två kartor: centrum (runt torget) och bron (Wolffskavägen från campus över Brändöbron
+# och Kyrkoesplanaden ner till centrum, i samma vridning som campuskartan).
+KARTOR = {
+    'centrum': ('osm-centrum.json', 'osm-utdrag.json', 63.09572, 21.61578, 21.7, 420),
+    'bron': ('osm-bron.json', 'osm-utdrag-bron.json', 63.1055, 21.595, 42.7, 1200),
+}
+NAMN = sys.argv[1] if len(sys.argv) > 1 else 'centrum'
+SRC_FIL, UT_FIL, LAT0, LON0, VRID, HALF = KARTOR[NAMN]
+RAW = json.load(open(os.path.join(HERE, SRC_FIL), encoding='utf-8'))
 KX = math.cos(math.radians(LAT0)) * 111320
 KY = 110540
 C, S = math.cos(math.radians(VRID)), math.sin(math.radians(VRID))
-# Bara det som behövs för kartan, och lite runt om.
-HALF = 420
 
 
 def proj(lat, lon):
@@ -29,7 +35,7 @@ def proj(lat, lon):
 
 
 KEEP = ('building', 'highway', 'landuse', 'leisure', 'amenity', 'natural', 'barrier', 'railway', 'shop',
-        'tourism', 'historic', 'man_made', 'place', 'area:highway')
+        'tourism', 'historic', 'man_made', 'place', 'area:highway', 'waterway', 'water')
 out = []
 for e in RAW['elements']:
     t = e.get('tags', {})
@@ -71,16 +77,16 @@ for e in RAW['elements']:
     if not rings:
         continue
     pts = [p for r in rings for p in r['pts']]
-    if not any(abs(x) < HALF and abs(y) < HALF for x, y in pts):
+    if not any(abs(x) < HALF and abs(y) < HALF * 1.3 for x, y in pts) and t.get('natural') != 'coastline':
         continue
     out.append({'id': e['type'][0] + str(e['id']), 'tags': t, 'rings': rings})
 
 meta = {
     'källa': '© OpenStreetMap-bidragsgivare, ODbL 1.0 (https://www.openstreetmap.org/copyright)',
     'origo': {'lat': LAT0, 'lon': LON0},
-    'enhet': 'meter, x österut och y söderut, vriden %.1f° så att gatunätet i centrum går rakt' % VRID,
+    'enhet': 'meter, x österut och y söderut, vriden %.1f°' % VRID,
     'hämtad': RAW.get('osm3s', {}).get('timestamp_osm_base', '')[:10],
 }
-json.dump({'meta': meta, 'element': out}, open(os.path.join(HERE, 'osm-utdrag.json'), 'w', encoding='utf-8'),
+json.dump({'meta': meta, 'element': out}, open(os.path.join(HERE, UT_FIL), 'w', encoding='utf-8'),
           ensure_ascii=False, separators=(',', ':'))
 print(len(out), 'element')

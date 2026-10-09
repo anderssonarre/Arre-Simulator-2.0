@@ -262,6 +262,18 @@ function facadeTexture(type, h) {
       g.arc(r() * W, r() * H, 2 + r() * 3, 0, 7);
       g.fill();
     }
+  } else if (type === 'railing') {
+    // Broräcke: betongkant med stolpar och ledstänger i målad stål.
+    g.fillStyle = '#a3a7a6';
+    g.fillRect(0, H * 0.55, W, H * 0.45);
+    g.fillStyle = '#7c8a91';
+    g.fillRect(0, 0, W, H * 0.55);
+    g.fillStyle = '#4b5a63';
+    for (let x = 4; x < W; x += 32) g.fillRect(x, 0, 5, H);
+    g.fillRect(0, 0, W, 6);
+    g.fillRect(0, H * 0.5, W, 4);
+    g.fillStyle = '#6f828c';
+    g.fillRect(0, 0, W, 2);
   } else if (type === 'stonewall') {
     g.fillStyle = '#7f7d78';
     g.fillRect(0, 0, W, H);

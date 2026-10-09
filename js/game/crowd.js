@@ -3,7 +3,7 @@
 'use strict';
 const CROWD = {
   // Hur många som är ute samtidigt per plats, vardag mitt på dagen. Kvällar och helger färre.
-  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4, centrum: 28, ollis: 14 },
+  antal: { outdoor: 16, w33: 12, tech: 9, gym: 4, centrum: 28, ollis: 14, bron: 6 },
   namn: [
     'Emma',
     'Oliver',
@@ -104,7 +104,7 @@ function makeStranger(w) {
 function crowdSpot(w, r) {
   if (w.id === 'outdoor') return randomOutdoorSpot(Math.floor(r() * 1e6));
   // Centrum är stort: folk dyker upp och går omkring i närheten av dig, inte på gräset.
-  if (w.id === 'centrum')
+  if (w.id === 'centrum' || w.id === 'bron')
     for (let i = 0; i < 60; i++) {
       const a = r() * 6.28,
         d = 6 + r() * 40,

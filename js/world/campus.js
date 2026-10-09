@@ -1,7 +1,7 @@
 // Bygger campus kring Wolffskavägen från kartdatan i js/data/campus.js (OpenStreetMap).
 'use strict';
 // Markslag i marklagret (samma nummer som i tools/campus/bygg_karta.py).
-const GROUND = { PAVING: 0, GRASS: 1, ASPHALT: 2, PAINT: 3, PARKING: 4, CURB: 5 };
+const GROUND = { PAVING: 0, GRASS: 1, ASPHALT: 2, PAINT: 3, PARKING: 4, CURB: 5, WATER: 6 };
 const MASK_RES = 4;
 // Hemmet är påhittat och ligger i västra kanten av kartan.
 const HOME_HOUSE = {
@@ -116,6 +116,13 @@ function osmWorld(id, name, C, extraHouses = []) {
   w.segments = [];
   w.houses = [...C.houses, ...extraHouses];
   w.wallHeight = 2.4;
+  // Vatten går inte att gå på (men syns inte som vägg).
+  if (w.ground.includes(GROUND.WATER)) {
+    const m = N * MASK_RES;
+    for (let y = 0; y < m; y++)
+      for (let x = 0; x < m; x++)
+        if (groundAt(w, (x + 0.5) / MASK_RES, (y + 0.5) / MASK_RES) === GROUND.WATER) w.mask[y * m + x] = 3;
+  }
   // Hus: fast mark och väggsegment.
   for (const h of w.houses) {
     fillMask(
@@ -132,7 +139,7 @@ function osmWorld(id, name, C, extraHouses = []) {
   }
   // Murar och häckar: låga väggar som syns från båda håll.
   for (const wl of C.walls) {
-    const type = wl.kind === 'hedge' ? 'hedge' : 'stonewall';
+    const type = wl.kind === 'hedge' ? 'hedge' : wl.kind === 'railing' ? 'railing' : 'stonewall';
     for (let i = 0; i + 1 < wl.pts.length; i++) {
       const [ax, ay] = wl.pts[i],
         [bx, by] = wl.pts[i + 1];

@@ -395,9 +395,11 @@ function groundMesh(w) {
         else if (cls < 2.5) col = texture2D(uAsphalt, t).rgb;
         else if (cls < 3.5) col = vec3(0.75, 0.76, 0.71);
         else if (cls < 4.5) col = texture2D(uAsphalt, t).rgb * 1.12;
-        else col = vec3(0.41, 0.41, 0.38);
+        else if (cls < 5.5) col = vec3(0.41, 0.41, 0.38);
+        else col = mix(vec3(0.13, 0.27, 0.36), vec3(0.18, 0.34, 0.42), texture2D(uAsphalt, t * 0.3).r);
         // Snö: vitt på gräs och plattor, sörjigt på asfalten.
-        float snowAmt = uSnow * (cls < 1.5 ? 1.0 : cls < 2.5 || cls > 3.5 ? 0.35 : 0.8);
+        // Isen på havet blir vit på vintern.
+        float snowAmt = uSnow * (cls > 5.5 ? 0.9 : cls < 1.5 ? 1.0 : cls < 2.5 || cls > 3.5 ? 0.35 : 0.8);
         col = mix(col, vec3(0.9, 0.92, 0.95), snowAmt);
         diffuseColor.rgb *= col;`,
       );

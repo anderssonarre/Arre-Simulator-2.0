@@ -571,6 +571,25 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.equal(stan.back, 'outdoor');
     step('bussen till Vasa centrum');
 
+    // Gå från campus över Brändöbron till centrum: kartorna byts vid kanten.
+    const walkTo = await zeb.evaluate(() => {
+      const seen = [];
+      changeWorld('outdoor', { x: 77.5, y: worlds.outdoor.size - 1.5, a: Math.PI / 2 });
+      mapLinkTick();
+      seen.push(world.id);
+      const n = worlds.bron.size;
+      changeWorld('bron', { x: 218, y: n - 1.5, a: Math.PI / 2 });
+      mapLinkTick();
+      seen.push(world.id);
+      const back = continuesIn('centrum', player.x, 1);
+      changeWorld('outdoor');
+      return { seen, back: back?.id, water: worlds.bron.ground.includes(GROUND.WATER) };
+    });
+    assert.deepEqual(walkTo.seen, ['bron', 'centrum'], 'campus → bron → centrum');
+    assert.equal(walkTo.back, 'bron', 'och tillbaka norrut');
+    assert.ok(walkTo.water, 'sundet under bron är vatten');
+    step('gå över Brändöbron till centrum');
+
     // Spela tillsammans: gester, gemensam skål, presenter och snöbollar.
     const meet = async () => {
       const spot = await zeb.evaluate(() => {

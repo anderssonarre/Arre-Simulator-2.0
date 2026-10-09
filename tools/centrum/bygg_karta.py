@@ -7,19 +7,25 @@ Kartdata © OpenStreetMap-bidragsgivare, ODbL 1.0. Utdraget är vridet 21,7° s�
 går rakt. Lägena för Torget, Stadshuset, Trefaldighetskyrkan, Saluhallen, Rewell och stationen
 är kontrollerade mot Google Maps. 1 ruta i spelet = 1,7 meter, som på campus.
 """
-import json, math, os, hashlib
+import json, math, os, hashlib, sys
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-SRC = json.load(open(os.path.join(HERE, 'osm-utdrag.json'), encoding='utf-8'))
-
+# Två kartor byggs med samma skript: python3 bygg_karta.py centrum  /  python3 bygg_karta.py bron
+#   utdrag, X0/Y0 (övre vänstra hörnet i meter), N (rutor per sida), R (markupplösning),
+#   utfil, konstantnamn och havspunkter (där vattnet fylls i, i meter).
+KARTOR = {
+    'centrum': ('osm-utdrag.json', -372.0, -390.0, 440, 4, 'centrum.js', 'CENTRUM', []),
+    # Wolffskavägen från campus, över Brändöbron och ner längs Kyrkoesplanaden till centrum.
+    'bron': ('osm-utdrag-bron.json', -430.0, 200.0, 530, 3, 'bron.js', 'BRON', [(-60, 475), (80, 475)]),
+}
+NAMN = sys.argv[1] if len(sys.argv) > 1 else 'centrum'
+UTDRAG, X0, Y0, N, R, UTFIL, KONST, HAV = KARTOR[NAMN]
+SRC = json.load(open(os.path.join(HERE, UTDRAG), encoding='utf-8'))
 M = 1.7  # meter per ruta
-X0, Y0 = -372.0, -390.0  # kartans övre vänstra hörn i meter (origo är Salutorget)
-N = 440  # rutor per sida (748 m)
-R = 4  # markupplösning: punkter per ruta (≈ 0,43 m)
 
-PAVING, GRASS, ASPHALT, PAINT, PARKING, CURB = 0, 1, 2, 3, 4, 5
+PAVING, GRASS, ASPHALT, PAINT, PARKING, CURB, WATER = 0, 1, 2, 3, 4, 5, 6
 
 # Kända hus: typ (fasad), höjd i meter och namn. Nycklar är OSM-id.
 HOUSES = {
@@ -134,6 +140,31 @@ for e in els:
         for r in rings(e, 'outer'):
             if len(r) > 2:
                 g.polygon([px(p) for p in r], fill=GRASS)
+# 1b. Vatten: sjöar och dammar, och havet innanför kustlinjen (fylls från havspunkterna).
+for e in els:
+    t = e['tags']
+    if t.get('natural') == 'water' or t.get('waterway') == 'riverbank' or t.get('landuse') == 'basin':
+        for r in rings(e, 'outer'):
+            if len(r) > 2:
+                g.polygon([px(p) for p in r], fill=WATER)
+if HAV:
+    coast = Image.new('L', (N * R, N * R), 0)
+    cg = ImageDraw.Draw(coast)
+    for e in els:
+        if e['tags'].get('natural') == 'coastline':
+            pts = [px(p) for p in rings(e)[0]]
+            if len(pts) > 1:
+                cg.line(pts, fill=255, width=3)
+    for sx, sy in HAV:
+        X, Y = px((sx, sy))
+        if 0 <= X < N * R and 0 <= Y < N * R and coast.getpixel((int(X), int(Y))) == 0:
+            ImageDraw.floodfill(coast, (int(X), int(Y)), 128, border=255)
+    cpix, gpix = coast.load(), ground.load()
+    for y in range(N * R):
+        for x in range(N * R):
+            if cpix[x, y] == 128 or (cpix[x, y] == 255 and gpix[x, y] != GRASS):
+                gpix[x, y] = WATER
+
 # 2. Parkeringar
 for e in els:
     if e['tags'].get('amenity') == 'parking':
@@ -307,6 +338,21 @@ for e in els:
         pts = [[round(a, 3) for a in tile(p)] for p in rings(e)[0]]
         h = {'wall': 0.6, 'retaining_wall': 0.5, 'hedge': 0.7, 'fence': 0.8}[t['barrier']] / M * 1.7
         walls.append({'kind': t['barrier'], 'h': round(h, 2), 'pts': pts})
+# Räcken längs broarna.
+for e in els:
+    t = e['tags']
+    if t.get('bridge') == 'yes' and t.get('highway') and road_width(t):
+        pts = rings(e)[0]
+        off = road_width(t) / 2 + 0.25
+        for side in (-1, 1):
+            rail = []
+            for i, (x, y) in enumerate(pts):
+                a = pts[max(0, i - 1)]
+                b = pts[min(len(pts) - 1, i + 1)]
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                L = math.hypot(dx, dy) or 1
+                rail.append([round(a_, 3) for a_ in tile((x - dy / L * off * side, y + dx / L * off * side))])
+            walls.append({'kind': 'railing', 'h': round(1.0 / M, 2), 'pts': rail})
 
 # 8. Träd (inte på asfalt eller i hus)
 trees = []
@@ -376,10 +422,10 @@ data = {
     'size': N, 'meterPerTile': M, 'groundRes': R, 'origin': [X0, Y0],
     'ground': packed, 'houses': houses, 'walls': walls, 'trees': trees, 'lamps': lamps, 'pois': pois,
 }
-js = ('// KARTA ÖVER VASA CENTRUM · genererad av tools/centrum/bygg_karta.py, ändra inte för hand.\n'
+js = ('// KARTA (' + NAMN + ') · genererad av tools/centrum/bygg_karta.py, ändra inte för hand.\n'
       '// Kartdata © OpenStreetMap-bidragsgivare, ODbL 1.0 (https://www.openstreetmap.org/copyright).\n'
-      "'use strict';\nconst CENTRUM = " + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
-open(os.path.join(ROOT, 'js', 'data', 'centrum.js'), 'w', encoding='utf-8').write(js)
-ground.point(lambda v: [210, 150, 90, 255, 120, 60][v] if v < 6 else 0).save(os.path.join(HERE, 'mark.png'))
+      "'use strict';\nconst " + KONST + " = " + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
+open(os.path.join(ROOT, 'js', 'data', UTFIL), 'w', encoding='utf-8').write(js)
+ground.point(lambda v: [210, 150, 90, 255, 120, 60, 30][v] if v < 7 else 0).save(os.path.join(HERE, 'mark-' + NAMN + '.png'))
 print('platser', len(pois), 'hus', len(houses), 'murar', len(walls), 'träd', len(trees), 'lampor', len(lamps), 'övergångar', crossings,
       'kb', round(len(js) / 1024))

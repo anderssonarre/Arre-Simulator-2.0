@@ -146,6 +146,19 @@ function render() {
             g = 172;
             b = 166;
             painted = true;
+          } else if (v === 6) {
+            // Havet: små vågor som rör sig, eller is och snö på vintern.
+            const wave = Math.sin(wx * 2.1 + wy * 0.7 + frame * 0.03) * Math.sin(wy * 1.7 - frame * 0.02);
+            if (snowNow > 0.5) {
+              r = 214 + wave * 6;
+              g = 224 + wave * 6;
+              b = 232 + wave * 6;
+            } else {
+              r = 46 + wave * 10;
+              g = 88 + wave * 12;
+              b = 112 + wave * 16;
+            }
+            painted = true;
           }
           if (v === 4) parking = true;
         } else if (workYard) {

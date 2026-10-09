@@ -19,6 +19,7 @@ const PLACE_TEXT = {
   gym: 'på gymmet',
   outdoor: 'ute på campus',
   centrum: 'i Vasa centrum',
+  bron: 'på Brändöbron',
 };
 const WALK_SPEED_NPC = 1.35;
 // id -> { p, obj, world (null = hemma), path, plan, goal }
@@ -326,6 +327,22 @@ function placePerson(pp, where, x, y) {
   pp.obj.targetX = null;
   worlds[where].objects.push(pp.obj);
 }
+// Vilken värld man ska gå till härnäst för att komma till målet (genom dörrar och busshållplatser).
+function stepToward(from, to) {
+  const seen = new Set([from]),
+    q = [[from, null]];
+  while (q.length) {
+    const [id, first] = q.shift();
+    for (const o of worlds[id].objects) {
+      if (o.type !== 'portal' || !worlds[o.target] || seen.has(o.target)) continue;
+      const step = first || o.target;
+      if (o.target === to) return step;
+      seen.add(o.target);
+      q.push([o.target, step]);
+    }
+  }
+  return null;
+}
 // Nästa delmål på vägen mot målet: en dörr, en utgång från campus eller själva platsen.
 function nextLeg(pp) {
   const goal = pp.goal;
@@ -337,11 +354,7 @@ function nextLeg(pp) {
     return nextLeg(pp);
   }
   if (pp.world === goal.where) return { x: goal.x, y: goal.y, arrive: true };
-  if (pp.world !== 'outdoor') {
-    const d = doorTo(pp.world, 'outdoor');
-    return { x: d.x, y: d.y, through: { to: 'outdoor', from: pp.world } };
-  }
-  if (goal.where === 'hemma') {
+  if (goal.where === 'hemma' && pp.world === 'outdoor') {
     const [x, y] = campusExits().reduce((a, b) =>
       Math.hypot(a[0] - pp.obj.x, a[1] - pp.obj.y) < Math.hypot(b[0] - pp.obj.x, b[1] - pp.obj.y)
         ? a
@@ -349,8 +362,11 @@ function nextLeg(pp) {
     );
     return { x, y, leave: true };
   }
-  const d = doorTo('outdoor', goal.where);
-  return { x: d.x, y: d.y, through: { to: goal.where, from: 'outdoor' } };
+  const step = stepToward(pp.world, goal.where === 'hemma' ? 'outdoor' : goal.where),
+    d = step && doorTo(pp.world, step);
+  // Ingen väg dit: personen går hem i stället.
+  if (!d) return { x: pp.obj.x, y: pp.obj.y, leave: true };
+  return { x: d.x, y: d.y, through: { to: step, from: pp.world } };
 }
 function startLeg(pp) {
   pp.leg = nextLeg(pp);
@@ -370,7 +386,7 @@ function finishLeg(pp) {
   if (leg.leave) placePerson(pp, 'hemma');
   else if (leg.through) {
     // Kliv in genom dörren och dyk upp innanför dörren i nästa värld.
-    const d = doorTo(leg.through.to, leg.through.from);
+    const d = doorTo(leg.through.to, leg.through.from) || worlds[leg.through.to].spawn;
     placePerson(pp, leg.through.to, d.x, d.y);
   }
   if (!leg.arrive) startLeg(pp);

@@ -57,6 +57,8 @@ function build() {
   placeCampusBusStop(worlds.outdoor);
   buildOllis(); // Oliver's Inn i centrum (js/world/ollis.js)
   linkOllis();
+  buildBron(); // Brändöbron mellan campus och centrum, och kartornas kanter (js/world/kartor.js)
+  openMapEdges();
   w = makeWorld('w33', 'W33 · entréplanet', 48);
   w.grid.forEach((row) => row.fill(1));
   rect(w, 3, 16, 40, 14, 0);
