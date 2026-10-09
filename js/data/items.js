@@ -10,6 +10,7 @@
 //   text            vad som står när man använder den
 //   mat             true om den räknas som mat (går inte att äta när man mår illa)
 //   bjuda           vad personen säger när man bjuder på den
+//   verktyg         true om den inte tar slut när man använder den (som paraplyet)
 const VAROR = {
   vatten: {
     namn: 'Vattenflaska',
@@ -60,6 +61,14 @@ const VAROR = {
     text: 'Salt, svart och omöjligt att sluta äta.',
     bjuda: 'Salmiak! Du förstår mig.',
   },
+  paraply: {
+    namn: 'Paraply',
+    ikon: '☂️',
+    pris: 8,
+    verktyg: true,
+    text: 'Paraplyet ligger i väskan och fälls upp av sig självt när det regnar.',
+    bjuda: 'Ett paraply? Det här är Vasa, det kommer jag att behöva.',
+  },
   öl: {
     namn: 'Öl',
     ikon: '🍺',
@@ -78,7 +87,7 @@ const BUTIKER = {
     värld: 'w33',
     x: 20.5,
     y: 18.5,
-    varor: ['vatten', 'smörgås', 'pirog', 'choklad', 'salmiak'],
+    varor: ['vatten', 'smörgås', 'pirog', 'choklad', 'salmiak', 'paraply'],
     öppet: { från: 8, till: 18 },
   },
   bar: {
@@ -127,5 +136,12 @@ const TILLSTÅND = {
       { från: 70, namn: 'Fokuserad', ikon: '🎯' },
     ],
     efterSömn: 65, // koncentrationen efter en hel natts sömn
+  },
+  // Blöt blir man ute i regnet. Man torkar inne. Siffrorna finns i VÄDERREGLER i js/data/weather.js.
+  blöt: {
+    gränser: [
+      { från: 30, namn: 'Blöt', ikon: '💦' },
+      { från: 70, namn: 'Genomblöt', ikon: '💦' },
+    ],
   },
 };

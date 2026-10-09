@@ -4,7 +4,7 @@
 'use strict';
 function ensureCond() {
   const c = (state.cond ??= {});
-  for (const k of ['berusning', 'illamående']) c[k] = clamp(Number(c[k]) || 0, 0, 100);
+  for (const k of ['berusning', 'illamående', 'blöt']) c[k] = clamp(Number(c[k]) || 0, 0, 100);
   c.koncentration = clamp(Number(c.koncentration ?? TILLSTÅND.koncentration.normal) || 0, 0, 100);
   c.peak = Number(c.peak) || 0;
   return c;
@@ -136,6 +136,7 @@ function playerStateText() {
     i = condLevel('illamående');
   if (b) parts.push(b.namn.toLowerCase());
   if (i) parts.push('mår illa');
+  if (condLevel('blöt')) parts.push(cond('blöt') >= 70 ? 'genomblöt av regnet' : 'blöt av regnet');
   return parts.join(', ');
 }
 
@@ -143,7 +144,7 @@ function playerStateText() {
 function updateConditionsHUD() {
   const el = $('conditions');
   if (!el || !state) return;
-  const chips = ['berusning', 'illamående', 'koncentration']
+  const chips = ['berusning', 'illamående', 'koncentration', 'blöt']
     .map((k) => condLevel(k))
     .filter(Boolean)
     .map((g) => '<span class="cond">' + g.ikon + ' ' + esc(g.namn) + '</span>');

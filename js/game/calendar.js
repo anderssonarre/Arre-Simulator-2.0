@@ -154,9 +154,9 @@ function showWeek() {
       ' · ' +
       dateText() +
       (isExamWeek() ? ' · <strong>tentavecka</strong>' : '') +
-      ' · väder idag: ' +
-      weatherText() +
-      '. Föreläsningar räknas som studiepass och ger alla anteckningar. Kurskamraterna sitter också där.</p>' +
+      '. Föreläsningar räknas som studiepass och ger alla anteckningar. Kurskamraterna sitter också där.</p><div class="info">Väder idag: ' +
+      forecastText() +
+      '</div>' +
       rows.join(''),
     [{ label: 'Tillbaka', primary: true, run: menu }],
     'Kalender',

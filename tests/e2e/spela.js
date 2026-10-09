@@ -517,6 +517,38 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(coffee.sleepAfter < 1, 'sent kaffe ger sämre sömn');
     step('kaffeautomater i alla hus');
 
+    // Väder: samma för alla online, regn gör en blöt (mindre med paraply) och folk går in.
+    const sky = async (page) => page.evaluate(() => JSON.stringify(weatherAt(state.day, 14)));
+    assert.equal(await sky(arvid), await sky(zeb), 'alla online har samma väder');
+    const wet = await arvid.evaluate(() => {
+      forcedWeather = { typ: 'regn', temp: 8 };
+      changeWorld('outdoor');
+      state.cond.blöt = 0;
+      delete state.bag.paraply;
+      const hourIn = () => {
+        weatherClock = state.day * 1440 + state.hour * 60 - 60;
+        weatherTick(0);
+        return Math.round(state.cond.blöt);
+      };
+      const without = hourIn();
+      state.cond.blöt = 0;
+      state.bag.paraply = 1;
+      const withUmbrella = hourIn();
+      const hud = $('termLabel').textContent;
+      const plan = planFor('otto', state.day, 13);
+      forcedWeather = { typ: 'sol', temp: 20 };
+      const sunny = weatherHud();
+      forcedWeather = null;
+      delete state.bag.paraply;
+      state.cond.blöt = 0;
+      return { without, withUmbrella, plan, sunny, hud, chip: condLevel('blöt') };
+    });
+    assert.ok(wet.without >= 30, 'en timme i regnet gör en blöt (' + wet.without + ')');
+    assert.ok(wet.withUmbrella < wet.without / 3, 'paraplyet skyddar');
+    assert.ok(wet.plan.where !== 'outdoor' || wet.plan.activity === 'fest', 'folk går in när det regnar');
+    assert.equal(wet.sunny, '☀️ 20°');
+    step('väder, regn och paraply');
+
     // Mobil: pekskärm och liten skärm.
     const phone = await open('Mobil', {
       viewport: { width: 390, height: 844 },

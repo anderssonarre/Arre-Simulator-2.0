@@ -54,6 +54,7 @@ function update(dt) {
   // Dagens liv (js/game/life.js) hämtas även när en dialogruta är öppen.
   if (active) lifeTick();
   if (active) conditionsTick();
+  if (active) weatherTick(dt);
   if (active) jobsTick(); // svar på jobbansökningar (jobboard.js)
   buildTick(); // ny version efter en deploy (online.js)
   if (!active || modal || document.hidden) return;

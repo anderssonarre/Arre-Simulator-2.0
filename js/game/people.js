@@ -30,7 +30,11 @@ function dayMatches(spec, day) {
     spec === wd || (spec === 'vardag' && !isWeekend(day)) || (spec === 'helg' && isWeekend(day))
   );
 }
+// Planen efter vädret (weather.js): i regn går folk in.
 function planFor(id, day, hour) {
+  return weatherPlan(id, day, hour, basePlan(id, day, hour));
+}
+function basePlan(id, day, hour) {
   const S = PEOPLE_SCHEDULE;
   // Gäst på din hemmafest: borta från campus så länge.
   if (homeParty?.guests.includes(id)) return { where: 'hemma' };

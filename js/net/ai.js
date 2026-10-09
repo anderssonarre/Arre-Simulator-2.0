@@ -46,6 +46,7 @@ function aiContext(p) {
     thought: lifeThought(p.id),
     traits: p.id ? traitAiText(p.id) : '',
     playerState: playerStateText(),
+    weather: weatherText(),
   };
 }
 // Hämtar ett AI-svar till en replik som redan står som "…" i historiken.

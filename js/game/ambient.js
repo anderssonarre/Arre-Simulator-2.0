@@ -86,6 +86,32 @@ function beatNote(kind) {
     o.stop(t + 0.25);
   }
 }
+// Åskmuller: brus genom ett lågpassfilter som klingar av. Starkare när blixten är nära.
+function thunder(power = 1) {
+  if (!AMB.ready || muted || document.hidden) return;
+  const a = audio,
+    t = a.currentTime,
+    s = a.createBufferSource(),
+    f = a.createBiquadFilter(),
+    g = a.createGain(),
+    v = clamp(power, 0.15, 1) * 0.5,
+    len = 2.5 + Math.random() * 1.5;
+  s.buffer = AMB.noiseBuf;
+  s.loop = true;
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(320 * clamp(power, 0.3, 1), t);
+  f.frequency.exponentialRampToValueAtTime(70, t + len);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(v, t + 0.08);
+  g.gain.setValueAtTime(v * 0.6, t + 0.4);
+  g.gain.linearRampToValueAtTime(v * 0.8, t + 0.7);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  s.connect(f);
+  f.connect(g);
+  g.connect(AMB.master);
+  s.start(t, Math.random());
+  s.stop(t + len + 0.1);
+}
 function birdChirp() {
   const a = audio,
     t = a.currentTime,
@@ -118,8 +144,10 @@ function ambientTick(dt) {
       (party && world.id === 'w33' && player.x > 28 && player.y < 18) ||
       (homeParty && world.id === 'home') ||
       (partyNow() && world.id === 'w33');
-  setLevel(AMB.wind, out ? (season === 'vinter' ? 0.05 : 0.025) + wx.clouds * 0.02 : 0.004);
-  setLevel(AMB.rain, out && wx.kind === 'regn' ? 0.05 : !out && wx.kind === 'regn' ? 0.008 : 0);
+  const storm = wx.åska ? 0.05 : 0,
+    rain = wx.kind === 'regn' ? wx.ned : 0;
+  setLevel(AMB.wind, out ? (season === 'vinter' ? 0.05 : 0.025) + wx.clouds * 0.02 + storm : 0.004);
+  setLevel(AMB.rain, out ? rain * (hasUmbrella() ? 0.09 : 0.07) : rain * 0.012);
   setLevel(AMB.murmur, !out ? Math.min(0.05, people * 0.006) : Math.min(0.02, people * 0.002));
   setLevel(AMB.music, partying ? 0.12 : 0);
   // Fåglar på dagen ute, inte på vintern.

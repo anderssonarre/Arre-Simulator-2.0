@@ -37,15 +37,18 @@ function render() {
     cam = { focal, horizon, eye, dirX, dirY, planeX, planeY, plane },
     lit = !!w.lightmap,
     mirrorPlane = w.mirror ? w.mirror.plane : null;
-  const light = 0.32 + 0.68 * daylight(day);
+  const light = 0.32 + 0.68 * daylight(day),
+    wxNow = w.outdoor ? weather() : null;
   // Färgen på diset långt bort, samma som himlen vid horisonten.
   const fogRGB = light > 0.8 ? [199, 220, 218] : light > 0.4 ? [212, 167, 130] : [54, 70, 88],
     fogCss = 'rgba(' + fogRGB.join(',') + ',';
   if (!w.ceiling) {
     const sky = ctx.createLinearGradient(0, 0, 0, horizon);
     if (w.outdoor) {
-      sky.addColorStop(0, light > 0.8 ? '#558cae' : light > 0.4 ? '#4e5371' : '#13273d');
-      sky.addColorStop(1, light > 0.8 ? '#c7dcda' : light > 0.4 ? '#d4a782' : '#364658');
+      // Mulet: himlen blir grå.
+      const grey = clamp(wxNow.clouds * 1.2 - 0.2, 0, 1);
+      sky.addColorStop(0, mixHex(light > 0.8 ? '#558cae' : light > 0.4 ? '#4e5371' : '#13273d', light > 0.4 ? '#7b8389' : '#1c2128', grey));
+      sky.addColorStop(1, mixHex(light > 0.8 ? '#c7dcda' : light > 0.4 ? '#d4a782' : '#364658', light > 0.4 ? '#adb4b8' : '#2a3038', grey));
     } else {
       sky.addColorStop(0, '#202e3b');
       sky.addColorStop(1, '#63717a');
@@ -55,12 +58,14 @@ function render() {
   }
   if (w.outdoor) {
     const sunX = ((((angle * 0.25 + 0.65) % 1) + 1) % 1) * W;
-    ctx.fillStyle = light > 0.8 ? '#f8ecd0' : '#e3c6a7';
-    ctx.beginPath();
-    ctx.arc(sunX, horizon * 0.32, W * 0.028, 0, 7);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff35';
-    for (let i = 0; i < 4; i++) {
+    if (wxNow.clouds < 0.6) {
+      ctx.fillStyle = light > 0.8 ? '#f8ecd0' : '#e3c6a7';
+      ctx.beginPath();
+      ctx.arc(sunX, horizon * 0.32, W * 0.028, 0, 7);
+      ctx.fill();
+    }
+    ctx.fillStyle = wxNow.ned > 0.2 ? '#5f676d55' : '#ffffff35';
+    for (let i = 0; i < 2 + Math.round(wxNow.clouds * 10); i++) {
       const x = ((((i * 0.31 + frame * 0.00005 - angle * 0.12) % 1) + 1) % 1) * W;
       ctx.beginPath();
       ctx.ellipse(x, horizon * (0.3 + (i % 2) * 0.2), W * 0.09, W * 0.014, 0, 0, 7);
@@ -524,11 +529,62 @@ function render() {
     H / 2,
     Math.max(W, H) * 0.65,
   );
+  if (w.outdoor) weatherOverlay(wxNow, light);
   vignette.addColorStop(0, '#0000');
   vignette.addColorStop(1, lit ? '#08111e55' : '#08111e77');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, W, H);
   drawMap(w);
+}
+// Blandar två färger (#rrggbb), t till 0–1.
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16),
+    pb = parseInt(b.slice(1), 16),
+    ch = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return 'rgb(' + ch(16) + ',' + ch(8) + ',' + ch(0) + ')';
+}
+// Regn, snö, dimma och blixtar ovanpå bilden.
+const hash01 = (n) => {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+};
+function weatherOverlay(wx, light) {
+  if (wx.dimma > 0.05) {
+    ctx.fillStyle = 'rgba(' + (light > 0.5 ? '205,210,212,' : '40,46,54,') + wx.dimma * 0.45 + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+  if (wx.ned > 0.05) {
+    const t = performance.now() / 1000,
+      n = Math.round((wx.snö ? 180 : 260) * wx.ned),
+      wind = wx.åska ? 0.25 : 0.08;
+    if (wx.snö) {
+      ctx.fillStyle = '#ffffffcc';
+      for (let i = 0; i < n; i++) {
+        const sp = 0.06 + ((i * 37) % 10) / 120,
+          x = ((((hash01(i) + t * wind * 0.4 + Math.sin(t + i) * 0.01) % 1) + 1) % 1) * W,
+          y = ((hash01(i + 0.5) + t * sp) % 1) * H,
+          r = 1 + (i % 3) * 0.7;
+        ctx.fillRect(x, y, r, r);
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(200,212,224,' + (0.35 + wx.ned * 0.25) + ')';
+      ctx.lineWidth = Math.max(1, W / 700);
+      ctx.beginPath();
+      const len = H * (0.03 + wx.ned * 0.04);
+      for (let i = 0; i < n; i++) {
+        const x = hash01(i) * W,
+          y = ((hash01(i + 0.5) + t * (1.4 + (i % 5) * 0.12)) % 1) * H;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - len * wind, y + len);
+      }
+      ctx.stroke();
+    }
+  }
+  const f = weatherFlash();
+  if (f > 0) {
+    ctx.fillStyle = 'rgba(235,240,255,' + f * 0.45 + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 // Namnskylt ovanför en figur.
 function drawTag(text, x, py, color) {

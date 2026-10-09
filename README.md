@@ -120,6 +120,9 @@ De här filerna är rena innehållsfiler som vem som helst kan redigera:
   slumpat två av, med egna rutiner, humör, repliker och hur fort man blir vän.
 - `js/data/jobs.js`: extrajobben på jobbtavlan, med lön, energi, arbetstider, krav,
   intervjufrågor och vad man gör under passet.
+- `js/data/weather.js`: vädret. Vädertyper (sol, halvklart, mulet, dimma, duggregn, regn och
+  åska, som blir snö när det är kallt), hur vanliga de är varje månad, temperaturen i Vasa och
+  hur fort man blir blöt. Dygnet har fyra perioder som skiftar mjukt, och alla online har samma väder.
 - `js/data/progress.js`: färdigheter, vilken färdighet varje kurs hör till, erfarenhet,
   hyra och studiestöd.
 

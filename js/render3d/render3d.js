@@ -725,10 +725,13 @@ function lightRig(w) {
   const u = R3.sky.material.uniforms;
   u.sunPosition.value.copy(dir);
   R3.sky.visible = outdoor;
-  u.turbidity.value = 3 + wx.clouds * 12;
-  u.rayleigh.value = 2.2 - wx.clouds * 1.4;
+  // Klar himmel är djupt blå, mulen himmel disig.
+  u.turbidity.value = 2 + wx.clouds * 12;
+  u.rayleigh.value = 3.2 - wx.clouds * 2.4;
+  cloudDome(outdoor, wx, daylight(h));
   seasonLook(w, wx);
-  R3.renderer.toneMappingExposure = outdoor ? 0.9 - day * 0.4 : 0.95;
+  // Soliga dagar lite ljusare, gråväder lite dovare.
+  R3.renderer.toneMappingExposure = outdoor ? (0.9 - day * 0.4) * (1.06 - wx.clouds * 0.12) : 0.95;
   nightUniform.value = clamp(1 - day * 2.5, 0, 1);
   // Solen följer spelaren så att skuggorna alltid är skarpa nära dig.
   const sun = R3.sun,
@@ -754,16 +757,23 @@ function lightRig(w) {
     sun.color.setHSL(0.09, 0.6 - day * 0.35, 0.75 + day * 0.15);
   }
   sun.castShadow = highDetail && !moon;
-  R3.hemi.intensity = outdoor ? 0.45 + day * 1.1 : 0.7 + day * 0.4;
+  // Mulet: mjukt ljus från hela himlen i stället för sol. Blixtar lyser upp allt.
+  R3.hemi.intensity =
+    (outdoor ? 0.45 + day * (1.1 + wx.clouds * 0.25) : 0.7 + day * 0.4) + weatherFlash() * (outdoor ? 3 : 0.8);
   R3.hemi.color.setHSL(0.6, 0.45, 0.3 + day * 0.45);
   R3.hemi.groundColor.setHSL(0.08, 0.25, 0.12 + day * 0.15);
   // Dimman mot horisonten har himlens färg.
-  const fog =
-    day > 0.6 ? (wx.clouds > 0.5 ? 0xa9b2b6 : 0xc5d6d8) : day > 0.15 ? 0xd2a07c : 0x1b2433;
+  const fog = new THREE.Color(
+    day > 0.6 ? 0xc5d6d8 : day > 0.15 ? 0xd2a07c : 0x1b2433,
+  ).lerp(new THREE.Color(day > 0.4 ? 0xa3abb0 : day > 0.15 ? 0x6d6c70 : 0x161b22), clamp(wx.clouds * 1.2 - 0.2, 0, 1));
+  if (wx.dimma > 0) fog.lerp(new THREE.Color(day > 0.3 ? 0xc9cdcf : 0x2a2f36), wx.dimma);
   if (outdoor) {
     R3.scene.fog ??= new THREE.Fog(fog, 70, 330);
-    R3.scene.fog.color.setHex(fog);
-    R3.scene.fog.far = wx.kind === 'regn' || wx.kind === 'snö' ? 160 : 330;
+    R3.scene.fog.color.copy(fog);
+    // Regn och snö skymmer sikten, dimman ännu mer.
+    const far = 330 - wx.ned * 190 - wx.dimma * 280;
+    R3.scene.fog.far = Math.max(40, far);
+    R3.scene.fog.near = wx.dimma > 0.2 ? 4 : 70 - wx.ned * 40;
     R3.scene.background = new THREE.Color(fog);
   } else {
     R3.scene.fog = null;
@@ -849,26 +859,131 @@ function seasonLook(w, wx) {
     });
     leaves.mesh.instanceColor.needsUpdate = true;
   }
-  precipitation(w.outdoor ? wx.kind : null);
+  precipitation(w.outdoor ? wx : null);
 }
-function precipitation(kind) {
+// Molnen: en kupol över campus med ett molntäcke som driver med vinden. När det är mulet
+// täcker ett grått lager hela himlen.
+function cloudTexture() {
+  const r = seeded(4242);
+  return canvasOf2(1024, 256, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    const blob = (x, y, rad, color, alpha) => {
+      for (const dx of [-w, 0, w]) {
+        const gr = g.createRadialGradient(x + dx, y, rad * 0.1, x + dx, y, rad);
+        gr.addColorStop(0, 'rgba(' + color + ',' + alpha + ')');
+        gr.addColorStop(0.6, 'rgba(' + color + ',' + alpha * 0.7 + ')');
+        gr.addColorStop(1, 'rgba(' + color + ',0)');
+        g.fillStyle = gr;
+        g.fillRect(x + dx - rad, y - rad, rad * 2, rad * 2);
+      }
+    };
+    // Bymoln: klungor av runda puffar med grå undersida. Mindre högt upp, större mot horisonten.
+    for (let c = 0; c < 46; c++) {
+      const y = h * (0.15 + r() * 0.8),
+        x = r() * w,
+        size = 10 + (y / h) * 26 + r() * 10,
+        puffs = 5 + Math.floor(r() * 7);
+      for (let i = 0; i < puffs; i++) {
+        const px = x + (r() - 0.5) * size * 3.2,
+          py = y + (r() - 0.5) * size * 0.6;
+        blob(px, py + size * 0.35, size * (0.8 + r() * 0.5), '150,160,172', 0.45);
+      }
+      for (let i = 0; i < puffs; i++) {
+        const px = x + (r() - 0.5) * size * 3,
+          py = y - r() * size * 0.5;
+        blob(px, py, size * (0.7 + r() * 0.5), '255,255,255', 0.85);
+      }
+    }
+  });
+}
+function cloudDome(outdoor, wx, day) {
+  if (!R3.clouds) {
+    const geo = new THREE.SphereGeometry(300, 48, 12, 0, Math.PI * 2, 0, Math.PI * 0.48),
+      t = new THREE.CanvasTexture(cloudTexture());
+    t.wrapS = THREE.RepeatWrapping;
+    t.repeat.set(2, 1);
+    const puff = new THREE.Mesh(
+        geo,
+        new THREE.MeshBasicMaterial({ map: t, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false }),
+      ),
+      cover = new THREE.Mesh(
+        geo,
+        new THREE.MeshBasicMaterial({ color: 0x9aa2a8, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false }),
+      );
+    // Klarblå himmel på fina dagar: djupblått uppe, ljusare mot horisonten.
+    const blueGeo = geo.clone(),
+      pos = blueGeo.attributes.position,
+      col = new Float32Array(pos.count * 3),
+      top = new THREE.Color(0x2c68b0),
+      low = new THREE.Color(0xa8cbe4),
+      C = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) {
+      C.copy(low).lerp(top, Math.pow(clamp(pos.getY(i) / 300, 0, 1), 0.6));
+      col.set([C.r, C.g, C.b], i * 3);
+    }
+    blueGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const blue = new THREE.Mesh(
+      blueGeo,
+      new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, side: THREE.BackSide, depthWrite: false, fog: false }),
+    );
+    blue.renderOrder = -3;
+    cover.renderOrder = -2;
+    puff.renderOrder = -1;
+    R3.clouds = { puff, cover, t, blue };
+    R3.scene.add(blue, cover, puff);
+  }
+  const { puff, cover, t, blue } = R3.clouds;
+  puff.visible = cover.visible = blue.visible = outdoor;
+  if (!outdoor) return;
+  puff.position.set(player.x, -20, player.y);
+  cover.position.copy(puff.position);
+  blue.position.copy(puff.position);
+  blue.material.opacity = clamp(1 - wx.clouds * 1.4, 0, 1) * clamp((day - 0.3) / 0.5, 0, 1) * 0.75;
+  blue.visible = blue.material.opacity > 0.01;
+  t.offset.x = (performance.now() / 1000) * (0.0006 + wx.ned * 0.002);
+  // Molnens färg: vita på dagen, grå när det regnar, rosa i skymningen och mörka på natten.
+  const C = new THREE.Color(day > 0.6 ? 0xffffff : day > 0.15 ? 0xe8c0a8 : 0x2a3140).lerp(
+    new THREE.Color(day > 0.4 ? 0x7d858b : 0x1a1f27),
+    clamp(wx.ned + (wx.clouds - 0.6), 0, 0.85),
+  );
+  puff.material.color.copy(C);
+  puff.material.opacity = clamp(wx.clouds * 1.6, 0, 1);
+  cover.material.color.copy(C).multiplyScalar(0.92);
+  cover.material.opacity = clamp((wx.clouds - 0.45) * 2, 0, 0.97);
+}
+// Regn som streck och snö som flingor runt spelaren. Mängden följer hur mycket det regnar.
+function precipitation(wx) {
+  const RAIN = 4000,
+    SNOW = 3000,
+    BOX = 40,
+    TOP = 14;
   if (!R3.rain) {
-    const n = 2500,
-      pos = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 40;
-      pos[i * 3 + 1] = Math.random() * 14;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
+    const pos = new Float32Array(RAIN * 6);
+    for (let i = 0; i < RAIN; i++) {
+      const x = (Math.random() - 0.5) * BOX,
+        y = Math.random() * TOP,
+        z = (Math.random() - 0.5) * BOX;
+      pos.set([x, y, z, x, y + 0.4, z], i * 6);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    R3.rain = new THREE.Points(
+    R3.rain = new THREE.LineSegments(
       geo,
+      new THREE.LineBasicMaterial({ color: 0xb4c2cf, transparent: true, opacity: 0.45, depthWrite: false }),
+    );
+    R3.rain.frustumCulled = false;
+    const sp = new Float32Array(SNOW * 3);
+    for (let i = 0; i < SNOW; i++)
+      sp.set([(Math.random() - 0.5) * BOX, Math.random() * TOP, (Math.random() - 0.5) * BOX], i * 3);
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+    R3.snow = new THREE.Points(
+      sg,
       new THREE.PointsMaterial({
-        color: 0xcfd8e0,
-        size: 0.06,
+        color: 0xffffff,
+        size: 0.09,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.9,
         depthWrite: false,
         map: new THREE.CanvasTexture(
           canvasOf2(32, 32, (g) => {
@@ -881,25 +996,53 @@ function precipitation(kind) {
         ),
       }),
     );
-    R3.rain.frustumCulled = false;
-    R3.scene.add(R3.rain);
+    R3.snow.frustumCulled = false;
+    R3.scene.add(R3.rain, R3.snow);
   }
-  const p = R3.rain;
-  p.visible = !!(kind === 'regn' || kind === 'snö');
-  if (!p.visible) return;
-  const snow = kind === 'snö',
-    a = p.geometry.attributes.position,
-    fall = snow ? 0.03 : 0.35;
-  p.material.size = snow ? 0.07 : 0.03;
-  p.material.color.setHex(snow ? 0xffffff : 0xaebccb);
-  for (let i = 0; i < a.count; i++) {
-    let y = a.getY(i) - fall;
-    if (y < 0) y += 14;
-    a.setY(i, y);
-    if (snow) a.setX(i, a.getX(i) + Math.sin(frame * 0.02 + i) * 0.01);
+  const wet = wx && wx.ned > 0.05,
+    snow = wet && wx.snö;
+  R3.rain.visible = !!(wet && !snow);
+  R3.snow.visible = !!snow;
+  if (!wet) return;
+  const storm = wx.åska ? 1 : 0;
+  if (!snow) {
+    // Mer regn: fler och längre streck som faller snabbare och snett i vinden.
+    const n = Math.round(RAIN * clamp(wx.ned, 0.15, 1)),
+      a = R3.rain.geometry.attributes.position,
+      fall = 0.3 + wx.ned * 0.25,
+      len = 0.25 + wx.ned * 0.35,
+      wind = 0.04 + storm * 0.12;
+    R3.rain.geometry.setDrawRange(0, n * 2);
+    R3.rain.material.opacity = 0.3 + wx.ned * 0.3;
+    for (let i = 0; i < n; i++) {
+      let y = a.getY(i * 2) - fall,
+        x = a.getX(i * 2) + wind * 0.3;
+      if (y < 0) y += TOP;
+      if (x > BOX / 2) x -= BOX;
+      a.setXYZ(i * 2, x, y, a.getZ(i * 2));
+      a.setXYZ(i * 2 + 1, x - wind, y + len, a.getZ(i * 2));
+    }
+    a.needsUpdate = true;
+    R3.rain.position.set(player.x, 0, player.y);
+  } else {
+    // Snöstorm: tätt och i sidled.
+    const n = Math.round(SNOW * clamp(wx.ned, 0.2, 1)),
+      a = R3.snow.geometry.attributes.position,
+      fall = 0.02 + wx.ned * 0.02 + storm * 0.02,
+      side = storm * 0.08;
+    R3.snow.geometry.setDrawRange(0, n);
+    R3.snow.material.size = 0.12 + wx.ned * 0.08;
+    for (let i = 0; i < n; i++) {
+      let y = a.getY(i) - fall,
+        x = a.getX(i) + Math.sin(frame * 0.02 + i) * 0.01 + side;
+      if (y < 0) y += TOP;
+      if (x > BOX / 2) x -= BOX;
+      a.setY(i, y);
+      a.setX(i, x);
+    }
+    a.needsUpdate = true;
+    R3.snow.position.set(player.x, 0, player.y);
   }
-  a.needsUpdate = true;
-  p.position.set(player.x, 0, player.y);
 }
 
 // ---- Figurer (personer, markörer) som skyltar mot kameran ----

@@ -32,8 +32,6 @@ const YEAR = {
     [4.2, 22.8],
     [5.6, 21.3],
   ],
-  // Chans för regn/snö och moln per månad.
-  nederbörd: [0.35, 0.45, 0.5, 0.45, 0.4, 0.35, 0.3, 0.3, 0.25, 0.25, 0.3, 0.35],
 };
 function yearDay(day = state?.day ?? 1) {
   return (((day - 1) % YEAR.dagar) + YEAR.dagar) % YEAR.dagar;
@@ -80,22 +78,7 @@ function daylight(hour, day = state?.day ?? 1) {
   if (hour > down - fade / 2) return (down + fade / 2 - hour) / fade;
   return 1;
 }
-// Dagens väder, samma för alla som spelar samma dag.
-function weather(day = state?.day ?? 1) {
-  const r = seeded(day * 7351 + 11),
-    m = monthIndex(day),
-    wet = r() < YEAR.nederbörd[m],
-    cloudy = wet || r() < 0.4,
-    cold = m >= 2 && m <= 6;
-  return {
-    kind: wet ? (cold && m !== 2 && m !== 6 ? 'snö' : 'regn') : cloudy ? 'mulet' : 'klart',
-    clouds: wet ? 0.85 : cloudy ? 0.55 : 0.1,
-  };
-}
-function weatherText() {
-  const w = weather();
-  return { klart: 'klart', mulet: 'mulet', regn: 'regn', snö: 'snöfall' }[w.kind];
-}
+// Vädret finns i js/game/weather.js.
 
 // ---- Studentlivets kalender ----
 // Varje fyraveckorsperiod: sitz torsdagen i vecka 2, tentavecka i vecka 4. Vappen 30.4–1.5.
@@ -116,7 +99,12 @@ function isVappen(day = state?.day ?? 1) {
   return yd === vappenStart() || yd === vappenStart() + 1;
 }
 function seasonHud() {
-  return dateText() + (isExamWeek() ? ' · tentavecka' : isVappen() ? ' · vappen!' : '');
+  return (
+    dateText() +
+    (isExamWeek() ? ' · tentavecka' : isVappen() ? ' · vappen!' : '') +
+    ' · ' +
+    weatherHud()
+  );
 }
 // Overallmärken man samlar på evenemang.
 function addBadge(name) {

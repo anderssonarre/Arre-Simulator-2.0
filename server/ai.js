@@ -93,6 +93,7 @@ function buildPrompt(b) {
       str(c.place, 40) +
       (c.activity ? ', du ' + str(c.activity, 30) : '') +
       '.',
+    c.weather ? 'Vädret i Vasa: ' + str(c.weather, 40) + '. Nämn det gärna om det passar.' : '',
     c.drunk
       ? 'Du har varit på fest (kanske Ollis tisdag) och är glad och lite berusad, det märks på hur du pratar.'
       : '',

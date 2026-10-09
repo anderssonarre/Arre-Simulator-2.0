@@ -111,7 +111,7 @@ function walk(dt, f, r, sprintHeld) {
     nf = len > 1 ? f / len : f,
     nr = len > 1 ? r / len : r,
     canRun = sprintHeld && state.stats.energy > 10 && state.stats.hunger > 5 && nf > 0.2,
-    speed = canRun ? RUN_SPEED : WALK_SPEED,
+    speed = (canRun ? RUN_SPEED : WALK_SPEED) * weatherSpeed(),
     cos = Math.cos(player.a),
     sin = Math.sin(player.a),
     tx = (cos * nf - sin * nr) * speed,

@@ -100,7 +100,7 @@ function showBag() {
   );
 }
 function conditionsSummary() {
-  const parts = ['berusning', 'illamående', 'koncentration'].map(
+  const parts = ['berusning', 'illamående', 'koncentration', 'blöt'].map(
     (k) => capital(k) + ' ' + Math.round(cond(k)),
   );
   return '<p class="sub">' + parts.join(' · ') + '</p>';
@@ -109,6 +109,7 @@ function useItem(k, fromBag = true) {
   const v = VAROR[k],
     b = ensureBag();
   if (fromBag && !b[k]) return;
+  if (v.verktyg) return toast(v.ikon + ' ' + v.text);
   if (v.mat && isNauseous())
     return toast('Du mår för illa för att äta. Vatten och vila hjälper.');
   if (fromBag && --b[k] <= 0) delete b[k];
