@@ -9,7 +9,11 @@ function npcSprite(p, pose = 0) {
   const g = c.getContext('2d'),
     female = ['ida', 'jennifer'].includes(p.id),
     skin = p.skin || '#e5b89b',
-    stride = [0, 8, 0, -8][pose % 4];
+    // pose: 0–3 = gång, 'w0'/'w1' = vinkar (handen fram och tillbaka), 'g0'/'g1' = gestikulerar.
+    wave = typeof pose === 'string' && pose[0] === 'w',
+    gesture = typeof pose === 'string' && pose[0] === 'g',
+    flip = typeof pose === 'string' && pose[1] === '1',
+    stride = typeof pose === 'number' ? [0, 8, 0, -8][pose % 4] : 0;
   g.fillStyle = '#10192135';
   g.beginPath();
   g.ellipse(80, 247, 39, 7, 0, 0, 7);
@@ -38,9 +42,21 @@ function npcSprite(p, pose = 0) {
   g.fillRect(47 - stride * 0.45, 244 + stride * 0.25, 28, 2);
   g.fillRect(90 + stride * 0.45, 244 - stride * 0.25, 27, 2);
   limb(47, 101, 36 + stride * 0.6, 158 - stride * 0.5, 19, p.color);
-  limb(113, 101, 124 - stride * 0.6, 158 + stride * 0.5, 19, p.color);
   limb(36 + stride * 0.6, 158 - stride * 0.5, 37 + stride * 0.6, 171 - stride * 0.5, 14, skin);
-  limb(124 - stride * 0.6, 158 + stride * 0.5, 123 - stride * 0.6, 171 + stride * 0.5, 14, skin);
+  if (wave) {
+    // Armen upp, med handen åt sidan.
+    const hx = flip ? 146 : 136;
+    limb(113, 101, 134, 62, 19, p.color);
+    limb(134, 62, hx, 40, 14, skin);
+  } else if (gesture) {
+    // Underarmen lyfts lite, som när man förklarar något.
+    const hy = flip ? 118 : 128;
+    limb(113, 101, 126, 146, 19, p.color);
+    limb(126, 146, 134, hy, 14, skin);
+  } else {
+    limb(113, 101, 124 - stride * 0.6, 158 + stride * 0.5, 19, p.color);
+    limb(124 - stride * 0.6, 158 + stride * 0.5, 123 - stride * 0.6, 171 + stride * 0.5, 14, skin);
+  }
   g.fillStyle = p.color;
   g.beginPath();
   g.moveTo(55, 89);

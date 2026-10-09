@@ -362,10 +362,24 @@ function render() {
     const o = it.o;
     if (o.profile) {
       const moving = o.targetX != null && Math.hypot(o.targetX - o.x, o.targetY - o.y) > 0.04;
-      o.sprite = npcSprite(o.profile, moving ? Math.floor(frame / 10) % 4 : 0);
+      // Kroppsspråk (js/game/life.js): vinkar, gestikulerar när de pratar.
+      const now = performance.now(),
+        flap = Math.floor(frame / 9) % 2;
+      o.sprite = npcSprite(
+        o.profile,
+        o.waveUntil > now
+          ? 'w' + flap
+          : !moving && (o.gestureUntil > now || o.bubbleUntil > now)
+            ? 'g' + (Math.floor(frame / 14) % 2)
+            : moving
+              ? Math.floor(frame / 10) % 4
+              : 0,
+      );
     }
     const scale = focal / it.depth,
-      sh = (o.height || 1) * scale,
+      // Den som är nere hänger med axlarna och ser lite mindre ut (fötterna står kvar).
+      slump = o.profile && (state?.society?.mood[o.profile.id] ?? 60) < 35 ? 0.97 : 1,
+      sh = (o.height || 1) * scale * slump,
       spr = o.sprite,
       sw = spr ? (sh * spr.width) / spr.height : 0,
       // Berusade (nattfolk och festfolk ute) vinglar åt sidorna.
