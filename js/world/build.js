@@ -87,6 +87,7 @@ function build() {
   station(w, 23.5, 26.5, 'exam', '', () => exam(0)).courseIndex = 0;
   station(w, 23.5, 21.5, 'food', 'Lunch · 8 €', lunch);
   station(w, 35.5, 12.5, 'party', 'Filicia Castle · fest', partyPrompt);
+  coffeeMachine(w, ...freeSpotNear(w, 34.5, 25.5));
   doorAt(w, 37, 30);
   portal(w, 37.5, 29.55, 'Ut till Wolffskavägen', 'outdoor', { x: 54.5, y: 17.0, a: Math.PI / 2 });
   sign(w, 37, 24, 'ENTRÉ');
@@ -154,6 +155,7 @@ function build() {
   station(w, 24.5, 32.5, 'study', '', () => study(2)).courseIndex = 2;
   lectureSpot(w, 2, ...freeSpotNear(w, 24.5, 32.5));
   station(w, 26.5, 35.5, 'exam', '', () => exam(2)).courseIndex = 2;
+  coffeeMachine(w, ...freeSpotNear(w, 30.5, 39.5));
   doorAt(w, 32, 42);
   portal(w, 32.5, 41.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 40.15, a: Math.PI / 2 });
   sign(w, 32.5, 38.5, 'TECHNOBOTHNIA');
@@ -200,6 +202,7 @@ function build() {
     toast('En lugn stund. +8 glädje, +5 energi.');
     save();
   });
+  coffeeMachine(w, ...freeSpotNear(w, 13.5, 15.5));
   doorAt(w, 8, 17);
   portal(w, 8.5, 16.55, 'Gå ut på campus', 'outdoor', { x: 24.5, y: 41.85, a: -Math.PI / 2 });
   linkCampusExits();

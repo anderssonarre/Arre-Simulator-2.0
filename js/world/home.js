@@ -675,7 +675,7 @@ function buildHome() {
   spot(6.75, 2.0, 'Skrivbordet · studieplan och examensprov', homeDesk);
   spot(1.75, 3.5, 'Garderoben', wardrobe);
   spot(4.5, 1.25, 'Spegeln', mirrorLook);
-  spot(7.05, 6.55, 'Kylskåpet · laga mat', cookAtHome);
+  spot(7.05, 6.55, 'Köket · laga mat eller koka kaffe', kitchen);
   spot(2.75, 5.5, 'Soffan · titta på TV', watchTv);
   spot(3.9, 6.55, 'Hallen · inred hemmet och boende', homeShop);
   spot(6.3, 4.95, 'Köksbordet · hemmafest', () => (homeParty ? endHomeParty() : partyInvite()));
@@ -734,6 +734,19 @@ function mirrorLook() {
     [
       { label: 'Byt kläder', primary: true, run: wardrobe },
       { label: 'Stäng', run: close },
+    ],
+    'Hemma',
+  );
+}
+// Köket: laga mat eller koka kaffe (gratis hemma, se js/game/coffee.js).
+function kitchen() {
+  dialog(
+    'Köket',
+    '<p>Vad blir det?</p>',
+    [
+      { label: 'Laga middag', primary: true, run: () => (close(), cookAtHome()) },
+      { label: coffeeLabel(true), run: () => (close(), drinkCoffee(true)) },
+      { label: 'Tillbaka', run: close },
     ],
     'Hemma',
   );

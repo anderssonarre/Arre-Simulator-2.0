@@ -174,6 +174,39 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(hist.includes('TEST-TANKE axel'), 'tanken kommer i samtalet');
     step('samtal med en person');
 
+    // Kaffeautomater i alla hus: varje kopp ger mindre, sent kaffe ger sämre sömn.
+    const coffee = await arvid.evaluate(() => {
+      const machines = ['w33', 'tech', 'gym'].map((id) =>
+        worlds[id].objects.find((o) => o.type === 'coffee'),
+      );
+      Object.assign(state, { money: 10, hour: 10 });
+      state.stats.energy = 40;
+      state.coffee = null;
+      const gains = [];
+      for (let i = 0; i < 4; i++) {
+        const before = state.stats.energy;
+        machines[0].action();
+        gains.push(Math.round(state.stats.energy - before)); // fem minuter kostar lite energi
+      }
+      const label = machines[1].label;
+      state.hour = 21;
+      const before = restBonus();
+      drinkCoffee(true);
+      return {
+        found: machines.map((m, i) => !!m && walkable(worlds[['w33', 'tech', 'gym'][i]], m.x, m.y, 0.1)),
+        gains,
+        money: state.money,
+        label,
+        sleepAfter: restBonus() / before,
+      };
+    });
+    assert.deepEqual(coffee.found, [true, true, true], 'en automat i varje hus, på golvet');
+    assert.deepEqual(coffee.gains, [18, 12, 7, 3], 'varje kopp ger mindre');
+    assert.equal(coffee.money, 2, 'fyra koppar à 2 €, hemma gratis');
+    assert.ok(coffee.label.includes('ger inget mer'), 'etiketten visar vad nästa kopp ger');
+    assert.ok(coffee.sleepAfter < 1, 'sent kaffe ger sämre sömn');
+    step('kaffeautomater i alla hus');
+
     // Mobil: pekskärm och liten skärm.
     const phone = await open('Mobil', {
       viewport: { width: 390, height: 844 },
@@ -228,6 +261,7 @@ async function waitFor(page, fn, what, ms = 20000) {
 
     // Går det långsamt sänks upplösningen.
     const scale = await phone.evaluate(() => {
+      close(); // mätningen pausar medan en dialogruta är öppen
       QUALITY.since = 0;
       qualityTick(1000);
       for (let i = 1; i <= 20; i++) qualityTick(1000 + i * 105); // cirka 10 bilder per sekund
@@ -248,7 +282,11 @@ async function waitFor(page, fn, what, ms = 20000) {
     await browser.close();
     game.kill();
     aiServer.close();
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    // Servern kan hinna skriva en sista gång medan den stängs.
+    await sleep(300);
+    try {
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    } catch {}
   }
   process.exit(failed ? 1 : 0);
 })();

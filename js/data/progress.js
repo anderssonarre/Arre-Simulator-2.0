@@ -61,6 +61,20 @@ const JOB_SKILL = {
   ida: 'socialt',
 };
 
+// Kaffe från automaterna i husen (och bryggaren hemma). Se js/game/coffee.js.
+const KAFFE = {
+  pris: 2, // € per kopp på campus, hemma kostar det inget
+  // Energi per kopp samma dag: första koppen ger mest, sedan allt mindre.
+  energi: [18, 12, 7, 3],
+  darrigFrån: 4, // från den här koppen samma dag blir man darrig
+  darrig: 5, // så mycket glädje en darrig kopp kostar
+  minuter: 5, // hur länge en kopp tar
+  // Kaffe efter klockan sentEfter gör att man sover sämre i så här många timmar.
+  sentEfter: 18,
+  verkarTimmar: 6,
+  sömnFaktor: 0.8, // sömnen ger så här stor del av energin
+};
+
 // Ekonomin räknas per vecka och dras på måndagar.
 const ECONOMY = {
   hyra: 55, // € per vecka

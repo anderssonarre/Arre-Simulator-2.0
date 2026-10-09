@@ -321,7 +321,8 @@ function sleep() {
 }
 // Trivseln hemma (möbler och lägenhet) gör att man vilar bättre.
 function restBonus() {
-  return clamp(1 + coziness() * 0.03, 0.9, 1.4);
+  // Möblerna hjälper, sent kaffe stjälper (js/game/coffee.js).
+  return clamp(1 + coziness() * 0.03, 0.9, 1.4) * coffeeSleepFactor();
 }
 // Sömnläge (online): energin fylls på i verklig tid tills tiden är ute eller du vaknar.
 function startSleep(energy, seconds, hunger, title) {
