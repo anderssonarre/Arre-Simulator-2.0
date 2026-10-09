@@ -534,6 +534,12 @@ async function waitFor(page, fn, what, ms = 20000) {
     assert.ok(scale < 1, 'lägre upplösning när det går långsamt');
     step('upplösningen anpassar sig');
 
+    // Statistiken som JSON, för speltestaren.
+    const st = await (await fetch('http://localhost:' + PORT + '/stats.json')).json();
+    assert.ok(Array.isArray(st.mått) && st.mått.length >= 5, 'stats.json har balansmåtten');
+    assert.ok(st.tidning?.rubrik, 'stats.json visar senaste tidningen');
+    step('statistik för speltestaren');
+
     await sleep(1000);
     assert.deepEqual(errors, [], 'inga fel i webbläsaren');
     step('inga fel i webbläsaren');

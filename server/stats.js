@@ -130,4 +130,34 @@ function statsPage(s, feedback) {
       : '<p>Svaren från "Tyck till" visas med rätt nyckel.</p>')
   );
 }
-module.exports = { countersFor, cleanFeedback, statsPage, STEPS };
+// Samma siffror som statistiksidan, jämförda med balansmålen i planen. För speltestaren.
+function summary(s) {
+  const ratio = (a, b) => (s[b] ? s[a] / s[b] : null),
+    round = (v, d = 2) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d),
+    m = (namn, värde, mål, ok) => ({ namn, värde: round(värde), mål, ok: värde == null ? null : ok });
+  const jobs = ratio('weekJobs', 'weeks'),
+    first = ratio('examsFirstPass', 'examsFirstTry'),
+    grade = ratio('gradeSum', 'gradeN'),
+    debt = ratio('weeksDebt', 'weeks'),
+    minutes = ratio('sessionMinutes', 'sessions'),
+    long = ratio('sessions20', 'sessions');
+  return {
+    underlag: {
+      sessioner: s.sessions || 0,
+      starter: s.starts || 0,
+      veckor: s.weeks || 0,
+      tentor: s.exams || 0,
+      terminer: s.terms || 0,
+    },
+    mått: [
+      m('Extrajobb per vecka', jobs, '1–2', jobs >= 1 && jobs <= 2),
+      m('Tentor godkända på första försöket', first, '0,70–0,80', first >= 0.7 && first <= 0.8),
+      m('Betygssnitt', grade, 'cirka 3', grade >= 2.5 && grade <= 3.5),
+      m('Andel veckor med hyresskuld', debt, 'låg, under 0,25', debt < 0.25),
+      m('Minuter per session', minutes, 'minst 20', minutes >= 20),
+      m('Andel sessioner över 20 minuter', long, 'så hög som möjligt', null),
+    ],
+    förstaDagen: STEPS.map((k) => ({ steg: k, antal: s['tutorial:' + k] || 0, av: s.starts || 0 })),
+  };
+}
+module.exports = { countersFor, cleanFeedback, statsPage, summary, STEPS };

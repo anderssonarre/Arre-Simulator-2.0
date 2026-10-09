@@ -206,3 +206,12 @@ test('AI-uppdrag kontrolleras mot spelets personer och platser', () => {
   assert.deepEqual(q.belöning, { pengar: 15, glädje: 5, relation: { ida: 12 } }, 'belöningen har tak');
   assert.ok(aiQuests.buildQuestPrompt(ctx).includes('INTE handla om skolan'));
 });
+
+test('statistiken jämförs med balansmålen', () => {
+  const s = stats.summary({ weeks: 4, weekJobs: 6, examsFirstTry: 10, examsFirstPass: 9, sessions: 2, sessionMinutes: 50 });
+  const by = Object.fromEntries(s.mått.map((m) => [m.namn, m]));
+  assert.equal(by['Extrajobb per vecka'].värde, 1.5);
+  assert.equal(by['Extrajobb per vecka'].ok, true);
+  assert.equal(by['Tentor godkända på första försöket'].ok, false); // 0,9 är för lätt
+  assert.equal(by['Betygssnitt'].ok, null); // inget underlag
+});

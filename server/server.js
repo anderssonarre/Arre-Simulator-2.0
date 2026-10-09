@@ -62,6 +62,32 @@ const server = http.createServer((req, res) => {
     );
     return;
   }
+  // Samma statistik som JSON, för speltestaren. Svaren från Tyck till kräver STATS_KEY om den är satt.
+  if (url === '/stats.json') {
+    if (!store) return json(res, 503, {});
+    const key = process.env.STATS_KEY,
+      show = !key || new URL(req.url, 'http://x').searchParams.get('key') === key;
+    Promise.all([
+      store.getStats(),
+      show ? store.getFeedback(40) : null,
+      store.getKv('paper:latest'),
+      store.getKv('paper-events:' + paper.weekKey()),
+    ])
+      .then(([s, f, issue, week]) =>
+        json(res, 200, {
+          ...stats.summary(s),
+          tyckTill: f,
+          tidning: issue ? { vecka: issue.week, rubrik: issue.rubrik } : null,
+          händelserDenHärVeckan: (week || []).length,
+          spelareOnline: players.size,
+        }),
+      )
+      .catch((e) => {
+        console.error(e);
+        json(res, 500, {});
+      });
+    return;
+  }
   if (url === '/stats') {
     if (!store) return res.writeHead(503).end('Statistiken är inte igång.');
     const key = process.env.STATS_KEY,
